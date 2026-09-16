@@ -1,0 +1,9 @@
+- menu:
+  - menuitem "标准模式 功能完整的编码 Agent，支持文件编辑、Shell、文件与网页检索、Skills、计划、目标、子代理和工作流。"
+  - menuitem "屌丝模式 节省 Token 的日常 Agent，保留文件编辑、Shell、搜索和 Skill，限制长输出并提前压缩历史。":
+    - text: 屌丝模式 节省 Token 的日常 Agent，保留文件编辑、Shell、搜索和 Skill，限制长输出并提前压缩历史。
+    - img
+  - menuitem "PTC 模式 功能完整的编码 Agent，但默认不提供 workflow 工具；其他工具通过 PTC 模式 SDK 呈现，让模型用一个 TypeScript 程序组合多步操作。"
+  - menuitem "极简模式 仅提供持久 shell 的单工具编码 Agent。"
+  - menuitem "创造模式 用于创建自定义 Agent preset：具备标准模式的全部能力，并提供运行时检查、插件实验和 preset 创作指导。"
+  - menuitem "Refusing mode Resolves, then refuses to start."

@@ -1,0 +1,4 @@
+# Source development uses the package's built browser export.
+- insert:
+    - id: ui-step-insight
+      name: './src/index.ts'

@@ -1,0 +1,3 @@
+- insert:
+    - id: image-generation
+      name: '@deepseek-ai/dsh-image-generation'

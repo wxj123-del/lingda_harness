@@ -1,0 +1,48 @@
+- main:
+  - img
+  - heading "技能广场" [level=1]
+  - text: "2"
+  - button "上传 Skill":
+    - img
+    - text: 上传 Skill
+  - button "Skill ZIP 压缩包"
+  - group "技能广场":
+    - button "全部 Skill" [pressed]: 全部 Skill 2
+    - button "内置精选": 内置精选 2
+    - button "我的 Skill": 我的 Skill 0
+  - img
+  - searchbox "搜索名称、描述或分类"
+  - complementary "分类":
+    - heading "分类" [level=2]
+    - button "全部分类" [pressed]: 全部分类 2
+    - button "技能创建": 技能创建 1
+    - button "工作流": 工作流 1
+    - button "内容创作": 内容创作 0
+    - button "知识研究": 知识研究 0
+    - button "开发工具": 开发工具 0
+    - button "通用": 通用 0
+  - region "全部 Skill":
+    - heading "全部分类" [level=2]
+    - text: 2 个 Skill
+    - article:
+      - img
+      - text: 内置
+      - button "创建 Skill":
+        - heading "创建 Skill" [level=3]
+      - paragraph: 把一个想法变成可复用的 Skill，明确触发场景、执行指令和输出格式。
+      - text: 技能创建 已启用
+      - button "查看详情"
+      - button "用于对话":
+        - img
+        - text: 用于对话
+    - article:
+      - img
+      - text: 内置
+      - button "创建工作流":
+        - heading "创建工作流" [level=3]
+      - paragraph: 把复杂任务拆成有输入、有产出、可检查的步骤，梳理工具与知识库依赖。
+      - text: 工作流 已启用
+      - button "查看详情"
+      - button "用于对话":
+        - img
+        - text: 用于对话

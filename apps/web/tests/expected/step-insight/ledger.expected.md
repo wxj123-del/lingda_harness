@@ -1,0 +1,129 @@
+- region "Token trace":
+  - img
+  - searchbox "Search steps, models or tools"
+  - combobox "Filter status":
+    - option "All states" [selected]
+    - option "Incomplete usage"
+    - option "Failed / interrupted"
+  - combobox "Sort":
+    - option "Chronological" [selected]
+    - option "Most tokens first"
+  - button "Export loaded records":
+    - img
+  - text: Known total
+  - strong: ≥24,471
+  - text: Input
+  - strong: ≥24,182
+  - text: Output
+  - strong: "289"
+  - text: Cache read
+  - strong: 23,552
+  - text: "Loaded requests: 3 Requests with incomplete usage: 3"
+  - paragraph: ≥ marks the sum of reported fields; missing fields remain unknown and the complete total may be higher.
+  - table "Requests":
+    - rowgroup:
+      - row "Step Input Cache read Output Known total":
+        - columnheader "Step"
+        - columnheader "Input"
+        - columnheader "Cache read"
+        - columnheader "Output"
+        - columnheader "Known total"
+    - rowgroup:
+      - row "Turn 1 / Step 1 deepseek-v4-flash Complete · 3 Tool calls ≥7,820 7,680 197 ≥8,017 Incomplete usage":
+        - cell "Turn 1 / Step 1 deepseek-v4-flash Complete · 3 Tool calls":
+          - button "Turn 1 / Step 1 deepseek-v4-flash Complete · 3 Tool calls"
+        - cell "≥7,820"
+        - cell "7,680"
+        - cell "197"
+        - cell "≥8,017 Incomplete usage":
+          - strong: ≥8,017
+          - text: Incomplete usage
+      - row "Turn 1 / Step 2 deepseek-v4-flash Complete ≥8,157 7,808 56 ≥8,213 Incomplete usage":
+        - cell "Turn 1 / Step 2 deepseek-v4-flash Complete":
+          - button "Turn 1 / Step 2 deepseek-v4-flash Complete"
+        - cell "≥8,157"
+        - cell "7,808"
+        - cell "56"
+        - cell "≥8,213 Incomplete usage":
+          - strong: ≥8,213
+          - text: Incomplete usage
+      - row "Turn 2 / Step 1 deepseek-v4-flash Complete ≥8,205 8,064 36 ≥8,241 Incomplete usage":
+        - cell "Turn 2 / Step 1 deepseek-v4-flash Complete":
+          - button "Turn 2 / Step 1 deepseek-v4-flash Complete" [pressed]
+        - cell "≥8,205"
+        - cell "8,064"
+        - cell "36"
+        - cell "≥8,241 Incomplete usage":
+          - strong: ≥8,241
+          - text: Incomplete usage
+  - complementary "Inspect request":
+    - heading "Turn 2 / Step 1" [level=3]
+    - text: "deepseek-official / deepseek-v4-flash Event #20 → #21"
+    - term: Uncached input
+    - definition: "141"
+    - term: Cache read
+    - definition: 8,064
+    - term: Cache write
+    - definition: —
+    - term: Unclassified input
+    - definition: —
+    - term: Input
+    - definition: ≥8,205
+    - term: Output
+    - definition: "36"
+    - term: Reasoning (included in output)
+    - definition: "16"
+    - term: Known total
+    - definition: ≥8,241
+    - term: Duration
+    - definition: {{duration}}
+    - term: Time to first token
+    - definition: {{duration}}
+    - term: Output tokens / second
+    - definition: "144"
+    - term: Cache hit rate
+    - definition: —%
+    - tablist "Inspect request":
+      - tab "Input sources" [selected]
+      - tab "Output details"
+      - tab "Tool calls (0)"
+      - tab "Source records"
+    - tabpanel "Input sources":
+      - paragraph: Content sizes are character estimates, not itemized billing; they are not added to provider usage.
+      - group: "System prompt #2 ~3"
+      - group: "User message #3 ~48"
+      - group: "Prior model output #6 ~97"
+      - group: "Tool result #8 ~4"
+      - group: "Tool result #11 ~49"
+      - group: "Tool result #12 ~49"
+      - group: "Prior model output #15 ~49"
+      - group: "User message #19 ~41"
+      - region "Tool / conversation similarity":
+        - heading "Tool / conversation similarity (3)" [level=4]
+        - text: Text estimate Conversation scope
+        - combobox "Conversation scope":
+          - option "Latest user message" [selected]
+          - option "All user messages in request"
+        - text: Tool order
+        - combobox "Tool order":
+          - option "Original order" [selected]
+          - option "Highest similarity first"
+        - group: "Reference text and scoring basis #19"
+        - group:
+          - code: image_generate
+          - text: "#5 Similarity"
+          - meter "image_generate Similarity"
+          - strong: ~0%
+          - text: ~23 Tokens
+        - group:
+          - code: read
+          - text: "#5 Similarity"
+          - meter "read Similarity"
+          - strong: ~0%
+          - text: ~21 Tokens
+        - group:
+          - code: bash
+          - text: "#5 Similarity"
+          - meter "bash Similarity"
+          - strong: ~0%
+          - text: ~21 Tokens

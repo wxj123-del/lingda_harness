@@ -1,0 +1,3 @@
+- insert:
+    - id: speech-generation
+      name: '@deepseek-ai/dsh-speech-generation'

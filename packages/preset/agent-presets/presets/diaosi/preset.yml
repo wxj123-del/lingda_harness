@@ -1,0 +1,3 @@
+name: 屌丝模式
+description: 节省 Token 的日常 Agent，保留文件编辑、Shell、搜索和 Skill，限制长输出并提前压缩历史。
+order: 1.5

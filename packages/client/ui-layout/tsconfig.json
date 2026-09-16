@@ -1,0 +1,51 @@
+{
+  "extends": "../../../tsconfig.base.client.json",
+  "compilerOptions": {
+    "types": ["client-build-environment", "node"],
+    "rootDir": "src",
+    "outDir": "lib/types"
+  },
+  "include": [
+    "src"
+  ],
+  "references": [
+    { "path": "../../api/session-controller/tsconfig.client.json" },
+    { "path": "../../../vendor/schemastery" },
+    { "path": "../../settings/settings" },
+    { "path": "../../core/session" },
+    { "path": "../ui-settings" },
+    {
+      "path": "../../util/brand"
+    },
+    {
+      "path": "../../../vendor/cordis"
+    },
+    {
+      "path": "../locale"
+    },
+    {
+      "path": "../ui-slots"
+    },
+    {
+      "path": "../ui-theme"
+    },
+    {
+      "path": "../ui-primitives"
+    },
+    {
+      "path": "../store"
+    },
+    {
+      "path": "../ui-renderer"
+    },
+    {
+      "path": "../ui-session"
+    },
+    {
+      "path": "../../skill/skill"
+    },
+    {
+      "path": "../../core/tools"
+    }
+  ]
+}

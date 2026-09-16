@@ -1,0 +1,97 @@
+# Budget-conscious native tools, mounted in this preset's standing scope.
+# Model routing, permissions, sandboxing and token measurement remain Host-owned.
+- id: persona
+  name: '@deepseek-ai/dsh-persona'
+  config:
+    prefix: You are a coding agent powered by the {{model}} model from the {{provider}} provider.
+    suffix: |-
+      Your working directory is {{cwd}}.
+      Work with the minimum sufficient context while completing the user's task and required verification.
+      Search within the relevant source directory before reading files. Exclude dependency, build, cache and archived output unless the task concerns them.
+      Read only the relevant line ranges. Expand a search or read when its omitted portion is needed, not merely because more content exists.
+      Reuse unchanged file passages already available in the current context. Read them again when they changed or are no longer available after compaction.
+      Batch independent targeted searches when useful. After repeated empty results or errors, revise the query instead of repeating it unchanged.
+      Keep command output bounded and retrieve additional sections from the saved full result only when needed.
+      Answer directly once there is sufficient evidence. Preserve required instructions, necessary details, correctness and safety; do not claim unmeasured token savings.
+
+- id: agent-instructions
+  name: '@deepseek-ai/dsh-agent-instructions'
+  config:
+    maxBytes: 65536
+
+- id: tool-bash
+  name: '@deepseek-ai/dsh-tool-bash'
+  disabled: !!js process.platform === 'win32'
+
+- id: tool-pwsh
+  name: '@deepseek-ai/dsh-tool-pwsh'
+  disabled: !!js process.platform !== 'win32'
+
+# read is intentionally excluded by spill-policy; cap it at the owning tool.
+- id: tool-fs
+  name: '@deepseek-ai/dsh-tool-fs'
+  config:
+    readLimit: 120
+    readMaxBytes: 8000
+    readMaxLineLength: 1000
+
+- id: tool-fs-search
+  name: '@deepseek-ai/dsh-tool-fs-search'
+  config:
+    sampleOverCapGlobResults: false
+    globMaxResults: 40
+    grepMaxMatches: 40
+    grepMaxLineBytes: 500
+
+- id: tool-jobs
+  name: '@deepseek-ai/dsh-tool-jobs'
+
+- id: skill-filesystem
+  name: '@deepseek-ai/dsh-skill-filesystem'
+  config:
+    includeAgentsHome: false
+
+- id: tool-skill
+  name: '@deepseek-ai/dsh-tool-skill'
+
+# Each preset owns a private compactor and pruner, sharing the Host token meter.
+- id: compaction
+  name: cordis:group
+  group: true
+  isolate:
+    compaction: true
+    toolResultPruner: true
+  config:
+    - id: compaction-basic
+      name: '@deepseek-ai/dsh-compaction-basic'
+      config:
+        thresholdRatio: 0.65
+        retainRatio: 0.12
+        maxTokens: 4096
+
+    - id: command-compact
+      name: '@deepseek-ai/dsh-command-compact'
+
+    - id: tool-result-pruner
+      name: '@deepseek-ai/dsh-compaction-tool-result-pruner'
+      config:
+        thresholdChars: 4096
+        headChars: 1800
+        tailChars: 800
+
+- id: tool-ask-user
+  name: '@deepseek-ai/dsh-tool-ask-user'
+
+- id: tool-todo
+  name: '@deepseek-ai/dsh-tool-todo'
+  config:
+    allowParallelInProgress: true
+
+- id: tool-web
+  name: '@deepseek-ai/dsh-tool-web'
+  config:
+    fetch: true
+    searchTimeoutMs: 60000
+
+- id: present
+  name: '@deepseek-ai/dsh-tool-present'
