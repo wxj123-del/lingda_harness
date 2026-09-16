@@ -29,6 +29,8 @@ Lingda Harness 处于开发者预览阶段，功能和接口仍在迭代，可�
 
 仓库沿用 `dsh` 命令和 `@deepseek-ai/*` 包名。请从本仓库源码运行灵搭；npm 上的 `@deepseek-ai/dsh` 是上游发行版本。
 
+独立的 `lingda-harness` npm 发行包可按照[发布指南](distribution/npm/README.zh.md)构建与验证。`npx lingda-harness@latest web` 需要先将该发行包发布到 npm 才能使用。
+
 <a id="run-from-source"></a>
 
 ### 从源码运行

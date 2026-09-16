@@ -1,0 +1,27 @@
+{
+  "name": "lingda-harness",
+  "version": "0.1.0",
+  "description": "Lingda Harness: a personal AI workspace with conversations, Skills, workflows, and tools",
+  "type": "module",
+  "license": "MIT",
+  "bin": {
+    "lingda-harness": "bin/lingda.mjs"
+  },
+  "files": ["bin", "runtime.mjs", "runtime.json", "packages", "README.md", "README.zh.md", "THIRD_PARTY_NOTICES.md"],
+  "engines": {
+    "node": "^22.19.0 || >=24.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/wxj123-del/lingda_harness.git"
+  },
+  "homepage": "https://github.com/wxj123-del/lingda_harness#readme",
+  "bugs": "https://github.com/wxj123-del/lingda_harness/issues",
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
+  },
+  "scripts": {
+    "prepublishOnly": "node -e \"throw new Error('Publish the tarball produced by pnpm pack:lingda, not this source directory.')\""
+  }
+}

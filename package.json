@@ -17,6 +17,9 @@
     "website"
   ],
   "scripts": {
+    "pack:lingda": "tsx scripts/release/lingda.ts",
+    "release:lingda": "tsx scripts/release/lingda.ts --build",
+    "test:lingda": "vitest run scripts/release/lingda.spec.ts && node --test distribution/npm/runtime.test.mjs",
     "build": "tsx scripts/build.ts",
     "build:bench": "npm run build:native-system && npm run build:lib && tsdown --config benchmarks/tsdown.config.ts",
     "build:official": "tsx scripts/build.ts --profile official",

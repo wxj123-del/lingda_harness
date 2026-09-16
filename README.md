@@ -29,6 +29,8 @@ Install Node.js 24 or later, or Node.js 22.19 or later within the 22.x line, and
 
 This checkout retains the `dsh` CLI and `@deepseek-ai/*` package names. Run Lingda from this repository's source; the npm package `@deepseek-ai/dsh` is the upstream distribution.
 
+The independent `lingda-harness` npm distribution can be built and tested using the [release guide](distribution/npm/README.md). The command `npx lingda-harness@latest web` requires publishing that distribution to npm first.
+
 <a id="run-from-source"></a>
 
 ### Run from source
