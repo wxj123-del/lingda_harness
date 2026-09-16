@@ -20,7 +20,7 @@ npx --yes /absolute/path/to/lingda-harness-0.1.0.tgz --version
 npx --yes /absolute/path/to/lingda-harness-0.1.0.tgz web --no-open
 ```
 
-Open `http://127.0.0.1:3080` and configure a model provider. Exit with Ctrl+C. Testing the archive uses the installed product without workspace links or source build tools.
+Open `http://127.0.0.1:3081` and configure a model provider. Exit with Ctrl+C. Testing the archive uses the installed product without workspace links or source build tools.
 
 ## Publish
 

@@ -11,7 +11,7 @@
  * provider may publish the parsed values as its own service from its program's
  * commander action, and ordinary rows
  * can inject that service and read it from lazily resolved config —
- * `port: !!js ctx.webStartup.port ?? 3080` — so a flag beats the value written
+ * `port: !!js ctx.webStartup.port ?? 3081` — so a flag beats the value written
  * beside it. No row has launcher-level command-line status.
  * @module @deepseek-ai/dsh-cmdline
  */

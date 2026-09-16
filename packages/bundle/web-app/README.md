@@ -25,7 +25,7 @@ Run `dsh --profile web` to open an interactive browser GUI with chat, model and 
 <a id="use-this-package"></a>
 ## Use this package
 
-Start the GUI, open your browser, and start talking to the agent. The flags fine-tune the invocation.
+Start the GUI, open your browser, and start talking to the agent. The default port is 3081; `--port` selects another port. The flags fine-tune the invocation.
 
 ### Starting the Web GUI
 

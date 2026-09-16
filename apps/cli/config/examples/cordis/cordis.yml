@@ -6,11 +6,11 @@
 # patch list at the same include level, so these patches reach every bundle
 # row. A patch replaces the targeted row's whole `config`.
 
-# Pinning the port here keeps this demo off the default 3080.
+# Pinning the port here keeps this demo off the default 3081.
 - id: webserver
   config:
     host: 127.0.0.1
-    port: 3081
+    port: 3082
 
 - insert:
     - id: cordis-host-runner

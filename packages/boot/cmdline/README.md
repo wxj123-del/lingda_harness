@@ -56,10 +56,10 @@ Rows configured from the parsed values inject the published service and read it 
   inject: [webStartup]
   config:
     host: !!js ctx.webStartup.host ?? '127.0.0.1'
-    port: !!js ctx.webStartup.port ?? 3080
+    port: !!js ctx.webStartup.port ?? 3081
 ```
 
-The outcomes: `dsh --profile web --port 8080` starts the server on port 8080 even when the config says 3080, because the flag wins. `--help` prints your app's help and exits 0 without starting anything; a rejected value (for example a non-numeric port) prints your error and exits nonzero, and no row that depends on the parsed values ever starts.
+The outcomes: `dsh --profile web --port 8080` starts the server on port 8080 even when the config says 3081, because the flag wins. `--help` prints your app's help and exits 0 without starting anything; a rejected value (for example a non-numeric port) prints your error and exits nonzero, and no row that depends on the parsed values ever starts.
 
 ### How flags beat config values
 

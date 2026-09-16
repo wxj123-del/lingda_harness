@@ -11,7 +11,7 @@ This opt-in overlay adds a signed GitHub endpoint to `dsh web`. When a pull requ
 - A TLS reverse proxy or tunnel that can forward one public URL to the loopback listener.
 - GitHub webhook subscription to the Pull requests event with content type `application/json`.
 
-The overlay defaults the Workspace to the launch directory and the listener to `127.0.0.1:3081`. Override them with `DSH_GITHUB_REVIEW_WORKSPACE` and `DSH_GITHUB_WEBHOOK_PORT`.
+The overlay defaults the Workspace to the launch directory and the listener to `127.0.0.1:3082`. Override them with `DSH_GITHUB_REVIEW_WORKSPACE` and `DSH_GITHUB_WEBHOOK_PORT`.
 
 ## Start DSH
 
@@ -39,7 +39,7 @@ For a permanent profile, place `github-ready-review-rule.mjs` beside `$DSH_HOME/
 
 ## Expose the dedicated endpoint
 
-The main Web UI and `/api` remain on port 3080. The overlay mounts a second WebServer in an isolated realm; only `POST /github` is registered there, and every other path returns `404`.
+The main Web UI and `/api` remain on port 3081. The overlay mounts a second WebServer in an isolated realm; only `POST /github` is registered there, and every other path returns `404`.
 
 A Caddy configuration can expose only that listener:
 
@@ -47,7 +47,7 @@ A Caddy configuration can expose only that listener:
 hooks.example.com {
   route {
     @github path /github
-    reverse_proxy @github 127.0.0.1:3081
+    reverse_proxy @github 127.0.0.1:3082
     respond 404
   }
 }

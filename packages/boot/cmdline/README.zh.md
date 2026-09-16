@@ -56,10 +56,10 @@ kind: "package-library"
   inject: [webStartup]
   config:
     host: !!js ctx.webStartup.host ?? '127.0.0.1'
-    port: !!js ctx.webStartup.port ?? 3080
+    port: !!js ctx.webStartup.port ?? 3081
 ```
 
-结果：即使配置写的是 3080，`dsh --profile web --port 8080` 也会让服务器监听 8080 端口，因为 flag 优先。`--help` 打印你的应用帮助并以 0 退出、不启动任何内容；被拒绝的值（例如非数字端口）打印你的错误并以非零码退出，任何依赖解析值的行都不会启动。
+结果：即使配置写的是 3081，`dsh --profile web --port 8080` 也会让服务器监听 8080 端口，因为 flag 优先。`--help` 打印你的应用帮助并以 0 退出、不启动任何内容；被拒绝的值（例如非数字端口）打印你的错误并以非零码退出，任何依赖解析值的行都不会启动。
 
 ### flag 如何胜过配置值
 

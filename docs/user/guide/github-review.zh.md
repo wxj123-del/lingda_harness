@@ -11,7 +11,7 @@
 - 一个可以把单个公共 URL 转发到 loopback 监听器的 TLS 反向代理或 tunnel。
 - GitHub webhook 订阅 Pull requests 事件，且 content type 为 `application/json`。
 
-overlay 默认使用启动目录作为 Workspace，并监听 `127.0.0.1:3081`。可通过 `DSH_GITHUB_REVIEW_WORKSPACE` 与 `DSH_GITHUB_WEBHOOK_PORT` 覆盖它们。
+overlay 默认使用启动目录作为 Workspace，并监听 `127.0.0.1:3082`。可通过 `DSH_GITHUB_REVIEW_WORKSPACE` 与 `DSH_GITHUB_WEBHOOK_PORT` 覆盖它们。
 
 ## 启动 DSH
 
@@ -39,7 +39,7 @@ dsh web --patch /absolute/path/to/github-review/cordis.yml
 
 ## 暴露专用端点
 
-主 Web UI 与 `/api` 继续位于端口 3080。overlay 会在隔离 realm 中挂载第二个 WebServer；其中只注册 `POST /github`，其他路径均返回 `404`。
+主 Web UI 与 `/api` 继续位于端口 3081。overlay 会在隔离 realm 中挂载第二个 WebServer；其中只注册 `POST /github`，其他路径均返回 `404`。
 
 Caddy 配置可以只暴露该监听器：
 
@@ -47,7 +47,7 @@ Caddy 配置可以只暴露该监听器：
 hooks.example.com {
   route {
     @github path /github
-    reverse_proxy @github 127.0.0.1:3081
+    reverse_proxy @github 127.0.0.1:3082
     respond 404
   }
 }

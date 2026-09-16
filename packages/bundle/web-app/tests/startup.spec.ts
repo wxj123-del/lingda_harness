@@ -62,7 +62,7 @@ export const apply = ctx => globalThis.__webStartupApply(ctx)
     '  config:',
     "    host: !!js ctx.webStartup.host ?? '127.0.0.1'",
     '    openBrowser: !!js ctx.webStartup.openBrowser',
-    '    port: !!js ctx.webStartup.port ?? 3080',
+    '    port: !!js ctx.webStartup.port ?? 3081',
     '    trustedHosts: !!js ctx.webStartup.trustedHosts',
     '- id: provider',
     `  name: ${pathToFileURL(join(dir, 'provider.mjs')).href}`,
@@ -116,7 +116,7 @@ describe('web command-line provider', () => {
     expect(observed.readerConfig).toEqual({
       host: '127.0.0.1',
       openBrowser: true,
-      port: 3080,
+      port: 3081,
       trustedHosts: [],
     })
   })

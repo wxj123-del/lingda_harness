@@ -47,7 +47,7 @@ pnpm dsh web
 
 `pnpm run build` prepares the repository artifacts. `pnpm dsh web` uses those built artifacts without rebuilding.
 
-The default address is `http://127.0.0.1:3080`. A local launch opens the browser; an SSH launch only prints the host URL. Add `--no-open` to skip opening the browser.
+The default address is `http://127.0.0.1:3081`, leaving the upstream DSH default on port 3080. A local launch opens the browser; an SSH launch only prints the host URL. Add `--no-open` to skip opening the browser.
 
 ### First conversation
 

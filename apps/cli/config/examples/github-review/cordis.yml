@@ -24,7 +24,7 @@
           name: '@deepseek-ai/dsh-host-webserver'
           config:
             host: '127.0.0.1'
-            port: !!js Number(process.env.DSH_GITHUB_WEBHOOK_PORT ?? 3081)
+            port: !!js Number(process.env.DSH_GITHUB_WEBHOOK_PORT ?? 3082)
 
         - id: github-webhook-adapter
           name: '@deepseek-ai/dsh-webhook-github'

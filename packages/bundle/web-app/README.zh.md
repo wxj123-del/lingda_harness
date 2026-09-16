@@ -25,7 +25,7 @@ kind: "package-bundle"
 <a id="use-this-package"></a>
 ## 使用本包
 
-启动 GUI、打开浏览器，然后开始与 agent（智能体）对话。flag 用于微调本次调用。
+启动 GUI、打开浏览器，然后开始与 agent（智能体）对话。默认端口为 3081；使用 `--port` 可选择其他端口。flag 用于微调本次调用。
 
 ### 启动 Web GUI
 

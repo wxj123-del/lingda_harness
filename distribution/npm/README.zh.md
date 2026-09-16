@@ -20,7 +20,7 @@ npx --yes /absolute/path/to/lingda-harness-0.1.0.tgz --version
 npx --yes /absolute/path/to/lingda-harness-0.1.0.tgz web --no-open
 ```
 
-打开 `http://127.0.0.1:3080` 并配置模型提供方。按 Ctrl+C 退出。归档验证使用安装后的产品，不依赖工作区链接或源码构建工具。
+打开 `http://127.0.0.1:3081` 并配置模型提供方。按 Ctrl+C 退出。归档验证使用安装后的产品，不依赖工作区链接或源码构建工具。
 
 ## 发布
 
