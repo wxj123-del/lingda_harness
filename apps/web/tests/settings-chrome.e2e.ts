@@ -9,6 +9,7 @@
 // frame, so there is no fixture and a stray stream would fail loud on the
 // open llm seam.
 import { readFile } from 'node:fs/promises'
+import { strToU8, zipSync } from 'fflate'
 import { fileURLToPath } from 'node:url'
 import type { Browser, Locator, Page } from 'playwright'
 import { chromium } from 'playwright'
@@ -197,15 +198,15 @@ describe('web e2e: settings modal and General preferences', () => {
       return tools.schemas().some(tool => tool.description === '整理本周工作并输出摘要')
     }, { timeout: 10_000 }).toBe(true)
     await navigation.getByRole('button', { name: 'Skill', exact: true }).click()
-    await page.locator('h1').getByText('Skill 工作流', { exact: true }).waitFor({ timeout: 10_000 })
-    await page.getByRole('button', { name: '新建', exact: true }).click()
+    await page.getByRole('heading', { name: '技能广场', exact: true }).waitFor({ timeout: 10_000 })
+    const archive = zipSync({ 'SKILL.md': strToU8('---\nname: product-assistant\ndescription: 回答产品相关问题\n---\n先查阅产品资料，再组织清晰回答。') })
+    await page.getByLabel('Skill ZIP 压缩包').setInputFiles({ name: 'product.zip', mimeType: 'application/zip', buffer: Buffer.from(archive) })
+    await page.getByRole('heading', { name: '导入 Skill', exact: true }).waitFor()
     await page.getByLabel('名称', { exact: true }).fill('产品助手')
-    await page.getByLabel('描述', { exact: true }).fill('回答产品相关问题')
-    await page.getByLabel('说明', { exact: true }).fill('先查阅产品资料，再组织清晰回答。')
-    await page.getByRole('button', { name: '保存', exact: true }).click()
+    await page.getByRole('button', { name: '确认导入', exact: true }).click()
     await expect.poll(async () => {
       const skills = scaffold.ctx.get('skills') as { list: () => Promise<readonly { description: string }[]> }
-      return (await skills.list()).some(skill => skill.description === '回答产品相关问题')
+      return (await skills.list()).some(skill => skill.description.includes('回答产品相关问题'))
     }, { timeout: 10_000 }).toBe(true)
     await navigation.getByRole('button', { name: '对话', exact: true }).click()
     await navigation.getByRole('button', { name: '工作流', exact: true }).click()
@@ -235,14 +236,15 @@ describe('web e2e: settings modal and General preferences', () => {
     const pluginPage = page
     await pluginPage.getByRole('heading', { name: '插件', exact: true }).waitFor({ timeout: 10_000 })
     await pluginPage.getByRole('tab', { name: '插件列表', exact: true }).click()
-    await pluginPage.getByText('用户创建的插件', { exact: true }).waitFor({ timeout: 10_000 })
-    await pluginPage.getByRole('button', { name: /周报整理/ }).waitFor({ timeout: 10_000 })
-    await pluginPage.getByRole('button', { name: /产品助手/ }).waitFor({ timeout: 10_000 })
-    const knowledgePlugin = pluginPage.getByRole('button', { name: /产品资料/ })
-    await knowledgePlugin.waitFor({ timeout: 10_000 })
-    await knowledgePlugin.click()
-    await expect.poll(() => pluginPage.getByText('资料数').count()).toBe(1)
-    await expect.poll(() => pluginPage.getByText('2', { exact: true }).count()).toBeGreaterThan(0)
+    await pluginPage.getByRole('searchbox', { name: '搜索插件' }).waitFor()
+    expect(await pluginPage.getByText('用户创建的插件', { exact: true }).count()).toBe(0)
+    expect(await pluginPage.getByRole('button', { name: /周报整理|产品助手|产品资料/ }).count()).toBe(0)
+    await navigation.getByRole('button', { name: '知识库', exact: true }).click()
+    expect(await page.getByLabel('资料名称 2', { exact: true }).inputValue()).toBe('产品FAQ.md')
+    await navigation.getByRole('button', { name: '工作流', exact: true }).click()
+    expect(await page.getByLabel('名称', { exact: true }).inputValue()).toBe('周报整理')
+    await navigation.getByRole('button', { name: 'Skill', exact: true }).click()
+    await page.getByRole('heading', { name: '产品助手', exact: true }).waitFor()
     expect(tripwire.pageErrors).toEqual([])
   }, 60_000)
 

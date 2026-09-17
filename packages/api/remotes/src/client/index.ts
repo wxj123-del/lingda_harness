@@ -8,6 +8,8 @@ import goalsRemote from '@deepseek-ai/dsh-goal/remote'
 import llmRemote from '@deepseek-ai/dsh-llm/remote'
 import dynamicRemote from '@deepseek-ai/dsh-cordis-host-runner/remote'
 import pluginInventoryRemote from '@deepseek-ai/dsh-host-plugin-inventory/remote'
+import knowledgeRemote from '@deepseek-ai/dsh-host-knowledge/remote'
+import localSkillImportRemote from '@deepseek-ai/dsh-host-local-skill-import/remote'
 import messageFeedbackRemote from '@deepseek-ai/dsh-message-feedback/remote'
 import permissionPresetsRemote from '@deepseek-ai/dsh-permission-presets/remote'
 import sessionFeedbackRemote from '@deepseek-ai/dsh-command-feedback/remote'
@@ -21,7 +23,11 @@ import workspaceFilesRemote from '@deepseek-ai/dsh-api-workspace-files/remote'
 import type { ClientRemote } from '@deepseek-ai/dsh-api-gateway/client'
 
 export type { ClientRemote } from '@deepseek-ai/dsh-api-gateway/client'
-export type { PluginInventorySnapshot } from '@deepseek-ai/dsh-host-plugin-inventory/types'
+export type { PluginInventorySnapshot, ToolUsageSnapshot } from '@deepseek-ai/dsh-host-plugin-inventory/types'
+export type * from '@deepseek-ai/dsh-host-knowledge/types'
+export type * from '@deepseek-ai/dsh-host-local-skill-import/types'
+export type {} from '@deepseek-ai/dsh-host-knowledge/remote'
+export type {} from '@deepseek-ai/dsh-host-local-skill-import/remote'
 export type {} from '@deepseek-ai/dsh-agent-presets/remote'
 export type {} from '@deepseek-ai/dsh-commands/remote'
 export type {} from '@deepseek-ai/dsh-api-settings-controller/remote'
@@ -158,7 +164,8 @@ export async function apply(ctx: Context): Promise<() => Promise<void>> {
   try {
     for (const contribution of [
       agentPresetsRemote, commandsRemote, settingsControllerRemote, goalsRemote, llmRemote, dynamicRemote,
-      pluginInventoryRemote, messageFeedbackRemote, sessionFeedbackRemote, fileUploadsRemote, sessionReferencesRemote,
+      pluginInventoryRemote, knowledgeRemote, localSkillImportRemote, messageFeedbackRemote,
+      sessionFeedbackRemote, fileUploadsRemote, sessionReferencesRemote,
       permissionPresetsRemote, subagentsRemote, sessionRemote, workspaceRemote, workspaceFilesRemote, terminalRemote,
     ]) {
       disposers.push(await ctx.remote.$mount(contribution))

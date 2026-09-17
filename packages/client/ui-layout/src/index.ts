@@ -13,6 +13,7 @@ import { dirname, join } from 'node:path'
 import { tmpdir } from 'node:os'
 import { randomUUID } from 'node:crypto'
 import { materializeSkillArchive } from './skill-archive-resources.ts'
+import { runtimeToolName } from './runtime-tool-name.ts'
 
 export { AUTHORING_SETTINGS_NAMESPACE, AuthoringSettingsSchema }
 export type { AuthoringItem, AuthoringSettings } from './authoring-settings.ts'
@@ -20,53 +21,6 @@ export type { AuthoringItem, AuthoringSettings } from './authoring-settings.ts'
 function runtimeSkillContent(item: AuthoringItem): string {
   const steps = item.steps.filter(step => step.trim() !== '').map((step, index) => `${index + 1}. ${step.trim()}`)
   return [item.body.trim(), steps.join('\n')].filter(Boolean).join('\n\n') || item.description.trim()
-}
-
-function runtimeToolName(kind: string, item: AuthoringItem): string {
-  const stableId = item.id.toLowerCase().replace(/[^a-z0-9-]+/g, '-')
-  return `user_${kind}_${stableId.replace(/^-+|-+$/g, '') || 'item'}`
-}
-
-function searchKnowledge(item: AuthoringItem, query: string): { title: string; content: string }[] {
-  const documents = item.documents?.length === 0 || item.documents === undefined
-    ? item.body.trim() === '' ? [] : [{ title: item.title, content: item.body }]
-    : item.documents
-  const terms = query.toLocaleLowerCase().split(/\s+/).filter(Boolean)
-  return documents
-    .map(document => ({ document, score: terms.reduce((score, term) => score + (document.content.toLocaleLowerCase().includes(term) ? 1 : 0), 0) }))
-    .filter(result => terms.length === 0 || result.score > 0)
-    .sort((left, right) => right.score - left.score)
-    .slice(0, 5)
-    .map(({ document }) => ({ title: document.title, content: document.content.slice(0, 2_000) }))
-}
-
-function knowledgeTool(item: AuthoringItem): ToolDefinition {
-  return {
-    name: runtimeToolName('knowledge', item),
-    description: item.description || `Search the ${item.title} knowledge base.`,
-    parameters: {
-      type: 'object', additionalProperties: false,
-      properties: { query: { type: 'string', description: 'Keywords to search for.' } },
-      required: ['query'],
-    },
-    output: {
-      schema: {
-        type: 'object', additionalProperties: false,
-        properties: {
-          results: {
-            type: 'array', items: {
-              type: 'object', additionalProperties: false,
-              properties: { title: { type: 'string' }, content: { type: 'string' } },
-              required: ['title', 'content'],
-            },
-          },
-        },
-        required: ['results'],
-      },
-      render: (_args, value) => [{ type: 'text', text: JSON.stringify(value) }],
-    },
-    execute: async args => ({ results: searchKnowledge(item, String((args as { query?: unknown }).query ?? '')) }),
-  }
 }
 
 function instructionTool(kind: 'workflow' | 'tool', item: AuthoringItem): ToolDefinition {
@@ -111,7 +65,10 @@ export function apply(ctx?: Context): void {
             if (item?.archive === undefined) return undefined
             options.signal?.throwIfAborted()
             const documentPath = runtimeCtx.settings.documentPath
-            const directory = await materializeSkillArchive(item.archive, documentPath === undefined ? temporaryHome : dirname(documentPath))
+            const directory = await materializeSkillArchive(
+              item.archive,
+              documentPath === undefined ? temporaryHome : dirname(documentPath),
+            )
             options.signal?.throwIfAborted()
             control.signal.throwIfAborted()
             return { ...candidate, content: runtimeSkillContent(item), resourceBase: { kind: 'directory', path: directory } }
@@ -151,7 +108,6 @@ export function apply(ctx?: Context): void {
       const syncTools = (value: AuthoringSettings): void => {
         for (const dispose of disposers) dispose()
         disposers = [
-          ...value.knowledge.filter(item => item.enabled).map(item => runtimeCtx.tools.register(knowledgeTool(item))),
           ...value.workflows.filter(item => item.enabled).map(item => runtimeCtx.tools.register(instructionTool('workflow', item))),
           ...value.tools.filter(item => item.enabled).map(item => runtimeCtx.tools.register(instructionTool('tool', item))),
         ]

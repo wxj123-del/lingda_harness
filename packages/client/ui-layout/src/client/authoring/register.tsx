@@ -6,12 +6,14 @@ import type { SettingsScope } from '@deepseek-ai/dsh-client-ui-settings/client'
 import type { MainPanelId } from '../service.ts'
 import type { createLayoutStore } from '../stores.ts'
 import type { AuthoringItem, AuthoringSettings, KnowledgeDocument } from '../../authoring-settings.ts'
-import { IconCodeOutline16, IconCordisPluginOutline14, IconDatabaseOutline16, IconEditOutline16, IconNewChatOutline16, IconSkillOutline16, IconPlusOutline16, IconCloseOutline16 } from '@deepseek-ai/dsh-client-ui-primitives'
+import { IconApiOutline14, IconCodeOutline16, IconCordisPluginOutline14, IconDatabaseOutline16, IconEditOutline16, IconNewChatOutline16, IconSkillOutline16, IconPlusOutline16, IconCloseOutline16 } from '@deepseek-ai/dsh-client-ui-primitives'
 import { Button } from '@deepseek-ai/dsh-client-ui-primitives'
 import { en, zh } from '../locales.ts'
 import css from './AuthoringPanel.module.css'
 import { StepsEditor } from './StepsEditor.tsx'
 import { SkillsPanel } from './SkillsPanel.tsx'
+import { ToolsPanel, type ToolsPanelProps } from './ToolsPanel.tsx'
+import { KnowledgePanel, type KnowledgePanelProps } from './KnowledgePanel.tsx'
 
 declare module '@deepseek-ai/dsh-client-ui-slots' {
   interface LocaleNamespaceMap { layout: keyof typeof zh }
@@ -39,7 +41,7 @@ function iconFor(kind: AuthoringKind, size = 16) {
   if (kind === 'knowledge') return <IconDatabaseOutline16 size={size} />
   if (kind === 'workflow') return <IconCodeOutline16 size={size} />
   if (kind === 'skill') return <IconSkillOutline16 size={size} />
-  return <IconCordisPluginOutline14 size={size} />
+  return <IconApiOutline14 size={size} />
 }
 
 function useScope(scope: SettingsScope<AuthoringSettings>): AuthoringSettings {
@@ -235,6 +237,14 @@ export function registerAuthoringSurface(
     subscribe: (listener: () => void) => instance.subscribe(listener),
   }
   const select = (id: string | null) => { ctx.layout.selectPanel(id as MainPanelId | null) }
+  const saveTool = async (item: AuthoringItem): Promise<void> => {
+    const snapshot = scope.getSnapshot()
+    if (!snapshot.writable || snapshot.value === undefined) throw new Error('Tool storage unavailable')
+    const items = snapshot.value.tools
+    await scope.set('tools', items.some(candidate => candidate.id === item.id)
+      ? items.map(candidate => candidate.id === item.id ? item : candidate)
+      : [...items, item])
+  }
   const saveSkill = async (item: AuthoringItem): Promise<void> => {
     const snapshot = scope.getSnapshot()
     if (!snapshot.writable || snapshot.value === undefined) throw new Error('Skill storage unavailable')
@@ -277,14 +287,64 @@ export function registerAuthoringSurface(
   }))
   for (const kind of ['knowledge', 'workflow', 'skill', 'tool'] as const) {
     const key = PANEL_IDS[kind] as MainPanelId
+    if (kind === 'knowledge') {
+      ctx.inject(['remote', 'remote.knowledge'], (knowledgeContext: Context) => {
+        const remote = knowledgeContext.remote.knowledge
+        const callbacks: Omit<KnowledgePanelProps, 'legacy' | 'writable' | 't'> = {
+          overview: () => remote.overview(), get: id => remote.get(id), save: draft => remote.save(draft),
+          remove: (id, revision) => remote.deleteBase(id, revision), reindex: id => remote.reindex(id),
+          preview: (documents, split) => remote.preview(documents, split),
+          search: (query, id, signal) => remote.search(query, id, signal),
+          importLegacy: items => remote.importLegacy(items),
+        }
+        knowledgeContext.slots.inject('main', () => knowledgeContext.slots.register({
+          name: 'main', key, locale: 'layout',
+          inject: () => ({ ...callbacks, hooks: { authoring: scope } }),
+        }, (props) => {
+          const snapshot = props.useAuthoring(value => value)
+          return <KnowledgePanel {...props} legacy={snapshot.value?.knowledge} writable={snapshot.writable} t={t} />
+        }))
+      })
+      continue
+    }
+    if (kind === 'tool') {
+      ctx.inject(['remote', 'remote.pluginInventory'], (toolContext: Context) => {
+        const loadUsage: ToolsPanelProps['loadUsage'] = async (signal) => {
+          const result = await toolContext.remote.pluginInventory.toolUsage(signal)
+          if (!result.ok) throw new Error(`pluginInventory.toolUsage failed: ${result.error.code}`)
+          return result.value
+        }
+        toolContext.slots.inject('main', () => toolContext.slots.register({
+          name: 'main', key, locale: 'layout',
+          inject: () => ({ hooks: { authoring: scope }, loadUsage, saveTool }),
+        }, (props) => {
+          const snapshot = props.useAuthoring(value => value)
+          return <ToolsPanel items={snapshot.value?.tools ?? []} writable={snapshot.writable}
+            loadUsage={props.loadUsage} save={props.saveTool} t={t} />
+        }))
+      })
+      continue
+    }
     if (kind === 'skill') {
-      ctx.slots.inject('main', () => ctx.slots.register({
-        name: 'main', key, locale: 'layout',
-        inject: () => ({ hooks: { authoring: scope }, saveSkill, invokeSkill }),
-      }, (props) => {
-        const snapshot = props.useAuthoring(value => value)
-        return <SkillsPanel items={snapshot.value?.skills ?? []} writable={snapshot.writable} loading={snapshot.status === 'loading'} save={props.saveSkill} invoke={props.invokeSkill} t={t} />
-      }))
+      ctx.inject(['remote', 'remote.localSkillImport'], (skillContext: Context) => {
+        const scanLocalSkills = async () => {
+          const result = await skillContext.remote.localSkillImport.list()
+          if (!result.ok) throw new Error(`localSkillImport.list failed: ${result.error.code}`)
+          return result.value
+        }
+        const loadLocalSkill = async (id: string) => {
+          const result = await skillContext.remote.localSkillImport.archive(id)
+          if (!result.ok) throw new Error(`localSkillImport.archive failed: ${result.error.code}`)
+          return result.value
+        }
+        skillContext.slots.inject('main', () => skillContext.slots.register({
+          name: 'main', key, locale: 'layout',
+          inject: () => ({ hooks: { authoring: scope }, saveSkill, invokeSkill, scanLocalSkills, loadLocalSkill }),
+        }, (props) => {
+          const snapshot = props.useAuthoring(value => value)
+          return <SkillsPanel items={snapshot.value?.skills ?? []} writable={snapshot.writable} loading={snapshot.status === 'loading'} save={props.saveSkill} invoke={props.invokeSkill} scanLocalSkills={props.scanLocalSkills} loadLocalSkill={props.loadLocalSkill} t={t} />
+        }))
+      })
       continue
     }
     ctx.slots.inject('main', () => ctx.slots.register({ name: 'main', key, locale: 'layout' }, () => <AuthoringPanel kind={kind} scope={scope} t={t} />))

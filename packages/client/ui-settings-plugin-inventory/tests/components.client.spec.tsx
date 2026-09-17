@@ -7,8 +7,6 @@ import type {
   PluginInventorySettingsTabProps,
 } from '../src/client/PluginInventorySettingsTab.tsx'
 import { en, type PluginInventoryLocaleKey } from '../src/client/locales.ts'
-import type { AuthoringSettings } from '@deepseek-ai/dsh-client-ui-layout/client'
-import type { SettingsScope } from '@deepseek-ai/dsh-client-ui-settings/client'
 
 afterEach(cleanup)
 
@@ -27,7 +25,7 @@ function props(
     t,
     list,
     presetName,
-  } as PluginInventorySettingsTabProps
+  }
 }
 
 /** A deployment with a roster: one failed global row, two preset-provided rows. */
@@ -84,11 +82,6 @@ async function renderReady(snapshot: Snapshot = SNAPSHOT): Promise<ReturnType<ty
 
 const globalToggle = (): HTMLElement =>
   screen.getByRole('button', { name: (name: string) => name.startsWith(en.globalTitle) })
-
-function authoringScope(value: AuthoringSettings): SettingsScope<AuthoringSettings> {
-  const snapshot = { status: 'ready' as const, value, base: undefined, user: value, revision: 1, writable: true, mode: 'host' as const }
-  return { getSnapshot: () => snapshot, subscribe: () => () => {}, mutate: async () => {}, set: async () => {}, unset: async () => {} }
-}
 
 describe('PluginInventorySettingsTab', () => {
   it('shows the default preset first and keeps the global plane collapsed', async () => {
@@ -354,49 +347,6 @@ describe('PluginInventorySettingsTab', () => {
     fireEvent.click(modelsCategory as HTMLElement)
     expect(view.container.querySelector('[data-plugin-entry="image-gen"]')).toBeTruthy()
     expect(view.container.querySelector('[data-plugin-entry="tts"]')).toBeTruthy()
-  })
-
-  it('renders each user-authored plugin with its own details and category', async () => {
-    const custom = {
-      skills: [
-        { id: 'skill-a', title: 'Skill A', description: 'A private skill', enabled: true, body: 'Do A', steps: ['step A'], updatedAt: 1 },
-        { id: 'skill-b', title: 'Skill B', description: 'B private skill', enabled: true, body: 'Do B', steps: ['step B'], updatedAt: 1 },
-      ],
-      workflows: [
-        { id: 'workflow-a', title: 'Workflow A', description: 'A workflow', enabled: true, body: '', steps: ['step A'], updatedAt: 1 },
-        { id: 'workflow-b', title: 'Workflow B', description: 'B workflow', enabled: false, body: '', steps: ['step B'], updatedAt: 1 },
-      ],
-      tools: [],
-      knowledge: [
-        { id: 'knowledge-c', title: 'Knowledge C', description: 'C docs', enabled: true, body: '', steps: [], documents: [{ id: 'doc-c', title: 'Doc C', content: 'C content', updatedAt: 1 }], updatedAt: 1 },
-        { id: 'knowledge-d', title: 'Knowledge D', description: 'D docs', enabled: true, body: '', steps: [], documents: [{ id: 'doc-d', title: 'Doc D', content: 'D content', updatedAt: 1 }], updatedAt: 1 },
-      ],
-    } satisfies AuthoringSettings
-    const view = render(<PluginInventorySettingsTab {...props(async () => ({ entries: [] }))} authoring={authoringScope(custom)} />)
-    await screen.findByRole('searchbox', { name: en.search })
-
-    expect(view.container.querySelector('[data-plugin-category="skills"]')?.textContent).toContain('4')
-    expect(screen.getByText('Skill A')).toBeTruthy()
-    expect(screen.getByText('Skill B')).toBeTruthy()
-    expect(screen.getByText('Workflow A')).toBeTruthy()
-    expect(screen.getByText('Workflow B')).toBeTruthy()
-    expect(screen.getByText('Knowledge C')).toBeTruthy()
-    expect(screen.getByText('Knowledge D')).toBeTruthy()
-    fireEvent.click(view.container.querySelector('[data-plugin-category="rag"]') as HTMLElement)
-    expect(screen.queryByText(en.emptyCategory)).toBeNull()
-    fireEvent.click(view.container.querySelector('[data-plugin-category="all"]') as HTMLElement)
-
-    fireEvent.click(screen.getByRole('button', { name: 'Skill A, Enabled' }))
-    expect(screen.getByText(en.descriptionLabel).nextElementSibling?.textContent).toBe('A private skill')
-    expect(screen.getByText(en.stepCount).nextElementSibling?.textContent).toBe('1')
-
-    fireEvent.change(screen.getByRole('searchbox', { name: en.search }), { target: { value: 'Knowledge C' } })
-    expect(screen.getByText('Knowledge C')).toBeTruthy()
-    expect(screen.queryByText('Skill A')).toBeNull()
-    expect(screen.queryByText('Skill B')).toBeNull()
-    expect(screen.queryByText('Workflow A')).toBeNull()
-    expect(screen.queryByText('Workflow B')).toBeNull()
-    expect(screen.queryByText('Knowledge D')).toBeNull()
   })
 
   it('renders a rosterless deployment as one expanded global list', async () => {

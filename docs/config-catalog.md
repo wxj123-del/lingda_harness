@@ -1057,6 +1057,20 @@ export interface Config {
 
 Source: [`packages/host/webserver/src/index.ts:59`](../packages/host/webserver/src/index.ts)
 
+<a id="deepseek-aidsh-image-generation"></a>
+
+## `@deepseek-ai/dsh-image-generation`
+
+Requires: `tools` · `attachments` · `credentials`
+
+```ts config-catalog
+export type Config = MediaConfig
+```
+
+Depends on: [`MediaConfig`](../packages/media/generation-core/src/index.ts)
+
+Source: [`packages/media/image-generation/src/index.ts:11`](../packages/media/image-generation/src/index.ts)
+
 <a id="deepseek-aidsh-invariants"></a>
 
 ## `@deepseek-ai/dsh-invariants`
@@ -2354,6 +2368,20 @@ export interface Config {
 
 Source: [`packages/skill/skill-filesystem/src/index.ts:49`](../packages/skill/skill-filesystem/src/index.ts)
 
+<a id="deepseek-aidsh-speech-generation"></a>
+
+## `@deepseek-ai/dsh-speech-generation`
+
+Requires: `tools` · `attachments` · `credentials`
+
+```ts config-catalog
+export type Config = MediaConfig
+```
+
+Depends on: [`MediaConfig`](../packages/media/generation-core/src/index.ts)
+
+Source: [`packages/media/speech-generation/src/index.ts:11`](../packages/media/speech-generation/src/index.ts)
+
 <a id="deepseek-aidsh-spill-local"></a>
 
 ## `@deepseek-ai/dsh-spill-local`
@@ -2398,10 +2426,12 @@ export interface Config {
    * this is spilled and replaced with a preview derived from this same budget.
    */
   maxInlineBytes?: number
+  /** Tool names this policy bounds; omitted applies to all eligible tools, while an empty list applies to none. */
+  toolNames?: string[] | undefined
 }
 ```
 
-Source: [`packages/spill/spill-policy/src/index.ts:61`](../packages/spill/spill-policy/src/index.ts)
+Source: [`packages/spill/spill-policy/src/index.ts:62`](../packages/spill/spill-policy/src/index.ts)
 
 <a id="deepseek-aidsh-ssh"></a>
 
@@ -2897,6 +2927,36 @@ export interface Config {
 
 Source: [`packages/shell/tool-bash-persistent/src/index.ts:435`](../packages/shell/tool-bash-persistent/src/index.ts)
 
+<a id="deepseek-aidsh-tool-discovery"></a>
+
+## `@deepseek-ai/dsh-tool-discovery`
+
+Requires: `tools` · `systemPrompt` · `sessionQuery`
+
+```ts config-catalog
+/** Per-preset native catalog and discovery budgets. */
+export interface Config {
+  /** Initial tool count, including pinned tools but excluding tool_search. */
+  initialTools: number
+  /** Maximum loaded tools, including pinned tools but excluding tool_search. */
+  maxTools: number
+  /** Always-visible tool names, when registered and allowed in this scope. */
+  pinnedTools: string[]
+  /** Ordered cold-start preferences for tools without recorded calls. */
+  fallbackTools: string[]
+  /** Maximum recent other Sessions read once when initializing this agent. */
+  historySessions: number
+  /** Maximum matching tools loaded by one search. */
+  searchLimit: number
+  /** Maximum characters of each result's description. */
+  descriptionChars: number
+  /** Maximum UTF-8 bytes of the complete rendered search result. */
+  resultMaxBytes: number
+}
+```
+
+Source: [`packages/preset/tool-discovery/src/index.ts:18`](../packages/preset/tool-discovery/src/index.ts)
+
 <a id="deepseek-aidsh-tool-fs"></a>
 
 ## `@deepseek-ai/dsh-tool-fs`
@@ -3129,6 +3189,8 @@ Requires: `agents` · `tools` · `skills`
 export interface Config {
   /** Maximum normalized description length rendered in the session catalog; minimum 3. */
   catalogDescriptionMaxLength?: number
+  /** Catalog framing: full guidance by default, or compact guidance with the same entries and loading rules. */
+  catalogStyle?: 'full' | 'compact'
 }
 ```
 
@@ -3635,6 +3697,7 @@ These load from a `cordis.yml` entry with no `config:` block; they declare no co
 - `@deepseek-ai/dsh-client-ui-sidebar-right` ([`packages/client/ui-sidebar-right/src/index.ts`](../packages/client/ui-sidebar-right/src/index.ts))
 - `@deepseek-ai/dsh-client-ui-sidebar-terminal` ([`packages/client/ui-sidebar-terminal/src/index.ts`](../packages/client/ui-sidebar-terminal/src/index.ts))
 - `@deepseek-ai/dsh-client-ui-skill` ([`packages/client/ui-skill/src/index.ts`](../packages/client/ui-skill/src/index.ts))
+- `@deepseek-ai/dsh-client-ui-step-insight` ([`packages/client/ui-step-insight/src/index.ts`](../packages/client/ui-step-insight/src/index.ts))
 - `@deepseek-ai/dsh-client-ui-subagent` ([`packages/client/ui-subagent/src/index.ts`](../packages/client/ui-subagent/src/index.ts))
 - `@deepseek-ai/dsh-client-ui-theme` ([`packages/client/ui-theme/src/index.ts`](../packages/client/ui-theme/src/index.ts))
 - `@deepseek-ai/dsh-client-ui-tool` ([`packages/client/ui-tool/src/index.ts`](../packages/client/ui-tool/src/index.ts))
@@ -3728,6 +3791,7 @@ Imported as libraries by other packages; a `cordis.yml` cannot load them.
 - `@deepseek-ai/dsh-experimental-browser-use-runtime` ([`packages/experimental/browser-use-runtime/src/index.ts`](../packages/experimental/browser-use-runtime/src/index.ts))
 - `@deepseek-ai/dsh-experimental-webworker-packer` ([`packages/experimental/webworker-packer/src/index.ts`](../packages/experimental/webworker-packer/src/index.ts))
 - `@deepseek-ai/dsh-experimental-webworker-runtime` ([`packages/experimental/webworker-runtime/src/index.ts`](../packages/experimental/webworker-runtime/src/index.ts))
+- `@deepseek-ai/dsh-generation-core` ([`packages/media/generation-core/src/index.ts`](../packages/media/generation-core/src/index.ts))
 - `@deepseek-ai/dsh-home-paths` ([`packages/util/home-paths/src/index.ts`](../packages/util/home-paths/src/index.ts))
 - `@deepseek-ai/dsh-hook-protocol` ([`packages/hooks/hook-protocol/src/index.ts`](../packages/hooks/hook-protocol/src/index.ts))
 - `@deepseek-ai/dsh-http-proxy` ([`packages/util/http-proxy/src/index.ts`](../packages/util/http-proxy/src/index.ts))

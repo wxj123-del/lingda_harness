@@ -37,8 +37,11 @@ External packages installed for runtime use or distributed inside the prebuilt b
 | [`@babel/code-frame`](https://github.com/babel/babel) | MIT |
 | [`@browserbasehq/stagehand`](https://github.com/browserbase/stagehand) | MIT |
 | [`@earendil-works/pi-ai`](https://github.com/earendil-works/pi) | MIT |
+| [`@huggingface/transformers`](https://github.com/huggingface/transformers.js) | Apache-2.0 |
 | [`@joplin/turndown-plugin-gfm`](https://github.com/laurent22/joplin-turndown-plugin-gfm) | MIT |
 | [`@jridgewell/gen-mapping`](https://github.com/jridgewell/sourcemaps) | MIT |
+| [`@lancedb/lancedb`](https://github.com/lancedb/lancedb) | Apache-2.0 |
+| [`@langchain/textsplitters`](https://github.com/git@github.com:langchain-ai/langchainjs) | MIT |
 | [`@lexical/history`](https://github.com/facebook/lexical) | MIT |
 | [`@lexical/plain-text`](https://github.com/facebook/lexical) | MIT |
 | [`@lexical/text`](https://github.com/facebook/lexical) | MIT |

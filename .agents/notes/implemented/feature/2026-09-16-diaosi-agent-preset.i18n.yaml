@@ -2,5 +2,5 @@
 # side as of the last confirmed-consistent state. Both languages carry equal authority;
 # after editing either side, bring the other along and re-record with:
 #   pnpm run verify-translation-pairing --write .agents/notes/implemented/feature/2026-09-16-diaosi-agent-preset.md
-2026-09-16-diaosi-agent-preset.md: e8e10ef8a6b98c8df5bce2bcfc935f05ef3f39db
-2026-09-16-diaosi-agent-preset.zh.md: c981a7693a087e4e10f023cf0c0a5a857d7e2d15
+2026-09-16-diaosi-agent-preset.md: 172f93d97e16e6d5c8d35978c96c99ab8263448e
+2026-09-16-diaosi-agent-preset.zh.md: 2d6a91720261ba6e5cf075a39d9911a5ed09ac35

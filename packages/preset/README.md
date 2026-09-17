@@ -26,6 +26,7 @@ The preset group provides per-session agent composition: an agent preset is a di
 |---|---|---|
 | [`agent-presets`](agent-presets/README.md) | Preset roster, discovery over trusted and user roots, per-agent composition, copy-only authoring | `ctx.agentPresets` |
 | [`persona`](persona/README.md) | The composable persona row a preset mounts to shadow or replace the deployment persona | — |
+| [`tool-discovery`](tool-discovery/README.md) | Frequency-ranked native tool selection and bounded on-demand discovery | — |
 
 -----
 

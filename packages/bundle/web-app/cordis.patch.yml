@@ -98,6 +98,16 @@
     - id: plugin-inventory
       name: '@deepseek-ai/dsh-host-plugin-inventory'
 
+    # Local multi-library knowledge retrieval, backed by LanceDB and a lazy
+    # on-device Chinese embedding model.
+    - id: knowledge
+      name: '@deepseek-ai/dsh-host-knowledge'
+
+    # Read-only discovery and bounded archive packaging for local Codex and
+    # Agents Skills. The browser can only request candidates returned by a scan.
+    - id: local-skill-import
+      name: '@deepseek-ai/dsh-host-local-skill-import'
+
     # Session commands, cold reads, and live control over Typert Remote.
     - id: session-controller
       name: '@deepseek-ai/dsh-api-session-controller'

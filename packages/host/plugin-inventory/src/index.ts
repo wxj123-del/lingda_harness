@@ -4,6 +4,8 @@ import type { Context, FiberState } from '@deepseek-ai/cordis'
 import type {} from '@deepseek-ai/cordis-plugin-loader'
 // Type-only: the optional agent-preset roster resolved through `ctx.get`.
 import type {} from '@deepseek-ai/dsh-agent-presets'
+import type {} from '@deepseek-ai/dsh-session-query'
+import { readToolUsage } from './tool-usage.ts'
 import { TypertRemoteService, Remote } from '@deepseek-ai/dsh-typert-protocol'
 // Typert-generated ./typert and ./remote artifacts import Zod at runtime.
 import type {} from 'zod'
@@ -13,6 +15,7 @@ import type {
   PluginFiberPhase,
   PluginInventoryEntry,
   PluginInventorySnapshot,
+  ToolUsageSnapshot,
 } from './types.ts'
 
 export type * from './types.ts'
@@ -48,6 +51,19 @@ export class PluginInventoryGateway extends TypertRemoteService {
 
   constructor(ctx: Context) {
     super(ctx, 'pluginInventory')
+  }
+
+  /**
+   * Aggregate tool calls from saved and live Sessions, including archived Sessions.
+   * @param signal - cancellation for Session enumeration and log reads.
+   * @returns Per-tool counts excluding inherited fork prefixes; unreadable Sessions are reported.
+   * @throws when the Session query service is unavailable or enumeration fails.
+   */
+  @Remote('toolUsage')
+  async toolUsage(signal: AbortSignal): Promise<ToolUsageSnapshot> {
+    const query = this.ctx.get('sessionQuery')
+    if (query === undefined) throw new Error('Tool usage requires the sessionQuery service')
+    return readToolUsage(query, signal)
   }
 
   /**

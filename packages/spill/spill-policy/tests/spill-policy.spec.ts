@@ -10,6 +10,7 @@
 
 import { describe, expect, it, onTestFinished, vi } from 'vitest'
 import { Context } from '@deepseek-ai/cordis'
+import { createScope } from '@deepseek-ai/dsh-scope'
 import Loader from '@deepseek-ai/cordis-plugin-loader'
 import { createUserMessage, ToolCallId } from '@deepseek-ai/dsh-llm'
 import type { ContentBlock } from '@deepseek-ai/dsh-llm'
@@ -242,6 +243,33 @@ describe('outer PTC mode failure capture', () => {
 })
 
 describe('read skip', () => {
+  it.each([false, true])('bounds only selected scoped tools before the host policy, host mounted last: %s', async (hostLast) => {
+    const { ctx, spill } = await setup({})
+    const call = exec('bash')
+    const scope = createScope(ctx, call.agent!)
+    onTestFinished(async () => { await ctx.fiber.dispose() })
+    const mountHost = () => ctx.plugin(SpillPolicy, { maxInlineBytes: 1000 })
+    if (!hostLast) await mountHost()
+    const scoped = await scope.ctx.plugin(SpillPolicy, { maxInlineBytes: 500, toolNames: ['bash'] })
+    if (hostLast) await mountHost()
+    const full = '完整输出'.repeat(500)
+    ctx.tools.register(textTool('bash', full))
+    ctx.tools.register(textTool('skill', 'instructions'.repeat(60)))
+
+    const result = await ctx.tools.execute(call)
+    expect(result.isError).toBe(false)
+    expect(Buffer.byteLength(textOf(result.content))).toBeLessThanOrEqual(500)
+    expect(spill?.saves).toHaveLength(1)
+    expect(spill?.saves[0]?.content).toBe(full)
+    expect(textOf((await ctx.tools.execute({ ...call, name: 'skill' })).content)).toBe('instructions'.repeat(60))
+    const other = await ctx.tools.execute(exec('bash', 'other'))
+    expect(Buffer.byteLength(textOf(other.content))).toBeGreaterThan(500)
+    expect(Buffer.byteLength(textOf(other.content))).toBeLessThanOrEqual(1000)
+    await scoped.dispose()
+    expect(Buffer.byteLength(textOf((await ctx.tools.execute(call)).content))).toBeGreaterThan(500)
+    await scope.dispose()
+  })
+
   it('never spills the read tool result (avoids a read → spill → read loop)', async () => {
     const { ctx, spill } = await setup({ maxInlineBytes: 10 })
     ctx.tools.register(textTool('read', 'x'.repeat(1000)))

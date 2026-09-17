@@ -29,7 +29,9 @@ kind: "package-reference"
 
 随附 Web 的 `standard`、`diaosi`、`ptc` 与 `cordis` preset 包含[显式文件交付](../../client/ui-deliverables/README.zh.md#explicit-deliveries)。`minimal` preset 仅提供持久 shell，并以包含会话所配置模型和提供方的完整人设作为系统提示词。它会抑制其他提示词段落和运行时上下文。
 
-需要精简日常工具集时，可选择 `diaosi`（屌丝模式，Budget mode），使用文件编辑、Shell、搜索、Skills、任务跟踪和提问。它保留所选模型与项目指令，不加载委派、工作流、目标和计划模式工具，并要求定向搜索、分段读取。每次读取最多返回 120 行、8,000 字节的所选文本；搜索内联保留 40 个路径或匹配。通用文本结果使用宿主共享的 spill 策略，超过其 50,000 字节配置上限后变为附全文位置的预览。其私有压缩器在达到所选模型上下文窗口的 65% 时触发。这些是输出与压力限制，并非总 Token 预算或经过测量的节省保证。[组装文件](presets/diaosi/agent.cordis.yml)定义会话专属配置；[决策记录](../../../.agents/notes/implemented/feature/2026-09-16-diaosi-agent-preset.zh.md)说明取舍。
+`diaosi` 使用[按需工具发现](../tool-discovery/README.zh.md)：初始提供四个工具，其中包括 `read` 和 `skill`，另加 `tool_search`；其他初始名额优先分配给历史实际调用较多的工具。每次搜索最多加载两个相关工具，后续请求最多保留八个工具和搜索入口。继承的媒体与 MCP schema 也参与同一筛选，不再无条件出现。更新后的预设适用于新建对话，已加载的代次保留原配置。
+
+需要精简日常工具集时，可选择 `diaosi`（屌丝模式，Budget mode），使用文件编辑、Shell、搜索、Skills、任务跟踪和提问。它保留所选模型与项目指令，不加载委派、工作流、目标和计划模式工具，并要求定向搜索、分段读取和简洁回复。每次读取最多返回 120 行、8,000 字节的所选文本；搜索内联保留 40 个路径或匹配。作用域 spill 策略将过大的 Shell、搜索、网页及任务输出文本变为 8,000 字节以内的预览并附全文位置；其他工具沿用既有策略。精简 Skill 目录保留名称、描述和完整指令加载。其私有压缩器在达到所选模型上下文窗口的 65% 时触发。这些是输出与压力限制，并非总 Token 预算或经过测量的节省保证。[组装文件](presets/diaosi/agent.cordis.yml)定义会话专属配置；[决策记录](../../../.agents/notes/implemented/feature/2026-09-16-diaosi-agent-preset.zh.md)说明取舍。
 
 ### preset 给会话带来什么
 

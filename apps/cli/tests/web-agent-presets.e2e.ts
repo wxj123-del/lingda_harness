@@ -21,7 +21,11 @@ import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest'
 import { SUBAGENT_MODEL_SELECTION_SETTINGS_NAMESPACE } from '@deepseek-ai/dsh-tool-subagent/model-selection-settings'
 import { SETTINGS_NAMESPACE, SHIPPED_PRESET_ROOT } from '@deepseek-ai/dsh-agent-presets'
 import { applyChildComposition, childSessionMeta } from '@deepseek-ai/dsh-subagent'
-import { ToolCallId } from '@deepseek-ai/dsh-llm'
+import { ToolCallId, createUserMessage } from '@deepseek-ai/dsh-llm'
+import { defineTool } from '@deepseek-ai/dsh-tools'
+import { MockAdapter, toolCallResponse, textResponse } from '../../../packages/core/agent-loop/tests/mock-adapter.ts'
+import type { LocalEmbedding } from '../../../packages/host/knowledge/src/embedding.ts'
+import type {} from '../../../packages/host/knowledge/src/index.ts'
 import type { BasicCompactionEngine } from '@deepseek-ai/dsh-compaction-basic'
 import type {} from '@deepseek-ai/dsh-skill'
 import type {} from '@deepseek-ai/dsh-tools'
@@ -200,6 +204,53 @@ beforeAll(async () => {
 }, 120_000)
 
 describe('the shipped Web composition', () => {
+  it('retrieves knowledge through the preset tool catalog and persists source excerpts in the session', async () => {
+    const root = await mkdtemp(join(tmpdir(), 'dsh-knowledge-composition-'))
+    const knowledgeCtx = await bootWeb(join(root, 'settings.yaml'), [{ id: 'session-title-llm', disabled: true }])
+    // Loader imports the built Host; replace only its external embedding inference.
+    const inference = (knowledgeCtx.knowledge as unknown as { embedding: LocalEmbedding }).embedding
+    const embed = vi.spyOn(inference, 'embed').mockImplementation(async texts => texts.map(() => [1, 0, 0]))
+    try {
+      await knowledgeCtx.knowledge.save({
+        id: 'knowledge-fixture' as never, title: '差旅知识库', description: '', enabled: true,
+        revision: 0, split: { mode: 'recursive', size: 400, overlap: 60 },
+        documents: [{ id: 'travel' as never, title: '报销规则', content: '住宿每晚最多报销四百元，需要电子发票和出差审批单。', updatedAt: 1 }],
+      })
+      await vi.waitFor(async () => expect((await knowledgeCtx.knowledge.overview()).bases[0]?.index.status).toBe('ready'))
+      const adapter = new MockAdapter([
+        toolCallResponse('find-knowledge', 'tool_search', { query: 'knowledge' }),
+        toolCallResponse('list-knowledge', 'knowledge_list', {}),
+        toolCallResponse('search-knowledge', 'knowledge_search', { query: '酒店费用和凭证', baseId: 'knowledge-fixture' }),
+        textResponse('住宿每晚最多报销四百元，需要电子发票和出差审批单。来源：差旅知识库 / 报销规则。'),
+      ])
+      const removeAdapter = knowledgeCtx.llm.registerAdapter(['knowledge-fixture'], adapter)
+      const handle = await knowledgeCtx.agents.create({
+        sessionId: SessionId('knowledge-retrieval'), meta: { cwd: root },
+        agentOptions: { provider: 'knowledge-fixture', model: 'fixture' },
+        setup: agentCtx => knowledgeCtx.agentPresets.mount(agentCtx, 'diaosi').then(() => undefined),
+      })
+      try {
+        expect(toolNames(knowledgeCtx, handle.agent)).toEqual(expect.arrayContaining(['knowledge_list', 'knowledge_search']))
+        handle.agent.followup(createUserMessage({ source: { kind: 'user' }, content: [{ type: 'text', text: '查询知识库：出差酒店费用和凭证。' }] }))
+        await handle.agent.whenIdle()
+        expect(adapter.requests).toHaveLength(4)
+        const observation = await knowledgeCtx.sessionQuery.observeSession(handle.agent.session.id, { projectionMode: 'none' })
+        try {
+          const results = observation.events.filter(event => event.type === 'tool/result').map(event => event.data.message.content)
+          expect(results).toHaveLength(3)
+          expect(results).toMatchSnapshot('knowledge retrieval source excerpts')
+          expect(adapter.requests[3]?.messages.some(message => JSON.stringify(message).includes('住宿每晚最多报销四百元'))).toBe(true)
+        } finally { observation[Symbol.dispose]() }
+      } finally { await handle.dispose(); removeAdapter() }
+      await knowledgeCtx.knowledge.deleteBase('knowledge-fixture' as never, 1)
+      expect(toolNames(knowledgeCtx)).not.toContain('knowledge_search')
+    } finally {
+      embed.mockRestore()
+      await knowledgeCtx.fiber.dispose()
+      await rm(root, { recursive: true, force: true })
+    }
+  })
+
   it('leaves the global tool layer empty', () => {
     // Every model-facing tool belongs to a preset, `ask_user_question`
     // included: a tool in the global layer reaches EVERY agent regardless of
@@ -293,9 +344,11 @@ describe('the shipped Web composition', () => {
     try {
       expect(toolNames(ctx, budget.agent).filter(name => name !== 'glob' && name !== 'grep')).toEqual([
         'ask_user_question', 'bash', 'edit', 'job_kill', 'job_list', 'job_output',
-        'present', 'read', 'read_image', 'skill', 'todo_write', 'web_fetch', 'web_search', 'write',
+        'present', 'read', 'read_image', 'skill', 'todo_write', 'tool_search', 'web_fetch', 'web_search', 'write',
       ])
       const assembly = await ctx.systemPrompt.assemble(assembleContextFor(budget.agent))
+      expect(assembly.tools).toHaveLength(5)
+      expect(assembly.tools.map(tool => tool.name)).toContain('tool_search')
       expect(renderPrompt(assembly)).toContain('powered by the custom-model model from the custom-provider provider')
       expect(assembly.sections.filter(section => section.name.startsWith('deployment:persona')))
         .toMatchSnapshot('diaosi persona')
@@ -324,9 +377,18 @@ describe('the shipped Web composition', () => {
       const shellArgs = { command: `cat '${spillPath}'`, description: 'Read the spill fixture' }
       const bounded = await execute(budget.agent, 'bash', shellArgs)
       expect(bounded).toContain('Full formatted result stored at:')
-      expect(Buffer.byteLength(bounded)).toBeLessThanOrEqual(50000)
+      expect(Buffer.byteLength(bounded)).toBeLessThanOrEqual(8000)
+      const savedPath = bounded.match(/Full formatted result stored at: (.+?)\. Use read/)?.[1]
+      expect(savedPath).toBeDefined()
+      const savedText = await readFile(savedPath!, 'utf8')
+      expect(savedText).not.toContain('Full formatted result stored at:')
+      expect(savedText).toContain('shell-output\n'.repeat(1000))
+      const originalPath = savedText.match(/full output: ([^\]]+)\]/)?.[1]
+      expect(originalPath).toBeDefined()
+      expect(await readFile(originalPath!, 'utf8')).toBe('shell-output\n'.repeat(5000))
       const standardOutput = await execute(standard.agent, 'bash', shellArgs)
       expect(standardOutput).toContain('Full formatted result stored at:')
+      expect(Buffer.byteLength(standardOutput)).toBeGreaterThan(8000)
       expect(Buffer.byteLength(standardOutput)).toBeLessThanOrEqual(50000)
 
       if (toolNames(ctx, budget.agent).includes('grep')) {
@@ -340,6 +402,105 @@ describe('the shipped Web composition', () => {
       await standard.dispose()
       await rm(directory, { recursive: true, force: true })
     }
+  })
+
+  it('discovers inherited media tools in diaosi and records the bounded catalogs seen by the model', async () => {
+    const root = await mkdtemp(join(tmpdir(), 'dsh-diaosi-discovery-'))
+    const ctx = await bootWeb(join(root, 'settings.yaml'), [{ id: 'session-title-llm', disabled: true }])
+    try {
+      const removeTools = ['generate_image', 'generate_speech', 'list_image_models', 'list_speech_models'].map(name =>
+        ctx.tools.register(defineTool({ name, description: `Fixture ${name}`, parameters: {},
+          output: { schema: { type: 'string' }, render: (_args, value) => [{ type: 'text', text: value }] },
+          async execute() { return 'media fixture completed' },
+        })))
+      const adapter = new MockAdapter([
+        toolCallResponse('find-image', 'tool_search', { query: 'generate_image' }),
+        toolCallResponse('use-image', 'generate_image', {}),
+        textResponse('done'),
+      ])
+      const removeAdapter = ctx.llm.registerAdapter(['discovery-fixture'], adapter)
+      const handle = await ctx.agents.create({
+        sessionId: SessionId('preset-diaosi-discovery'),
+        meta: { cwd: root },
+        agentOptions: { provider: 'discovery-fixture', model: 'fixture' },
+        setup: agentCtx => ctx.agentPresets.mount(agentCtx, 'diaosi').then(() => undefined),
+      })
+      try {
+        const full = ctx.tools.schemas(handle.agent)
+        const before = await ctx.systemPrompt.assemble(assembleContextFor(handle.agent))
+        expect(before.tools).toHaveLength(5)
+        expect(before.tools.map(tool => tool.name)).not.toContain('generate_image')
+        expect(JSON.stringify(before.tools).length).toBeLessThan(JSON.stringify(full).length / 2)
+        const errors: string[] = []
+        ctx.on('agent/error', ({ error }) => { errors.push(String(error)) })
+        handle.agent.followup(createUserMessage({ source: { kind: 'user' }, content: [{ type: 'text', text: 'Generate an image.' }] }))
+        await handle.agent.whenIdle()
+        expect(errors).toEqual([])
+        expect(adapter.requests).toHaveLength(3)
+        const catalogs = adapter.requests.map(request => request.tools?.map(tool => tool.name))
+        expect(catalogs[0]).not.toContain('generate_image')
+        expect(catalogs[1]).toContain('generate_image')
+        expect(catalogs[2]).toEqual(catalogs[1])
+        expect(catalogs.flat()).not.toContain('generate_speech')
+        const observation = await ctx.sessionQuery.observeSession(handle.agent.session.id, { projectionMode: 'none' })
+        try {
+          const headers = observation.events.filter(event => event.type === 'request/header').map(event => event.data.header.tools?.map(tool => tool.name))
+          expect(headers).toEqual([catalogs[0], catalogs[1]])
+          const results = observation.events.filter(event => event.type === 'tool/result')
+            .map(event => ({ content: event.data.message.content, meta: event.data.meta }))
+          expect({ catalogs, results, searchTool: before.tools.find(tool => tool.name === 'tool_search') }).toMatchSnapshot('diaosi on-demand media tools')
+        } finally { observation[Symbol.dispose]() }
+      } finally {
+        await handle.dispose()
+        removeAdapter()
+        for (const remove of removeTools) remove()
+      }
+    } finally {
+      await ctx.fiber.dispose()
+      await rm(root, { recursive: true, force: true })
+    }
+  })
+
+  it('keeps compact diaosi instructions and skill catalogs in recorded requests without changing standard', async () => {
+    const root = await mkdtemp(join(tmpdir(), 'dsh-diaosi-context-'))
+    await writeFile(join(root, 'AGENTS.md'), 'Project rule: verify exported data before reporting success.\n')
+    const ctx = await bootWeb(join(root, 'settings.yaml'), [{ id: 'session-title-llm', disabled: true }])
+    try {
+      const removeSkill = ctx.skills.register({ name: 'budget-proof', description: 'Use for budget verification.', source: 'runtime', content: 'Full skill instructions remain available.' })
+      const adapter = new MockAdapter([textResponse('hello'), textResponse('hello')])
+      const removeAdapter = ctx.llm.registerAdapter(['context-fixture'], adapter)
+      const observed: Record<string, unknown>[] = []
+      try {
+        for (const preset of ['diaosi', 'standard']) {
+          const handle = await ctx.agents.create({
+            sessionId: SessionId(`preset-${preset}-context`), meta: { cwd: root },
+            agentOptions: { provider: 'context-fixture', model: 'fixture' },
+            setup: agentCtx => ctx.agentPresets.mount(agentCtx, preset).then(() => undefined),
+          })
+          try {
+            handle.agent.followup(createUserMessage({ source: { kind: 'user' }, content: [{ type: 'text', text: 'Hello.' }] }))
+            await handle.agent.whenIdle()
+            const events = handle.agent.session.snapshotEvents()
+            const system = events.find(event => event.type === 'system/message')
+            const catalog = events.find(event => event.type === 'user/message' && event.data.source.kind === 'skill-catalog')
+            expect(catalog?.type).toBe('user/message')
+            if (catalog?.type !== 'user/message') throw new Error('Missing skill catalog')
+            expect(JSON.stringify(catalog.data.content).includes('Summaries are not instructions')).toBe(preset === 'diaosi')
+            const request = adapter.requests.at(-1)!
+            expect(JSON.stringify(request.messages)).toContain('verify exported data before reporting success')
+            expect(JSON.stringify(request.messages)).toContain('Approval policy:')
+            expect(JSON.stringify(request.messages)).toContain('Current DSH file policy:')
+            expect(JSON.stringify(request.messages)).toContain('fixture')
+            if (preset === 'diaosi') expect(JSON.stringify(request.messages)).toContain('context-fixture')
+            expect(request.messages.some(message => JSON.stringify(message.content) === JSON.stringify(catalog.data.content))).toBe(true)
+            expect(JSON.stringify(system).includes('Keep replies concise unless detail is requested')).toBe(preset === 'diaosi')
+            observed.push({ preset, catalog: catalog.data.content })
+          } finally { await handle.dispose() }
+        }
+        expect(adapter.requests).toHaveLength(2)
+        expect(observed).toMatchSnapshot('scoped skill catalog styles')
+      } finally { removeSkill(); removeAdapter() }
+    } finally { await ctx.fiber.dispose(); await rm(root, { recursive: true, force: true }) }
   })
 
   it('applies the default-off subagent model allowlist only to new sessions', async () => {

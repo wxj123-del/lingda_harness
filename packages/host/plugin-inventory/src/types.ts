@@ -1,4 +1,5 @@
 import type { Branded } from '@deepseek-ai/dsh-brand'
+import type { JsonValue } from '@deepseek-ai/dsh-util-values'
 
 /** Stable Loader-tree identity of one configured plugin entry. */
 export type PluginEntryId = Branded<'PluginEntryId'>
@@ -67,4 +68,33 @@ export interface PluginInventorySnapshot {
    * composed in this deployment.
    */
   readonly agentPresets?: readonly AgentPresetPluginGroup[]
+}
+
+/** Recorded executions of one tool across the local Session corpus. */
+export interface ToolUsageEntry {
+  readonly name: string
+  /** Latest recorded definition; absent when only a call survives. */
+  readonly description?: string
+  readonly parameters?: JsonValue
+  readonly calls: number
+  readonly directCalls: number
+  readonly internalCalls: number
+  /** Settled model attempts whose reconstructed native tool catalog contains this tool. */
+  readonly exposedRequests: number
+  /** Exposed attempts with at least one matching recorded direct call, counted once per attempt. */
+  readonly usedRequests: number
+  readonly sessions: number
+  readonly lastUsedAt: number | null
+}
+
+/** On-demand counts from live and saved Sessions, without duplicated fork history. */
+export interface ToolUsageSnapshot {
+  readonly tools: readonly ToolUsageEntry[]
+  /** Settled assistant messages and attempts, excluding inherited history and compaction. */
+  readonly requestCount: number
+  /** Settled attempts without a preceding request header; excluded from exposure metrics. */
+  readonly unknownCatalogRequests: number
+  readonly sessionCount: number
+  readonly failedSessionCount: number
+  readonly scannedAt: number
 }

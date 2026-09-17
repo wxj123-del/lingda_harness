@@ -35,6 +35,15 @@ Each row is one non-group Loader entry: its entry id, the exact module specifier
 
 With a roster composed, `agentPresets` carries one group per preset in roster order: its id, whether the deployment ships it or the user owns it (`trust`, which clients use to localize shipped names), published display name, whether a session naming no preset composes it, and flattened plugin rows — entry id (null when the file row declares none), module specifier, effective enablement, the row's own `!!js` disabled expression when it carries one, and a root-fiber phase when the composition is live. A preset some session already composed answers from its newest standing generation — even when its file has since broken, because the mount is what those sessions run; one never composed since boot answers from its composition file with disabled gates evaluated against the Loader context, and reading never mounts a preset. `conditional` enablement marks a gate the Host could not evaluate, and a broken preset nothing composed stays listed with its reason and no rows. Without a roster the field is absent.
 
+<a id="tool-usage"></a>
+### Tool usage
+
+Call `pluginInventory/toolUsage` to count recorded tool calls across saved and live Sessions, including archived Sessions. Counts group by tool name. Each `tool/call` contributes one direct call; PTC dispatch start and completion records contribute one internal call per `subCallId`, including failed or interrupted calls. Inherited fork prefixes do not contribute. Tool schemas found in request headers provide zero-call rows for unused tools. Each row also reports the number of Sessions with new calls, the latest call time, and the description and parameters from its latest recorded definition. Historical definitions do not establish current availability.
+
+This read requires `sessionQuery`; a missing service or failed enumeration rejects the request. Unreadable individual Sessions are excluded and reported in `failedSessionCount`. The reader releases every observation and honors cancellation. It neither restores saved Sessions into the live store nor changes their events.
+
+Each settled assistant message or attempt increments `requestCount`. The latest request header persists until changed: every tool in that catalog gains one `exposedRequests`, and a matching recorded direct call contributes one `usedRequests` per tool per response. Repeated calls increase call totals but not hits. The native-tool hit rate is `usedRequests / exposedRequests`; PTC internal calls do not enter its numerator. Missing headers increment `unknownCatalogRequests` and are excluded from exposure metrics; an explicitly empty catalog is known. Inherited events establish catalog state without adding exposures. In-flight requests and compaction summaries are outside these counts. A low rate alone does not justify disabling a tool.
+
 ### What you can and cannot do with it
 
 The inventory is a snapshot for display and diagnostics: a client can render the roster, flag failed entries, and detect changes by comparing snapshots. It cannot enable, disable, add, or remove plugins, and it carries no history — a fiber that already failed and was removed is absent. Because the service reads the Loader on every call, the answer always reflects the current composition rather than a cached view.
@@ -99,6 +108,7 @@ These limits define what a point-in-time inventory cannot tell a client. They ar
 - **Point-in-time state only** — the result contains no durable failure history or subscription; a missing root Fiber is reported as `null`, regardless of why no live root exists.
 - **No introduction source or mutation** — the service does not identify which bundle, profile, or override introduced an entry, and it cannot enable, disable, add, or remove plugins in either plane.
 - **Presets appear only with a roster** — a deployment without `dsh-agent-presets` serves Loader entries alone; the `agentPresets` field is absent rather than empty.
+- **Usage follows retained logs** — removed Sessions stop contributing. A fork's inherited prefix stays excluded even when its parent is unavailable. Tools absent from all retained headers and calls have no row; names are aggregated across plugin instances and presets. Each refresh scans the retained corpus, so read time grows with history size.
 
 <a id="dev-note"></a>
 ### Dev Note

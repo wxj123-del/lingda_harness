@@ -6,6 +6,7 @@ import { readFile } from 'node:fs/promises'
 import { strToU8, zipSync } from 'fflate'
 import { chromium } from 'playwright'
 import { expect, it } from 'vitest'
+import type {} from '@deepseek-ai/dsh-skill'
 import { acknowledgeReloadConnectionLoss, captureStableAria, compareOrRefreshGolden, launchWebScaffold, webSnapshotMode, watchConsole } from './scaffold.ts'
 import { connectFreshWorkspaceZh } from './support.ts'
 
@@ -56,6 +57,20 @@ it('discovers built-in skills, imports a Skill bundle and prepares explicit invo
     if (imported?.resourceBase?.kind !== 'directory') throw new Error('Imported Skill has no resource directory')
     expect(imported.resourceBase.path.startsWith(join(scaffold.harnessHome, 'skill-imports'))).toBe(true)
     expect(await readFile(join(imported.resourceBase.path, 'references/style.md'), 'utf8')).toBe('使用清晰的主体和构图')
+    await page.getByRole('button', { name: '插件', exact: true }).click()
+    await page.getByRole('searchbox', { name: '搜索插件' }).waitFor()
+    expect(await page.getByText('用户创建的插件', { exact: true }).count()).toBe(0)
+    expect(await page.getByRole('button', { name: /封面助手/ }).count()).toBe(0)
+    const supportCategory = page.getByRole('tab', { name: /^技能与工作流支持插件/ })
+    await supportCategory.click()
+    expect(await page.locator('[data-plugin-module="@deepseek-ai/dsh-tool-skill"]').count()).toBeGreaterThan(0)
+    const supportSnapshot = await captureStableAria(page, '[data-plugin-category="skills"]', scaffold.workspaceCwd)
+    await compareOrRefreshGolden(fileURLToPath(new URL('./expected/skill-marketplace/support-category.expected.md', import.meta.url)), supportSnapshot, webSnapshotMode())
+    await page.screenshot({ path: join(tmpdir(), 'dsh-plugin-support-desktop.png') })
+    await page.setViewportSize({ width: 390, height: 844 })
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+    await page.screenshot({ path: join(tmpdir(), 'dsh-plugin-support-mobile.png') })
+    await page.setViewportSize({ width: 1440, height: 1000 })
     const warningStart = tripwire.warnings.length
     await page.reload()
     await page.getByRole('button', { name: 'Skill', exact: true }).click()

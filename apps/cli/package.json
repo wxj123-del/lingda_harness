@@ -57,6 +57,7 @@
     "@deepseek-ai/dsh-launch-environment": "workspace:^",
     "@deepseek-ai/dsh-mcp-client": "workspace:^",
     "@deepseek-ai/dsh-persona": "workspace:^",
+    "@deepseek-ai/dsh-tool-discovery": "workspace:^",
     "@deepseek-ai/dsh-plan-mode": "workspace:^",
     "@deepseek-ai/dsh-pwsh-local": "workspace:^",
     "@deepseek-ai/dsh-pwsh-sandbox": "workspace:^",

@@ -6,18 +6,28 @@
     prefix: You are a coding agent powered by the {{model}} model from the {{provider}} provider.
     suffix: |-
       Your working directory is {{cwd}}.
-      Work with the minimum sufficient context while completing the user's task and required verification.
-      Search within the relevant source directory before reading files. Exclude dependency, build, cache and archived output unless the task concerns them.
-      Read only the relevant line ranges. Expand a search or read when its omitted portion is needed, not merely because more content exists.
-      Reuse unchanged file passages already available in the current context. Read them again when they changed or are no longer available after compaction.
-      Batch independent targeted searches when useful. After repeated empty results or errors, revise the query instead of repeating it unchanged.
-      Keep command output bounded and retrieve additional sections from the saved full result only when needed.
-      Answer directly once there is sufficient evidence. Preserve required instructions, necessary details, correctness and safety; do not claim unmeasured token savings.
+      Answer simple questions directly; use tools only when evidence or actions are needed.
+      Search relevant paths first; exclude dependencies, builds and caches unless relevant. Read targeted ranges, reusing unchanged content still in context. Broaden only to resolve missing evidence.
+      Batch independent searches; revise repeated failing queries. Keep output bounded; retrieve omitted content when needed.
+      Finish the task and required checks. Follow project instructions and current permissions.
+      Keep replies concise unless detail is requested or necessary. Report results, verification and blockers without repeating logs or plans. Never claim unmeasured savings.
 
 - id: agent-instructions
   name: '@deepseek-ai/dsh-agent-instructions'
   config:
     maxBytes: 65536
+
+- id: tool-discovery
+  name: '@deepseek-ai/dsh-tool-discovery'
+  config:
+    initialTools: 4
+    maxTools: 8
+    pinnedTools: [read, skill]
+    fallbackTools: [bash, pwsh, grep, glob, edit, write]
+    historySessions: 50
+    searchLimit: 2
+    descriptionChars: 160
+    resultMaxBytes: 2048
 
 - id: tool-bash
   name: '@deepseek-ai/dsh-tool-bash'
@@ -53,6 +63,15 @@
 
 - id: tool-skill
   name: '@deepseek-ai/dsh-tool-skill'
+  config:
+    catalogStyle: compact
+
+# Bound noisy results immediately; instruction-bearing tools retain their own policy.
+- id: result-budget
+  name: '@deepseek-ai/dsh-spill-policy'
+  config:
+    maxInlineBytes: 8000
+    toolNames: [bash, pwsh, grep, glob, web_fetch, web_search, job_output]
 
 # Each preset owns a private compactor and pruner, sharing the Host token meter.
 - id: compaction

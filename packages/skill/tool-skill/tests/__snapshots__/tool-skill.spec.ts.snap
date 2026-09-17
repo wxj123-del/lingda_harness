@@ -1,0 +1,32 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`dsh-tool-skill > compacts only catalog guidance and keeps entries, loading, updates and empty replacement durable > compact empty skill catalog 1`] = `
+[
+  {
+    "text": "<system-reminder>
+Available skills (replaces earlier catalogs):
+<available_skills>
+</available_skills>
+No skills are available through \`skill\`; do not use earlier catalog names.
+Follow directly supplied <skill_content> without loading that skill again.
+</system-reminder>",
+    "type": "text",
+  },
+]
+`;
+
+exports[`dsh-tool-skill > compacts only catalog guidance and keeps entries, loading, updates and empty replacement durable > compact skill catalog 1`] = `
+[
+  {
+    "text": "<system-reminder>
+Available skills (replaces earlier catalogs):
+<available_skills>
+- \`budget-skill\`: Use for &lt;budget&gt; &amp; costs.
+</available_skills>
+Before acting, load every named or clearly matching listed skill with \`skill\` using its exact name. Summaries are not instructions; follow the loaded content.
+Follow directly supplied <skill_content> without loading that skill again.
+</system-reminder>",
+    "type": "text",
+  },
+]
+`;

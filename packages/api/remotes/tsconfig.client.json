@@ -45,6 +45,12 @@
       "path": "../../host/plugin-inventory"
     },
     {
+      "path": "../../host/knowledge"
+    },
+    {
+      "path": "../../host/local-skill-import"
+    },
+    {
       "path": "../../interaction/commands"
     },
     {

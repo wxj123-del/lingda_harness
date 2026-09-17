@@ -33,7 +33,7 @@ agent 可以在会话期间发现并加载 skill。在首次请求前，如果�
 
 ### 挂载与配置
 
-与 skill 注册表和至少一个提供方一起加载该插件。唯一配置项限制目录中渲染的规范化描述长度。
+与 skill 注册表和至少一个提供方一起加载该插件。可配置描述长度与目录指引样式。
 
 ```yaml
 - name: '@deepseek-ai/dsh-skill'
@@ -44,6 +44,7 @@ agent 可以在会话期间发现并加载 skill。在首次请求前，如果�
 | 字段 | 默认值 | 含义 |
 |---|---|---|
 | `catalogDescriptionMaxLength` | `500` | 会话目录中渲染的规范化描述最大长度；最小为 3 |
+| `catalogStyle` | `full` | `compact` 缩短指引，但保留名称、描述、加载规则及完整的 skill 指令 |
 
 生成的[配置目录](../../../docs/config-catalog.zh.md#deepseek-aidsh-tool-skill)是每个受支持字段的穷尽式真源。
 
@@ -129,7 +130,7 @@ A user may also invoke a skill directly; its <skill_content> block then appears 
 
 #### Token 影响
 
-重复输入成本随 skill 数量和 `catalogDescriptionMaxLength` 增长；当列表为空或工具被隐藏或遮蔽时，不会发送初始目录 token。每次实际目录变更都会添加一条保留的完整替换消息。
+重复输入成本随 skill 数量和 `catalogDescriptionMaxLength` 增长；当列表为空或工具被隐藏或遮蔽时，不会发送初始目录 token。每次实际目录变更都会添加一条保留的完整替换消息。`catalogStyle: compact` 缩短周围指引；仅更改样式不会重新发布历史中内容未变的目录。
 
 #### KV Cache 影响
 

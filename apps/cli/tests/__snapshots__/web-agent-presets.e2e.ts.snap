@@ -9,13 +9,184 @@ exports[`the shipped Web composition > bounds diaosi reads and search results wi
   {
     "name": "deployment:persona-suffix",
     "text": "Your working directory is {{cwd}}.
-Work with the minimum sufficient context while completing the user's task and required verification.
-Search within the relevant source directory before reading files. Exclude dependency, build, cache and archived output unless the task concerns them.
-Read only the relevant line ranges. Expand a search or read when its omitted portion is needed, not merely because more content exists.
-Reuse unchanged file passages already available in the current context. Read them again when they changed or are no longer available after compaction.
-Batch independent targeted searches when useful. After repeated empty results or errors, revise the query instead of repeating it unchanged.
-Keep command output bounded and retrieve additional sections from the saved full result only when needed.
-Answer directly once there is sufficient evidence. Preserve required instructions, necessary details, correctness and safety; do not claim unmeasured token savings.",
+Answer simple questions directly; use tools only when evidence or actions are needed.
+Search relevant paths first; exclude dependencies, builds and caches unless relevant. Read targeted ranges, reusing unchanged content still in context. Broaden only to resolve missing evidence.
+Batch independent searches; revise repeated failing queries. Keep output bounded; retrieve omitted content when needed.
+Finish the task and required checks. Follow project instructions and current permissions.
+Keep replies concise unless detail is requested or necessary. Report results, verification and blockers without repeating logs or plans. Never claim unmeasured savings.",
   },
+]
+`;
+
+exports[`the shipped Web composition > discovers inherited media tools in diaosi and records the bounded catalogs seen by the model > diaosi on-demand media tools 1`] = `
+{
+  "catalogs": [
+    [
+      "bash",
+      "grep",
+      "read",
+      "skill",
+      "tool_search",
+    ],
+    [
+      "bash",
+      "generate_image",
+      "grep",
+      "read",
+      "skill",
+      "tool_search",
+    ],
+    [
+      "bash",
+      "generate_image",
+      "grep",
+      "read",
+      "skill",
+      "tool_search",
+    ],
+  ],
+  "results": [
+    {
+      "content": [
+        {
+          "content": [
+            {
+              "text": "{"loaded":[{"name":"generate_image","description":"Fixture generate_image"}],"message":"Loaded tools are available on the next request."}",
+              "type": "text",
+            },
+          ],
+          "isError": false,
+          "toolCallId": "find-image",
+          "type": "tool-result",
+        },
+      ],
+      "meta": {
+        "toolDiscovery": [
+          "generate_image",
+        ],
+      },
+    },
+    {
+      "content": [
+        {
+          "content": [
+            {
+              "text": "media fixture completed",
+              "type": "text",
+            },
+          ],
+          "isError": false,
+          "toolCallId": "use-image",
+          "type": "tool-result",
+        },
+      ],
+      "meta": undefined,
+    },
+  ],
+  "searchTool": {
+    "description": "Find and load tools missing from the current tool list. Use concise English keywords (image, speech, web, workflow, edit) or an exact tool name. Only matching tools are returned; their full parameters become available on the next request. Search only when the task needs a missing capability.",
+    "name": "tool_search",
+    "parameters": {
+      "properties": {
+        "query": {
+          "description": "Specific capability or exact tool name; not a request to list every tool.",
+          "type": "string",
+        },
+      },
+      "required": [
+        "query",
+      ],
+      "type": "object",
+    },
+  },
+}
+`;
+
+exports[`the shipped Web composition > keeps compact diaosi instructions and skill catalogs in recorded requests without changing standard > scoped skill catalog styles 1`] = `
+[
+  {
+    "catalog": [
+      {
+        "text": "<system-reminder>
+Available skills (replaces earlier catalogs):
+<available_skills>
+- \`budget-proof\`: Use for budget verification.
+- \`dsh-badge\`: Add the official “powered by dsh” badge to documents, pull requests, merge requests, and other content produced with DeepSeek Harness. Use whenever creating a pull request or merge request. Also use when the user asks for a dsh badge, powered-by-dsh attribution, or a reusable dsh badge asset or snippet.
+- \`make-skill\`: Create or improve a reusable Skill with clear triggers, instructions and an output format.
+- \`make-workflow\`: Create or improve a workflow with ordered steps, verifiable outputs, tools and knowledge dependencies.
+</available_skills>
+Before acting, load every named or clearly matching listed skill with \`skill\` using its exact name. Summaries are not instructions; follow the loaded content.
+Follow directly supplied <skill_content> without loading that skill again.
+</system-reminder>",
+        "type": "text",
+      },
+    ],
+    "preset": "diaosi",
+  },
+  {
+    "catalog": [
+      {
+        "text": "<system-reminder>
+A skill is a reusable set of task-specific instructions. The following skills are available in this session:
+
+<available_skills>
+- \`budget-proof\`: Use for budget verification.
+- \`dsh-badge\`: Add the official “powered by dsh” badge to documents, pull requests, merge requests, and other content produced with DeepSeek Harness. Use whenever creating a pull request or merge request. Also use when the user asks for a dsh badge, powered-by-dsh attribution, or a reusable dsh badge asset or snippet.
+- \`make-skill\`: Create or improve a reusable Skill with clear triggers, instructions and an output format.
+- \`make-workflow\`: Create or improve a workflow with ordered steps, verifiable outputs, tools and knowledge dependencies.
+</available_skills>
+
+If the user names a skill, or the task clearly matches a skill's description, call the \`skill\` tool with the exact skill name before taking task actions. Load all applicable skills, then follow their full instructions. This catalog contains summaries only; do not infer or follow a skill's instructions until it has been loaded.
+A user may also invoke a skill directly; its <skill_content> block then appears in this conversation. Follow it, and do not call the \`skill\` tool again for that skill.
+</system-reminder>",
+        "type": "text",
+      },
+    ],
+    "preset": "standard",
+  },
+]
+`;
+
+exports[`the shipped Web composition > retrieves knowledge through the preset tool catalog and persists source excerpts in the session > knowledge retrieval source excerpts 1`] = `
+[
+  [
+    {
+      "content": [
+        {
+          "text": "{"loaded":[{"name":"knowledge_list","description":"列出已启用的知识库及索引状态。检索前可用它查找知识库 ID。"},{"name":"knowledge_search","description":"检索用户启用的知识库，返回相关原文、文档标题、片段编号和余弦相似度。引用资料时注明知识库和文档标题；相似度不是正确率。未建索引的知识库会列在 skippedBases 中。"}],"message":"Loaded tools are available on the next request."}",
+          "type": "text",
+        },
+      ],
+      "isError": false,
+      "toolCallId": "find-knowledge",
+      "type": "tool-result",
+    },
+  ],
+  [
+    {
+      "content": [
+        {
+          "text": "{"bases":[{"id":"knowledge-fixture","title":"差旅知识库","description":"","status":"ready"}]}",
+          "type": "text",
+        },
+      ],
+      "isError": false,
+      "toolCallId": "list-knowledge",
+      "type": "tool-result",
+    },
+  ],
+  [
+    {
+      "content": [
+        {
+          "text": "{"hits":[{"baseId":"knowledge-fixture","baseTitle":"差旅知识库","documentId":"travel","title":"报销规则","ordinal":0,"content":"住宿每晚最多报销四百元，需要电子发票和出差审批单。","score":1}],"skippedBases":[]}",
+          "type": "text",
+        },
+      ],
+      "isError": false,
+      "toolCallId": "search-knowledge",
+      "type": "tool-result",
+    },
+  ],
 ]
 `;

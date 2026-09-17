@@ -51,6 +51,7 @@
     "yaml": "^2.4.2"
   },
   "devDependencies": {
+    "@deepseek-ai/dsh-api-remotes": "workspace:^",
     "@types/node": "^22.20.0",
     "@deepseek-ai/dsh-api-session-controller": "workspace:^",
     "@deepseek-ai/dsh-brand": "workspace:^",

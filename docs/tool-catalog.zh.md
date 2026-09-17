@@ -19,6 +19,7 @@
 
 | 工具包 | 模型可见名称 | 依赖 | 写入／影响 | 随产品发布的别名 | 部署说明 |
 | --- | --- | --- | --- | --- | --- |
+| `@deepseek-ai/dsh-tool-discovery` | `tool_search` | `ctx.tools`、`ctx.systemPrompt`、`ctx.sessionQuery`、`a native-tool agent scope` | `tool/call`、`tool/result with loaded tool names`、`request/header on selection changes` | - | 完整名称加载一个工具；关键词搜索在结果提交后最多加载两个作用域内匹配项。选择只改变 schema，不改变执行权限。 |
 | `@deepseek-ai/dsh-mcp-resources` | `list_mcp_resource_templates`, `list_mcp_resources`, `read_mcp_resource` | `ctx.tools`, `ctx.mcpResources` | `tool/call`, `tool/result` | - | - |
 | `@deepseek-ai/dsh-experimental-browser-use-stagehand-native` | `stagehand_act`、`stagehand_extract`、`stagehand_navigate`、`stagehand_observe`、`stagehand_screenshot`、`stagehand_tabs` | `ctx.browserUse`、`ctx.agents`、`ctx.tools`、`ctx.systemPrompt` | `tool/call`、`tool/result` | - | - |
 | `@deepseek-ai/dsh-tool-ask-user` | `ask_user_question` | `ctx.tools`、`ctx.userQuestions` | `tool/call`、`tool/result after a UI/provider answers the question` | - | ask_user_question 会暂停工具调用，直到当前 UI 提供方返回人类答案。 |
@@ -47,6 +48,33 @@
 | `@deepseek-ai/dsh-tool-todo` | `todo_write` | `ctx.tools`、`owning Agent session` | `tool/call`、`todo/write`、`tool/result` | - | todo_write 是会话所有的状态；UI 将最新的 todo/write 事件渲染为检查清单。`allowParallelInProgress` 是没有默认值的必填项，因此本目录明确选择 `true`，对应描述允许同时存在多个 `in_progress` 项。选择 `false` 的部署会获得同一工具，但描述会要求只能有 1 个活动任务。 |
 | `@deepseek-ai/dsh-tool-workflow` | `workflow` | `ctx.tools`、`ctx.workflowEngine`、`ctx.systemPrompt`、`a calling Agent (exec.agent parents the script children)` | `tool/call`、`tool/result` | - | - |
 | `@deepseek-ai/dsh-tool-web` | `web_fetch`、`web_search` | `ctx.tools`、`ctx.web`、`ctx.systemPrompt` | `tool/call`、`tool/result` | - | web_search 和 web_fetch 将提供方选择置于 ctx.web 之后，使模型可见 schema 在更换后端时保持稳定。 |
+
+<a id="deepseek-aidsh-tool-discovery"></a>
+
+## `@deepseek-ai/dsh-tool-discovery`
+
+### `tool_search`
+
+查找并加载当前工具列表中缺少的工具。使用简短英文关键词（image、speech、web、workflow、edit）或完整工具名。只返回匹配工具，其完整参数会在下一次请求中可用。仅在任务需要缺失能力时搜索。
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "query": {
+      "type": "string",
+      "description": "Specific capability or exact tool name; not a request to list every tool."
+    }
+  },
+  "required": [
+    "query"
+  ]
+}
+```
+
+来源： [`packages/preset/tool-discovery/src/index.ts`](../packages/preset/tool-discovery/src/index.ts)
+
+Exact names load one tool; keyword searches load at most two scoped matches after their result commits. Selection changes schemas, not execution permissions.
 
 <a id="deepseek-aidsh-mcp-resources"></a>
 

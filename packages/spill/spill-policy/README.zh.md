@@ -42,7 +42,7 @@ kind: "package-reference"
 |---|---|---|
 | `maxInlineBytes` | 省略 | 纯文本结果面向模型的上下文上限（UTF-8 字节）；省略时完全禁用该策略 |
 
-生成的[配置目录](../../../docs/config-catalog.zh.md#deepseek-aidsh-spill-policy)是每个受支持字段的穷尽式真源。负数或小数上限会让插件加载失败，而不是破坏每次调用的行为。
+可选的 `toolNames` 按精确工具名称限制结果与 dispatch 日志两条处理分支；省略时包含所有符合条件的工具，空列表则不处理任何工具。生成的[配置目录](../../../docs/config-catalog.zh.md#deepseek-aidsh-spill-policy)是每个受支持字段的穷尽式真源。负数或小数上限会让插件加载失败，而不是破坏每次调用的行为。
 
 ### 模型看到什么
 
@@ -84,7 +84,7 @@ kind: "package-reference"
 
 ### 两条分支
 
-`tools/post-execute` waterfall（瀑布式事件）监听器（以 `prepend` 注册、通过 `next()` 委托）约束面向模型的结果；`tools/ptc-dispatch-log` 监听器约束每个 `run_code` 子调用的持久日志副本。两者共享同一个替换辅助函数，因此两个投影字节一致。post-execute 分支跳过 `read` 以避免 read → spill → read 循环；dispatch-log 分支约束 `read` 子调用，因为日志副本不是模型上下文。
+`tools/post-execute` waterfall（瀑布式事件）监听器通过 `next()` 委托并约束面向模型的结果；`tools/ptc-dispatch-log` 监听器约束每个 `run_code` 子调用的持久日志副本。宿主策略前置，作用域策略后置，因此更严格的作用域策略先保存完整结果，宿主随后检查其较短预览。两者共享同一个替换辅助函数，因此两个投影字节一致。post-execute 分支跳过 `read` 以避免 read → spill → read 循环；dispatch-log 分支约束 `read` 子调用，因为日志副本不是模型上下文。
 
 <a id="shared-notice-ownership"></a>
 ### 共享通知的所有权

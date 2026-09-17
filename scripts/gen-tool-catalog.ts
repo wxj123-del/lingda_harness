@@ -64,6 +64,7 @@ import * as StagehandBrowserTools from '@deepseek-ai/dsh-experimental-browser-us
 import type TeamService from '@deepseek-ai/dsh-experimental-agent-team'
 import * as ToolTeam from '@deepseek-ai/dsh-experimental-tool-agent-team'
 import * as ToolTodo from '@deepseek-ai/dsh-tool-todo'
+import * as ToolDiscovery from '@deepseek-ai/dsh-tool-discovery'
 import McpResources from '@deepseek-ai/dsh-mcp-resources'
 import * as ToolSubagent from '@deepseek-ai/dsh-tool-subagent'
 import { registerListSubagentModels } from '../packages/subagent/tool-subagent/src/list-models.ts'
@@ -199,6 +200,26 @@ export interface ToolPackage {
  * guard proves it is exhaustive against the on-disk glob.
  */
 const TOOL_PACKAGES: ToolPackage[] = [
+  {
+    pkg: '@deepseek-ai/dsh-tool-discovery',
+    dir: 'tool-discovery',
+    source: 'packages/preset/tool-discovery/src/index.ts',
+    requires: ['ctx.tools', 'ctx.systemPrompt', 'ctx.sessionQuery', 'a native-tool agent scope'],
+    writes: ['tool/call', 'tool/result with loaded tool names', 'request/header on selection changes'],
+    async mount(ctx) {
+      await ctx.plugin(SessionStore)
+      await ctx.plugin(SqliteSessionQueryEngine, { path: ':memory:' })
+      await mountCatalogChildScope(ctx, (child) => {
+        child.plugin(ToolDiscovery, {
+          initialTools: 4, maxTools: 8, pinnedTools: ['read', 'skill'],
+          fallbackTools: ['bash', 'pwsh', 'grep', 'glob', 'edit', 'write'],
+          historySessions: 50, searchLimit: 2, descriptionChars: 160, resultMaxBytes: 2048,
+        })
+      }, undefined, ['tools', 'systemPrompt', 'sessionQuery'])
+    },
+    scope: ctx => catalogChildScopes.get(ctx) as Agent,
+    note: 'Exact names load one tool; keyword searches load at most two scoped matches after their result commits. Selection changes schemas, not execution permissions.',
+  },
   {
     pkg: '@deepseek-ai/dsh-mcp-resources',
     dir: 'mcp-resources',

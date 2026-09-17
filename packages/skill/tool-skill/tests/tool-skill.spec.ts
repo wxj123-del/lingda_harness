@@ -332,6 +332,33 @@ describe('dsh-tool-skill', () => {
     expect(await composePrefixForAgent(ctx, agent)).toEqual([])
   })
 
+  it('compacts only catalog guidance and keeps entries, loading, updates and empty replacement durable', async () => {
+    const home = await tempDir('compact-catalog')
+    const ctx = await setup(home, { catalogStyle: 'compact' })
+    try {
+      const remove = ctx.skills.register({ name: 'budget-skill', description: 'Use for <budget> & costs.', source: 'runtime', content: 'Required full instructions.'.repeat(1000) })
+      const agent = agentForCwd('/workspace')
+      await composePrefixForAgent(ctx, agent)
+      const first = catalogMessages(agent.session)[0]!.data
+      expect(first.source).toMatchObject({ entries: [{ name: 'budget-skill', description: 'Use for <budget> & costs.' }] })
+      expect(first.content).toMatchSnapshot('compact skill catalog')
+      await composePrefixForAgent(ctx, agent)
+      expect(catalogMessages(agent.session)).toHaveLength(1)
+      const loaded = await ctx.tools.execute({ callId: ToolCallId('compact-load'), name: 'skill', arguments: { name: 'budget-skill' }, agent, signal: testToolSignal })
+      expect(loaded.isError).toBe(false)
+      expect(JSON.stringify(loaded.content)).toContain('Required full instructions.'.repeat(1000))
+      remove()
+      const removeNext = ctx.skills.register({ name: 'next-skill', description: 'Replacement.', source: 'runtime', content: 'Next instructions.' })
+      await composePrefixForAgent(ctx, agent)
+      expect(catalogMessages(agent.session).at(-1)!.data.source).toMatchObject({ update: true, entries: [{ name: 'next-skill', description: 'Replacement.' }] })
+      removeNext()
+      await composePrefixForAgent(ctx, agent)
+      const empty = catalogMessages(agent.session).at(-1)!.data
+      expect(empty.source).toMatchObject({ update: true, entries: [] })
+      expect(empty.content).toMatchSnapshot('compact empty skill catalog')
+    } finally { await ctx.fiber.dispose() }
+  })
+
   it('omits an incomplete initial catalog and retries on a later request boundary', async () => {
     const home = await tempDir('tool-incomplete-prefix')
     const ctx = await setup(home)

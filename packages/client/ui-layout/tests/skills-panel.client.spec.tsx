@@ -5,6 +5,8 @@ import { strToU8, zipSync } from 'fflate'
 import { SkillsPanel } from '../src/client/authoring/SkillsPanel.tsx'
 import { zh } from '../src/client/locales.ts'
 import type { AuthoringItem } from '../src/authoring-settings.ts'
+import type { LocalSkillArchive, LocalSkillScan } from '@deepseek-ai/dsh-api-remotes/client'
+import { encodeSkillArchive } from '../src/skill-archive.ts'
 
 afterEach(cleanup)
 const custom: AuthoringItem = { id: 'cover', title: '文章封面', description: '设计文章封面提示词', enabled: false, category: 'writing', body: '输出构图与提示词', steps: ['读取主题'], updatedAt: 1 }
@@ -14,9 +16,15 @@ const upload = (content = '---\nname: cover-assistant\ndescription: Create artic
   Object.defineProperty(file, 'arrayBuffer', { value: async () => bytes.buffer })
   fireEvent.change(screen.getByLabelText('Skill ZIP 压缩包'), { target: { files: [file] } })
 }
-const setup = (items: AuthoringItem[] = [], save = vi.fn<(_item: AuthoringItem) => Promise<void>>(async () => {})) => {
+const setup = (
+  items: AuthoringItem[] = [],
+  save = vi.fn<(_item: AuthoringItem) => Promise<void>>(async () => {}),
+  local?: { scan: () => Promise<LocalSkillScan>; load: (id: string) => Promise<LocalSkillArchive> },
+) => {
   const invoke = vi.fn(async () => {})
-  render(<SkillsPanel items={items} writable loading={false} save={save} invoke={invoke} t={key => zh[key]} />)
+  const localProps = local === undefined ? {} : { scanLocalSkills: local.scan, loadLocalSkill: local.load }
+  render(<SkillsPanel items={items} writable loading={false} save={save} invoke={invoke}
+    {...localProps} t={key => zh[key]} />)
   return { invoke, save }
 }
 
@@ -46,11 +54,11 @@ describe('Skill marketplace', () => {
   it('keeps disabled skills editable but prevents using them in chat', () => {
     setup([custom])
     fireEvent.click(screen.getByRole('button', { name: '我的 Skill' }))
-    expect((screen.getByRole('button', { name: '用于对话' }) as HTMLButtonElement).disabled).toBe(true)
+    expect(screen.getByRole<HTMLButtonElement>('button', { name: '用于对话' }).disabled).toBe(true)
     fireEvent.click(screen.getByRole('button', { name: '查看详情' }))
     fireEvent.click(screen.getByRole('button', { name: '编辑 Skill' }))
-    expect((screen.getByLabelText('名称') as HTMLInputElement).value).toBe(custom.title)
-    expect((screen.getByLabelText('分类') as HTMLSelectElement).value).toBe('writing')
+    expect(screen.getByLabelText<HTMLInputElement>('名称').value).toBe(custom.title)
+    expect(screen.getByLabelText<HTMLSelectElement>('分类').value).toBe('writing')
   })
 
   it('previews an upload, retains it after a failed save and commits resources on retry', async () => {
@@ -68,10 +76,12 @@ describe('Skill marketplace', () => {
     fireEvent.click(screen.getByRole('button', { name: '添加步骤' }))
     fireEvent.click(screen.getByRole('button', { name: '确认导入' }))
     await waitFor(() => { expect(screen.getByRole('alert').textContent).toBe('保存失败，请重试') })
-    expect((screen.getByLabelText('名称') as HTMLInputElement).value).toBe('封面助手')
+    expect(screen.getByLabelText<HTMLInputElement>('名称').value).toBe('封面助手')
     fireEvent.click(screen.getByRole('button', { name: '确认导入' }))
     await waitFor(() => { expect(screen.getByRole('heading', { name: '技能广场' })).toBeTruthy() })
-    expect(save).toHaveBeenLastCalledWith(expect.objectContaining({ id: 'imported-cover-assistant', title: '封面助手', category: 'writing', steps: ['读取主题'], archive: expect.any(String) }))
+    const saved = save.mock.calls.at(-1)?.[0]
+    expect(saved).toMatchObject({ id: 'imported-cover-assistant', title: '封面助手', category: 'writing', steps: ['读取主题'] })
+    expect(typeof saved?.archive).toBe('string')
   })
 
   it('rejects invalid metadata without saving and allows retrying the upload', async () => {
@@ -96,9 +106,35 @@ describe('Skill marketplace', () => {
     await waitFor(() => { expect(save).toHaveBeenCalledWith(expect.objectContaining({ id: 'imported-cover-assistant', enabled: false })) })
   })
 
+  it('scans configured local roots and opens a detected Skill in the existing import preview', async () => {
+    const bytes = zipSync({
+      'SKILL.md': strToU8('---\nname: local-helper\ndescription: Local helper\n---\nUse local resources.'),
+      'references/guide.md': strToU8('Guide'),
+    })
+    const scan = vi.fn(async (): Promise<LocalSkillScan> => ({
+      roots: [{ source: 'codex', path: '~/.codex/skills', available: true }],
+      candidates: [{
+        id: 'candidate-1', name: 'local-helper', description: 'Local helper', source: 'codex',
+        sourcePath: '~/.codex/skills', relativePath: 'local-helper', fileCount: 2,
+        expandedBytes: 128, issue: null,
+      }],
+      scannedAt: 1,
+    }))
+    const load = vi.fn(async (): Promise<LocalSkillArchive> => ({ archive: encodeSkillArchive(bytes) }))
+    setup([], undefined, { scan, load })
+    fireEvent.click(screen.getByRole('button', { name: '扫描本机 Skill' }))
+    const dialog = await screen.findByRole('dialog', { name: '导入本机 Skill' })
+    expect(within(dialog).getByText('~/.codex/skills')).toBeTruthy()
+    expect(within(dialog).getAllByText('local-helper')).toHaveLength(2)
+    fireEvent.click(within(dialog).getByRole('button', { name: '导入' }))
+    await screen.findByRole('heading', { name: '导入 Skill' })
+    expect(screen.getByText('references/guide.md')).toBeTruthy()
+    expect(load).toHaveBeenCalledWith('candidate-1')
+  })
+
   it('disables explicit invocation for model-only imports', () => {
     setup([{ ...custom, enabled: true, invocation: { modelInvocable: true, userInvocable: false } }])
     fireEvent.click(screen.getByRole('button', { name: '我的 Skill' }))
-    expect((screen.getByRole('button', { name: '用于对话' }) as HTMLButtonElement).disabled).toBe(true)
+    expect(screen.getByRole<HTMLButtonElement>('button', { name: '用于对话' }).disabled).toBe(true)
   })
 })

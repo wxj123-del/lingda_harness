@@ -1,15 +1,17 @@
 /** Searchable Skill catalog with built-in instructions and editable user entries. */
-import { useRef, useState, type ChangeEvent } from 'react'
+import { useMemo, useRef, useState, type ChangeEvent } from 'react'
+import type { LocalSkillArchive, LocalSkillCandidate, LocalSkillScan } from '@deepseek-ai/dsh-api-remotes/client'
 import {
   Button, Input, Modal, IconSearchOutline16, IconFolderOpenOutline16,
   IconSkillOutline16, IconCodeOutline16, IconEditOutline16, IconNewChatOutline16,
+  IconRefreshOutline16,
 } from '@deepseek-ai/dsh-client-ui-primitives'
 import { SKILL_CATEGORIES, type AuthoringItem, type SkillCategory } from '../../authoring-settings.ts'
 import { BUILTIN_SKILLS, userSkillName } from '../../builtin-skills.ts'
 import type { LayoutKey } from '../locales.ts'
 import { SkillEditor } from './SkillEditor.tsx'
 import css from './SkillsPanel.module.css'
-import { encodeSkillArchive, MAX_SKILL_ARCHIVE_BYTES, readSkillArchive, SkillArchiveError } from '../../skill-archive.ts'
+import { decodeSkillArchive, encodeSkillArchive, MAX_SKILL_ARCHIVE_BYTES, readSkillArchive, SkillArchiveError } from '../../skill-archive.ts'
 
 type Source = 'all' | 'builtin' | 'mine'
 interface CatalogSkill {
@@ -24,13 +26,25 @@ interface CatalogSkill {
   item?: AuthoringItem
 }
 
+function formatBytes(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`
+  if (bytes < 1024 * 1024) return `${Math.ceil(bytes / 1024)} KB`
+  return `${(bytes / 1024 / 1024).toFixed(1)} MB`
+}
+
+function cssClass(value: string | undefined): string {
+  return value ?? ''
+}
+
 /** @param props - Persisted skills and injected authoring actions. @returns Discoverable catalog. */
-export function SkillsPanel({ items, writable, loading, save, invoke, t }: {
+export function SkillsPanel({ items, writable, loading, save, invoke, scanLocalSkills, loadLocalSkill, t }: {
   items: readonly AuthoringItem[]
   writable: boolean
   loading: boolean
   save: (item: AuthoringItem) => Promise<void>
   invoke: (name: string) => Promise<void>
+  scanLocalSkills?: () => Promise<LocalSkillScan>
+  loadLocalSkill?: (id: string) => Promise<LocalSkillArchive>
   t: (key: LayoutKey) => string
 }) {
   const [source, setSource] = useState<Source>('all')
@@ -43,6 +57,11 @@ export function SkillsPanel({ items, writable, loading, save, invoke, t }: {
   const [importing, setImporting] = useState(false)
   const [importError, setImportError] = useState<LayoutKey | null>(null)
   const [importPreview, setImportPreview] = useState<{ filename: string; files: string[]; replacing: boolean } | null>(null)
+  const [localOpen, setLocalOpen] = useState(false)
+  const [localScan, setLocalScan] = useState<LocalSkillScan | null>(null)
+  const [localLoading, setLocalLoading] = useState(false)
+  const [localError, setLocalError] = useState(false)
+  const [localQuery, setLocalQuery] = useState('')
   const fileInput = useRef<HTMLInputElement>(null)
   const catalog: CatalogSkill[] = [
     ...BUILTIN_SKILLS.map(skill => ({
@@ -60,6 +79,20 @@ export function SkillsPanel({ items, writable, loading, save, invoke, t }: {
   const found = inSource.filter(skill => [skill.title, skill.name, skill.description, t(`skill.category.${skill.category}`)].join(' ').toLocaleLowerCase().includes(search))
   const shown = found.filter(skill => category === 'all' || skill.category === category)
   const detail = catalog.find(skill => skill.name === detailName)
+  const localFound = useMemo(() => {
+    const search = localQuery.trim().toLocaleLowerCase()
+    return (localScan?.candidates ?? []).filter(candidate => [candidate.name, candidate.description, candidate.relativePath]
+      .join(' ').toLocaleLowerCase().includes(search))
+  }, [localQuery, localScan])
+  const previewArchive = (bytes: Uint8Array, filename: string) => {
+    const skill = readSkillArchive(bytes)
+    const id = `imported-${skill.name}`
+    const existing = items.find(item => item.id === id)
+    setImportPreview({ filename, files: Object.keys(skill.files), replacing: existing !== undefined })
+    setDraft({ id, title: skill.name, description: skill.description, body: skill.body, steps: [],
+      enabled: existing?.enabled ?? true, category: skill.category, archive: encodeSkillArchive(bytes),
+      invocation: skill.invocation, updatedAt: existing?.updatedAt ?? 0 })
+  }
   const upload = async (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.currentTarget.files?.[0]
     event.currentTarget.value = ''
@@ -70,15 +103,30 @@ export function SkillsPanel({ items, writable, loading, save, invoke, t }: {
       if (!/\.zip$/i.test(file.name)) throw new SkillArchiveError('invalidZip')
       if (file.size > MAX_SKILL_ARCHIVE_BYTES) throw new SkillArchiveError('tooLarge')
       const bytes = new Uint8Array(await file.arrayBuffer())
-      const skill = readSkillArchive(bytes)
-      const id = `imported-${skill.name}`
-      const existing = items.find(item => item.id === id)
-      setImportPreview({ filename: file.name, files: Object.keys(skill.files), replacing: existing !== undefined })
-      setDraft({ id, title: skill.name, description: skill.description, body: skill.body, steps: [],
-        enabled: existing?.enabled ?? true, category: skill.category, archive: encodeSkillArchive(bytes),
-        invocation: skill.invocation, updatedAt: existing?.updatedAt ?? 0 })
+      previewArchive(bytes, file.name)
     } catch (error) {
       setImportError(error instanceof SkillArchiveError ? `skill.importError.${error.code}` : 'skill.importError.readFailed')
+    } finally { setImporting(false) }
+  }
+  const scanLocal = async () => {
+    if (scanLocalSkills === undefined || localLoading) return
+    setLocalOpen(true)
+    setLocalLoading(true)
+    setLocalError(false)
+    try { setLocalScan(await scanLocalSkills()) } catch { setLocalError(true) } finally { setLocalLoading(false) }
+  }
+  const importLocal = async (candidate: LocalSkillCandidate) => {
+    if (candidate.issue !== null || loadLocalSkill === undefined || importing || !writable) return
+    setImporting(true)
+    setLocalError(false)
+    setImportError(null)
+    try {
+      const result = await loadLocalSkill(candidate.id)
+      previewArchive(decodeSkillArchive(result.archive), `${candidate.name}.zip`)
+      setLocalOpen(false)
+    } catch (error) {
+      setImportError(error instanceof SkillArchiveError ? `skill.importError.${error.code}` : 'skill.localImportError')
+      setLocalError(true)
     } finally { setImporting(false) }
   }
   const saveDraft = async (item: AuthoringItem) => {
@@ -97,13 +145,17 @@ export function SkillsPanel({ items, writable, loading, save, invoke, t }: {
       {t(opening === skill.name ? 'skill.opening' : 'skill.use')}
     </Button>
   )
-  if (draft !== null) return <SkillEditor initial={draft} importPreview={importPreview} writable={writable} save={saveDraft} close={() => { setDraft(null); setImportPreview(null) }} t={t} />
+  if (draft !== null) return <SkillEditor initial={draft} importPreview={importPreview} writable={writable}
+    save={saveDraft} close={() => { setDraft(null); setImportPreview(null) }} t={t} />
   return (
     <main className={css.page} aria-busy={loading}>
       <div className={css.inner}>
         <header className={css.header}>
           <div className={css.heading}><IconSkillOutline16 size={28} /><h1>{t('skill.title')}</h1><span className={css.total}>{catalog.length}</span></div>
-          <Button variant="primary" icon={<IconFolderOpenOutline16 />} disabled={!writable || importing} onClick={() => { fileInput.current?.click() }}>{t(importing ? 'skill.importing' : 'skill.upload')}</Button>
+          <div className={css.headerActions}>
+            {scanLocalSkills !== undefined && <Button icon={<IconRefreshOutline16 />} disabled={!writable || importing || localLoading} onClick={() => { void scanLocal() }}>{t(localLoading ? 'skill.localScanning' : 'skill.scanLocal')}</Button>}
+            <Button variant="primary" icon={<IconFolderOpenOutline16 />} disabled={!writable || importing} onClick={() => { fileInput.current?.click() }}>{t(importing ? 'skill.importing' : 'skill.upload')}</Button>
+          </div>
           <input ref={fileInput} className={css.fileInput} type="file" accept=".zip,application/zip,application/x-zip-compressed" aria-label={t('skill.archiveFile')} disabled={!writable || importing} onChange={(event) => { void upload(event) }} />
         </header>
         <div className={css.toolbar}>
@@ -112,7 +164,7 @@ export function SkillsPanel({ items, writable, loading, save, invoke, t }: {
               {t(`skill.${value}`)}<span>{value === 'all' ? catalog.length : value === 'builtin' ? BUILTIN_SKILLS.length : items.length}</span>
             </button>)}
           </div>
-          <Input className={css.search!} icon={<IconSearchOutline16 />} type="search" aria-label={t('skill.search')} placeholder={t('skill.search')} value={query} onChange={(event) => { setQuery(event.target.value) }} />
+          <Input className={cssClass(css.search)} icon={<IconSearchOutline16 />} type="search" aria-label={t('skill.search')} placeholder={t('skill.search')} value={query} onChange={(event) => { setQuery(event.target.value) }} />
         </div>
         <div className={css.body}>
           <aside className={css.categories} aria-label={t('skill.categories')}>
@@ -145,15 +197,51 @@ export function SkillsPanel({ items, writable, loading, save, invoke, t }: {
           </section>
         </div>
       </div>
-      {detail && <Modal open title={detail.title} closeLabel={t('skill.close')} onClose={() => { setDetailName(null) }} className={css.detail!} contentClassName={css.detailContent!}
+      {detail && <Modal open title={detail.title} closeLabel={t('skill.close')} onClose={() => { setDetailName(null) }} className={cssClass(css.detail)} contentClassName={cssClass(css.detailContent)}
         footer={<div className={css.detailActions}>
-          {detail.item && <Button icon={<IconEditOutline16 />} disabled={!writable} onClick={() => { setDraft(detail.item!); setDetailName(null) }}>{t('skill.edit')}</Button>}
+          {detail.item && <Button icon={<IconEditOutline16 />} disabled={!writable} onClick={() => { if (detail.item) setDraft(detail.item); setDetailName(null) }}>{t('skill.edit')}</Button>}
           {useButton(detail)}
         </div>}>
         <div className={css.detailMeta}><span className={css.badge}>{t(detail.item ? 'skill.customBadge' : 'skill.builtinBadge')}</span><span>{t(`skill.category.${detail.category}`)}</span></div>
         <p>{detail.description}</p><h3>{t('skill.instructions')}</h3><p className={css.instructions}>{detail.body}</p>
         {detail.steps.length > 0 && <><h3>{t('step')}</h3><ol className={css.detailSteps}>{detail.steps.map((step, index) => <li key={index}>{step}</li>)}</ol></>}
         {error && <p role="alert" className={css.error}>{t('skill.useError')}</p>}
+      </Modal>}
+      {localOpen && <Modal open title={t('skill.localTitle')} closeLabel={t('skill.close')}
+        onClose={() => { if (!importing) setLocalOpen(false) }}
+        className={cssClass(css.localDialog)} contentClassName={cssClass(css.localContent)}
+        footer={<div className={css.detailActions}>
+          <Button icon={<IconRefreshOutline16 />} disabled={localLoading || importing} onClick={() => { void scanLocal() }}>{t(localLoading ? 'skill.localScanning' : 'skill.localRefresh')}</Button>
+        </div>}>
+        <p className={css.localIntro}>{t('skill.localIntro')}</p>
+        {localScan !== null && <div className={css.localRoots}>{localScan.roots.map(root => (
+          <span key={root.source} data-available={root.available}>
+            {t(root.source === 'codex' ? 'skill.localCodex' : 'skill.localAgents')}: <code>{root.path}</code>
+          </span>
+        ))}</div>}
+        <Input className={cssClass(css.localSearch)} icon={<IconSearchOutline16 />} type="search" aria-label={t('skill.localSearch')}
+          placeholder={t('skill.localSearch')} value={localQuery} onChange={(event) => { setLocalQuery(event.target.value) }} />
+        {localLoading && localScan === null && <p role="status" className={css.localStatus}>{t('skill.localScanning')}</p>}
+        {localError && <p role="alert" className={css.error}>{t('skill.localError')}</p>}
+        {localScan !== null && <p className={css.localStatus}>{localFound.length} {t('skill.localCount')}</p>}
+        <div className={css.localList}>
+          {localFound.map((candidate) => {
+            const replacing = items.some(item => item.id === `imported-${candidate.name}`)
+            return <div className={css.localRow} key={candidate.id}>
+              <div className={css.localInfo}>
+                <div className={css.localName}><strong>{candidate.name}</strong><span className={css.badge}>{t(candidate.source === 'codex' ? 'skill.localCodex' : 'skill.localAgents')}</span></div>
+                <p>{candidate.description || t(`skill.localIssue.${candidate.issue ?? 'unreadable'}`)}</p>
+                <code>{candidate.relativePath}</code>
+                <span>{candidate.fileCount} {t('skill.packageFiles')} · {formatBytes(candidate.expandedBytes)}</span>
+                {candidate.issue !== null && <span className={css.localIssue}>{t(`skill.localIssue.${candidate.issue}`)}</span>}
+              </div>
+              <Button size="sm" variant={replacing ? 'outline' : 'primary'} disabled={candidate.issue !== null || importing || !writable} onClick={() => { void importLocal(candidate) }}>
+                {t(importing ? 'skill.importing' : replacing ? 'skill.replace' : 'skill.localImport')}
+              </Button>
+            </div>
+          })}
+        </div>
+        {!localLoading && localScan !== null && localFound.length === 0 && <p className={css.localEmpty}>{t('skill.localEmpty')}</p>}
       </Modal>}
     </main>
   )

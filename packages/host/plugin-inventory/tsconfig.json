@@ -8,6 +8,9 @@
     "src"
   ],
   "references": [
+    { "path": "../../util/values" },
+    { "path": "../../session-query/session-query" },
+    { "path": "../../core/tools" },
     {
       "path": "../../../vendor/cordis"
     },

@@ -33,7 +33,7 @@ Use it when agents should discover and load skills during a session. Skip it whe
 
 ### Mount and configure
 
-Load the plugin together with the skill registry and at least one provider. The only configuration caps the normalized description length rendered in the catalog.
+Load the plugin together with the skill registry and at least one provider. Configure the description length and catalog guidance style.
 
 ```yaml
 - name: '@deepseek-ai/dsh-skill'
@@ -44,6 +44,7 @@ Load the plugin together with the skill registry and at least one provider. The 
 | Field | Default | Meaning |
 |---|---|---|
 | `catalogDescriptionMaxLength` | `500` | Maximum normalized description length rendered in the session catalog; minimum 3 |
+| `catalogStyle` | `full` | `compact` shortens guidance without removing names, descriptions, loading rules, or full skill instructions |
 
 The generated [configuration catalog](../../../docs/config-catalog.md#deepseek-aidsh-tool-skill) is the exhaustive source for every accepted field.
 
@@ -129,7 +130,7 @@ A user may also invoke a skill directly; its <skill_content> block then appears 
 
 #### Token effect
 
-Repeated input cost scales with skill count and `catalogDescriptionMaxLength`; no initial catalog tokens are sent when the list is empty or the tool is hidden or shadowed. Each actual catalog change adds one retained complete replacement message.
+Repeated input cost scales with skill count and `catalogDescriptionMaxLength`; no initial catalog tokens are sent when the list is empty or the tool is hidden or shadowed. Each actual catalog change adds one retained complete replacement message. `catalogStyle: compact` reduces the surrounding guidance; changing only the style does not republish an unchanged catalog already in history.
 
 #### KV Cache effect
 

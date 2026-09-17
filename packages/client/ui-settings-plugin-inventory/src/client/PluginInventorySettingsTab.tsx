@@ -1,7 +1,5 @@
-import { useEffect, useId, useMemo, useState, useSyncExternalStore, type ReactNode } from 'react'
+import { useEffect, useId, useMemo, useState, type ReactNode } from 'react'
 import type { PluginInventorySnapshot } from '@deepseek-ai/dsh-api-remotes/client'
-import type { AuthoringItem, AuthoringSettings } from '@deepseek-ai/dsh-client-ui-layout/client'
-import type { SettingsScope, SettingsScopeSnapshot } from '@deepseek-ai/dsh-client-ui-settings/client'
 import {
   IconChevronDownOutline14,
   IconSearchOutline16,
@@ -27,8 +25,6 @@ export interface PluginInventorySettingsTabInjected {
    * agent-preset dictionaries, user-authored ones keep their own metadata.
    */
   presetName: (preset: AgentPresetGroup) => string
-  /** Read the durable user-authored Skill/workflow/tool/knowledge settings. */
-  authoring: SettingsScope<AuthoringSettings>
 }
 type PluginFiberPhase = PluginInventoryEntry['fiberPhase']
 
@@ -66,51 +62,6 @@ const CATEGORY_LABEL_KEYS = {
   integrations: 'categoryIntegrations',
   other: 'categoryOther',
 } as const satisfies Record<PluginCategory, PluginInventoryLocaleKey>
-
-type AuthoringKind = 'skill' | 'workflow' | 'tool' | 'knowledge'
-type UserPluginRow = {
-  readonly kind: AuthoringKind
-  readonly item: AuthoringItem
-  readonly category: Exclude<PluginCategory, 'all'>
-}
-
-const EMPTY_AUTHORING: AuthoringSettings = { skills: [], workflows: [], tools: [], knowledge: [] }
-const USER_TYPE_KEYS = {
-  skill: 'userTypeSkill',
-  workflow: 'userTypeWorkflow',
-  tool: 'userTypeTool',
-  knowledge: 'userTypeKnowledge',
-} as const satisfies Record<AuthoringKind, PluginInventoryLocaleKey>
-const UNAVAILABLE_AUTHORING_SNAPSHOT: SettingsScopeSnapshot<AuthoringSettings> = {
-  status: 'unavailable', value: undefined, base: undefined, user: undefined,
-  revision: undefined, writable: false, mode: 'memory',
-}
-
-function userPluginRows(settings: AuthoringSettings): UserPluginRow[] {
-  return [
-    ...settings.skills.map(item => ({ kind: 'skill' as const, item, category: 'skills' as const })),
-    ...settings.workflows.map(item => ({ kind: 'workflow' as const, item, category: 'skills' as const })),
-    ...settings.tools.map(item => ({ kind: 'tool' as const, item, category: 'tools' as const })),
-    ...settings.knowledge.map(item => ({ kind: 'knowledge' as const, item, category: 'rag' as const })),
-  ]
-}
-
-function userPluginRuntimeName(kind: AuthoringKind, item: AuthoringItem): string {
-  const stableId = item.id.toLowerCase().replace(/[^a-z0-9-]+/g, '-')
-  const cleanId = stableId.replace(/^-+|-+$/g, '') || 'item'
-  return kind === 'skill' ? `user-${cleanId}` : `user_${kind}_${cleanId}`
-}
-
-function userPluginSearchText(row: UserPluginRow): string {
-  return [
-    row.item.id,
-    row.item.title,
-    row.item.description,
-    row.item.body,
-    ...row.item.steps,
-    ...(row.item.documents ?? []).flatMap(document => [document.title, document.content]),
-  ].join(' ').toLocaleLowerCase()
-}
 
 /** Assign a stable browsing category from the metadata every inventory row shares. */
 function pluginCategory(moduleName: string, entryId: string | null): Exclude<PluginCategory, 'all'> {
@@ -321,7 +272,7 @@ function StateTag({ kind, label }: { readonly kind: EnablementKind; readonly lab
 }
 
 /** Render the read-only plugin inventory: agent presets first, then the global plane. */
-export function PluginInventorySettingsTab({ list, presetName, authoring, t }: PluginInventorySettingsTabProps): ReactNode {
+export function PluginInventorySettingsTab({ list, presetName, t }: PluginInventorySettingsTabProps): ReactNode {
   const sectionId = useId()
   const [request, setRequest] = useState(0)
   const [query, setQuery] = useState('')
@@ -332,11 +283,6 @@ export function PluginInventorySettingsTab({ list, presetName, authoring, t }: P
   const [globalOpen, setGlobalOpen] = useState<boolean | null>(null)
   const [category, setCategory] = useState<PluginCategory>('all')
   const [state, setState] = useState<ViewState>({ status: 'loading' })
-  const authoringSnapshot = useSyncExternalStore(
-    listener => authoring?.subscribe(listener) ?? (() => {}),
-    () => authoring?.getSnapshot() ?? UNAVAILABLE_AUTHORING_SNAPSHOT,
-    () => authoring?.getSnapshot() ?? UNAVAILABLE_AUTHORING_SNAPSHOT,
-  )
   useEffect(() => {
     let current = true
     void Promise.resolve().then(() => list()).then(
@@ -367,7 +313,6 @@ export function PluginInventorySettingsTab({ list, presetName, authoring, t }: P
   }, [presets])
 
   const entries = snapshot?.entries ?? []
-  const userRows = useMemo(() => userPluginRows(authoringSnapshot.value ?? EMPTY_AUTHORING), [authoringSnapshot.value])
   const failedEntries: PluginInventoryEntry[] = []
   const regularEntries: PluginInventoryEntry[] = []
   for (const entry of entries) {
@@ -381,10 +326,8 @@ export function PluginInventorySettingsTab({ list, presetName, authoring, t }: P
     category === 'all' || pluginCategory(moduleName, entryId) === category
   const matchingEntries = entries.filter(entryMatch)
   const matchingSelectedRows = selected === undefined ? [] : selected.rows.filter(rowMatch)
-  const matchingUserRows = userRows.filter(row => userPluginSearchText(row).includes(normalizedQuery)
-    && (category === 'all' || row.category === category))
   const categoryCounts = new Map<PluginCategory, number>(CATEGORY_ORDER.map(key => [key, 0]))
-  categoryCounts.set('all', matchingEntries.length + matchingSelectedRows.length + userRows.filter(row => userPluginSearchText(row).includes(normalizedQuery)).length)
+  categoryCounts.set('all', matchingEntries.length + matchingSelectedRows.length)
   for (const entry of matchingEntries) {
     const key = pluginCategory(entry.moduleName, entry.entryId)
     categoryCounts.set(key, (categoryCounts.get(key) ?? 0) + 1)
@@ -392,10 +335,6 @@ export function PluginInventorySettingsTab({ list, presetName, authoring, t }: P
   for (const row of matchingSelectedRows) {
     const key = pluginCategory(row.moduleName, row.entryId)
     categoryCounts.set(key, (categoryCounts.get(key) ?? 0) + 1)
-  }
-  for (const row of userRows) {
-    if (!userPluginSearchText(row).includes(normalizedQuery)) continue
-    categoryCounts.set(row.category, (categoryCounts.get(row.category) ?? 0) + 1)
   }
   const visibleCategories = CATEGORY_ORDER.filter(key => key === 'all' || key === category || (categoryCounts.get(key) ?? 0) > 0)
   const filteredFailed = failedEntries.filter(entry => entryMatch(entry) && categoryMatch(entry.moduleName, entry.entryId))
@@ -413,8 +352,8 @@ export function PluginInventorySettingsTab({ list, presetName, authoring, t }: P
   const presetEffectiveOpen = searching || (presetOpen ?? true)
   const globalEffectiveOpen = searching || category !== 'all' || (globalOpen ?? presets.length === 0)
   const nothingMatches = searching && globalCount === 0 && selectedRows.length === 0
-    && otherPresetMatches.length === 0 && matchingUserRows.length === 0
-  const nothingInCategory = !searching && category !== 'all' && globalCount === 0 && selectedRows.length === 0 && matchingUserRows.length === 0
+    && otherPresetMatches.length === 0
+  const nothingInCategory = !searching && category !== 'all' && globalCount === 0 && selectedRows.length === 0
 
   const retry = (): void => {
     setState({ status: 'loading' })
@@ -422,36 +361,6 @@ export function PluginInventorySettingsTab({ list, presetName, authoring, t }: P
   }
   const toggleRow = (key: string): void => {
     setExpanded(current => current === key ? null : key)
-  }
-
-  const userRowCard = (row: UserPluginRow): ReactNode => {
-    const title = row.item.title.trim() || t('untitledPlugin')
-    const runtimeName = userPluginRuntimeName(row.kind, row.item)
-    const stateText = row.item.enabled ? t('enabledTag') : t('disabledTag')
-    const facts: readonly (readonly [label: string, value: ReactNode])[] = [
-      [t('pluginType'), t(USER_TYPE_KEYS[row.kind])],
-      [t('descriptionLabel'), row.item.description || t('noDescription')],
-      [t('configuration'), stateText],
-      [t('runtimeName'), <code key="runtime-name">{runtimeName}</code>],
-      ...(row.kind === 'knowledge'
-        ? [[t('documentCount'), String(row.item.documents?.length ?? 0)] as const]
-        : [[t('stepCount'), String(row.item.steps.length)] as const]),
-    ]
-    return (
-      <PluginCard
-        key={`user:${row.kind}:${row.item.id}`}
-        rowKey={`user:${row.kind}:${row.item.id}`}
-        moduleName={title}
-        entryId={runtimeName}
-        failed={false}
-        expanded={expanded}
-        onToggle={toggleRow}
-        ariaLabel={`${title}, ${stateText}`}
-        trailing={<StateTag kind={row.item.enabled ? 'enabled' : 'disabled'} label={stateText} />}
-      >
-        <CardFacts moduleName={title} moduleLabel={t('pluginName')} entryId={runtimeName} facts={facts} />
-      </PluginCard>
-    )
   }
 
   /** Trailing status and detail facts for one row of the selected preset. */
@@ -595,19 +504,9 @@ export function PluginInventorySettingsTab({ list, presetName, authoring, t }: P
               </button>
             ))}
           </div>
-          {entries.length === 0 && presets.length === 0 && userRows.length === 0 ? <p className={css.status}>{t('empty')}</p> : null}
+          {entries.length === 0 && presets.length === 0 ? <p className={css.status}>{t('empty')}</p> : null}
           {nothingMatches ? <p className={css.status}>{t('emptySearch')}</p> : null}
           {nothingInCategory ? <p className={css.status}>{t('emptyCategory')}</p> : null}
-
-          {matchingUserRows.length > 0 ? (
-            <section className={css.group} data-plugin-scope="user">
-              <div className={css.groupTitleRow}>
-                <span className={css.groupTitle}>{t('userTitle')}</span>
-              </div>
-              <p className={css.groupSub}>{t('userSubtitle')}<span data-user-plugin-count>{` · ${String(matchingUserRows.length)} ${t('countUnit')}`}</span></p>
-              <ul className={css.cards}>{matchingUserRows.map(userRowCard)}</ul>
-            </section>
-          ) : null}
 
           {selected !== undefined ? (
             <section className={css.group} data-plugin-scope="preset" data-preset-id={selected.id}>

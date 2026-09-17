@@ -4,7 +4,6 @@ import type {} from '@deepseek-ai/dsh-client-locale/client'
 import type { Context as ClientContext } from '@deepseek-ai/cordis'
 import type {} from '@deepseek-ai/dsh-client-ui-settings/client'
 import type {} from '@deepseek-ai/dsh-client-ui-renderer/client'
-import type {} from '@deepseek-ai/dsh-client-ui-layout/client'
 // Type-only: pulls the 'settings.agentPreset' LocaleNamespaceMap merge, whose
 // dictionaries the shipped-preset name resolution below reads.
 import type {} from '@deepseek-ai/dsh-client-ui-agent-preset/client'
@@ -12,7 +11,6 @@ import type {} from '@deepseek-ai/dsh-client-ui-agent-preset/client'
 import { presetDisplayText } from '@deepseek-ai/dsh-agent-presets/display'
 import { PluginInventorySettingsTab, type PluginInventorySettingsTabInjected } from './PluginInventorySettingsTab.tsx'
 import { en, zh, type PluginInventoryLocaleKey } from './locales.ts'
-import type { AuthoringSettings } from '@deepseek-ai/dsh-client-ui-layout/client'
 
 export type { PluginInventorySettingsTabInjected, PluginInventorySettingsTabProps } from './PluginInventorySettingsTab.tsx'
 export type { PluginInventoryLocaleKey } from './locales.ts'
@@ -28,7 +26,7 @@ declare module '@deepseek-ai/dsh-client-ui-slots' {
 export const NS = 'settings.pluginInventory'
 
 /** Services required by the independent panel registration and Remote face. */
-export const inject = ['slots', 'locale', 'remote', 'remote.pluginInventory', 'settingsScope']
+export const inject = ['slots', 'locale', 'remote', 'remote.pluginInventory']
 
 /** Contribute the inventory page and its product-navigation entry. */
 export function apply(ctx: ClientContext): void {
@@ -47,8 +45,7 @@ export function apply(ctx: ClientContext): void {
   const agentPresetCopy = ctx.locale.bind('settings.agentPreset')
   const presetName: PluginInventorySettingsTabInjected['presetName'] = preset =>
     presetDisplayText(preset, agentPresetCopy).name
-  const authoring = ctx.settingsScope.bind<AuthoringSettings>({ namespace: 'ui-authoring' })
-  const injected = (): PluginInventorySettingsTabInjected => ({ list, presetName, authoring })
+  const injected = (): PluginInventorySettingsTabInjected => ({ list, presetName })
   ctx.slots.inject('settings.plugins.tab', () => ctx.slots.register({
     name: 'settings.plugins.tab',
     id: 'all',

@@ -34,8 +34,8 @@
  *   failure ⇒ log and return the original result. A spill failure must NEVER
  *   turn a successful tool call into an `isError` or hide the inline result.
  *
- * It COMPOSES with other post-execute listeners: its prepended listener
- * delegates via `next()` and bounds the resulting content projection, so
+ * It COMPOSES with other post-execute listeners: Host listeners prepend,
+ * scoped listeners append, and both delegate via `next()` before bounding, so
  * tool-owned asynchronous projection runs before generic bounding, a hook that
  * replaced content still has its replacement bounded, and value replacements
  * and `block` decisions pass through unchanged.
@@ -45,6 +45,7 @@
 
 import type { Context } from '@deepseek-ai/cordis'
 import z from '@deepseek-ai/schemastery'
+import { scopeOf } from '@deepseek-ai/dsh-scope'
 import type { ContentBlock } from '@deepseek-ai/dsh-llm'
 import { TextRetainer } from '@deepseek-ai/dsh-output-retention'
 import type { Omitted } from '@deepseek-ai/dsh-output-retention'
@@ -65,6 +66,8 @@ export interface Config {
    * this is spilled and replaced with a preview derived from this same budget.
    */
   maxInlineBytes?: number
+  /** Tool names this policy bounds; omitted applies to all eligible tools, while an empty list applies to none. */
+  toolNames?: string[] | undefined
 }
 
 /** Cordis plugin name used by loader diagnostics. */
@@ -75,6 +78,7 @@ export const inject = ['tools']
 
 export const Config: z<Config> = z.object({
   maxInlineBytes: z.number(),
+  toolNames: z.union([z.array(z.string()), z.const(undefined)]),
 })
 
 /** All-text content flattened to one UTF-8 string, or `undefined` if any block is non-text. */
@@ -114,6 +118,9 @@ export function apply(ctx: Context, config: Config): void {
   }
   // Narrowed once for the nested arms (closure narrowing does not survive awaits).
   const cap: number = maxInlineBytes
+  const toolNames = config.toolNames === undefined ? undefined : new Set(config.toolNames)
+  // Host caps wrap scoped policies, so a narrower preview still points to the full result.
+  const prepend = scopeOf(ctx) === undefined
 
   /**
    * Spill `text` and build the bounded replacement (preview + notice), or
@@ -189,7 +196,8 @@ export function apply(ctx: Context, config: Config): void {
     const decision = await next()
     // Skip `read` to avoid a read → spill → read again loop.
     if (decision.kind !== 'accept' || Object.hasOwn(decision, 'value')
-      || exec.parent !== undefined || exec.name === 'read') return decision
+      || exec.parent !== undefined || exec.name === 'read'
+      || (toolNames !== undefined && !toolNames.has(exec.name))) return decision
 
     const content = decision.content ?? result.content
     const text = flattenPlainText(content)
@@ -201,7 +209,7 @@ export function apply(ctx: Context, config: Config): void {
     if (replacedText === undefined) return decision
     const replaced: ContentBlock[] = [{ type: 'text', text: replacedText }]
     return { kind: 'accept', content: replaced, ...decision.additionalContexts ? { additionalContexts: decision.additionalContexts } : {} }
-  }, { prepend: true })
+  }, { prepend })
 
   // The durable-log arm: bound the `tool/ptc-dispatch` event's copy of an
   // oversized sub-call result the same way the model-facing arm bounds an
@@ -211,6 +219,7 @@ export function apply(ctx: Context, config: Config): void {
   // spill artifact exactly as they do for spilled native results.
   ctx.on('tools/ptc-dispatch-log', async (dispatch, next): Promise<ContentBlock[]> => {
     const content = await next()
+    if (toolNames !== undefined && !toolNames.has(dispatch.name)) return content
     // `read` sub-calls spill too: the log copy is not model context, so the
     // read → spill → read-again loop the post-execute arm avoids cannot
     // happen here, and read is precisely the tool that produces huge logs.
@@ -223,5 +232,5 @@ export function apply(ctx: Context, config: Config): void {
       text, totalBytes, ownerSessionId(dispatch.exec), dispatch.name, dispatch.subCallId, 'dispatch')
     if (replacedText === undefined) return content
     return [{ type: 'text', text: replacedText }]
-  }, { prepend: true })
+  }, { prepend })
 }

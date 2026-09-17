@@ -1,0 +1,33 @@
+.actions, .summary, .summary > div { display: flex; align-items: center; flex-wrap: wrap; gap: 12px; }
+.refresh { display: grid; place-items: center; width: 32px; height: 32px; border: 0; border-radius: 4px; background: transparent; color: var(--dsw-alias-label-secondary); cursor: pointer; }
+.refresh:hover { background: var(--dsw-alias-interactive-bg-hover-solid); }
+.refresh:disabled { opacity: .5; cursor: wait; }
+.refresh:focus-visible, .sort:focus-visible { outline: 2px solid var(--dsw-alias-interactive-border-focus); outline-offset: 2px; }
+.summary { justify-content: space-between; margin: 20px 0; font-size: 12px; color: var(--dsw-alias-label-secondary); }
+.summary > div { gap: 20px; }
+.summary strong { color: var(--dsw-alias-label-primary); font-variant-numeric: tabular-nums; }
+.overview { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; margin: 0 0 24px; padding: 18px 0; border-block: 0.5px solid var(--dsw-alias-border-l2); }
+.overview dt, .cardMetrics dt { font-size: 12px; color: var(--dsw-alias-label-secondary); overflow-wrap: anywhere; }
+.overview dd { margin: 6px 0 0; font-size: 24px; font-weight: 600; color: var(--dsw-alias-label-primary); font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.overview [tabindex]:focus-visible { outline: 2px solid var(--dsw-alias-interactive-border-focus); outline-offset: 2px; }
+.cardMetrics { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin: 0 0 16px; }
+.cardMetrics dd { margin: 4px 0 0; font-size: 16px; font-weight: 600; color: var(--dsw-alias-label-primary); font-variant-numeric: tabular-nums; }
+.sort { max-width: 100%; border: 0.5px solid var(--dsw-alias-border-l2); border-radius: 4px; padding: 7px; font: inherit; color: var(--dsw-alias-label-secondary); background: var(--dsw-alias-bg-base); }
+.title { margin: 0; font-size: 16px; line-height: 24px; font-weight: 600; overflow-wrap: anywhere; }
+.usage { color: var(--dsw-alias-label-secondary); font-size: 12px; }
+.usage strong { margin: 0 4px; color: var(--dsw-alias-label-primary); font-size: 20px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.dialog { width: min(680px, calc(100vw - 48px)); max-height: calc(100dvh - 48px); }
+.dialog h2 { overflow-wrap: anywhere; min-width: 0; }
+.detail { min-width: 0; font-size: 13px; line-height: 1.7; color: var(--dsw-alias-label-secondary); overflow-wrap: anywhere; }
+.detail h3 { margin: 20px 0 8px; font-size: 14px; color: var(--dsw-alias-label-primary); }
+.name { display: block; color: var(--dsw-alias-label-tertiary); font-size: 12px; overflow-wrap: anywhere; }
+.description { margin: 12px 0 20px; white-space: pre-wrap; }
+.metrics { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; border-top: 0.5px solid var(--dsw-alias-border-l2); border-bottom: 0.5px solid var(--dsw-alias-border-l2); padding: 16px 0; }
+.metrics dt { font-size: 12px; }
+.metrics dd { margin: 4px 0 0; font-size: 22px; color: var(--dsw-alias-label-primary); font-variant-numeric: tabular-nums; }
+.timestamp, .scope { font-size: 12px; color: var(--dsw-alias-label-tertiary); }
+.schema { margin-top: 20px; border-top: 0.5px solid var(--dsw-alias-border-l2); padding-top: 16px; }
+.schema summary { cursor: pointer; color: var(--dsw-alias-label-primary); }
+.schema pre { white-space: pre-wrap; overflow-wrap: anywhere; font-size: 12px; }
+@media (max-width: 640px) { .overview { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 480px) { .metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); } }

@@ -42,7 +42,7 @@ Load the policy with a `maxInlineBytes` budget, in UTF-8 bytes, and a spill back
 |---|---|---|
 | `maxInlineBytes` | omitted | Model-facing context cap for a plain-text result, in UTF-8 bytes; omitted disables the policy entirely |
 
-The generated [configuration catalog](../../../docs/config-catalog.md#deepseek-aidsh-spill-policy) is the exhaustive source for every accepted field. A negative or fractional cap fails plugin load rather than corrupting per-call behavior.
+Optional `toolNames` restricts both result and dispatch-log handling to exact tool names; omission includes every eligible tool, while an empty list includes none. The generated [configuration catalog](../../../docs/config-catalog.md#deepseek-aidsh-spill-policy) is the exhaustive source for every accepted field. A negative or fractional cap fails plugin load rather than corrupting per-call behavior.
 
 ### What the model sees
 
@@ -84,7 +84,7 @@ The policy is deliberately narrow: it only decides **when** to spill and compose
 
 ### The two arms
 
-A `tools/post-execute` waterfall listener (registered with `prepend`, delegating via `next()`) bounds the model-facing result; a `tools/ptc-dispatch-log` listener bounds the durable log copy of each `run_code` sub-call. Both share one replacement helper so the two projections are byte-identical. The post-execute arm skips `read` to avoid a read → spill → read loop; the dispatch-log arm bounds `read` sub-calls because a log copy is not model context.
+A `tools/post-execute` waterfall listener delegates via `next()` and bounds the model-facing result; a `tools/ptc-dispatch-log` listener bounds the durable log copy of each `run_code` sub-call. Host policies prepend; scoped policies append, so a stricter scoped policy saves the full result before the Host checks its shorter preview. Both share one replacement helper so the two projections are byte-identical. The post-execute arm skips `read` to avoid a read → spill → read loop; the dispatch-log arm bounds `read` sub-calls because a log copy is not model context.
 
 <a id="shared-notice-ownership"></a>
 ### Shared notice ownership

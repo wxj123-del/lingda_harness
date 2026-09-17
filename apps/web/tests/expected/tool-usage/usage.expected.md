@@ -1,0 +1,75 @@
+- main:
+  - img
+  - heading "工具" [level=1]
+  - text: "3"
+  - button "刷新统计":
+    - img
+  - button "新建工具":
+    - img
+    - text: 新建工具
+  - term: 已记录请求
+  - definition: "6"
+  - term: 携带次数
+  - definition: "18"
+  - term: 命中次数
+  - definition: "4"
+  - term: 调用命中率
+  - definition: 22.2%
+  - group "工具筛选":
+    - button "全部工具" [pressed]: 全部工具 3
+    - button "已调用": 已调用 2
+    - button "未调用": 未调用 1
+    - button "自建工具": 自建工具 0
+  - img
+  - searchbox "搜索工具名称或描述"
+  - text: 2 个会话 累计调用
+  - strong: "6"
+  - text: 次
+  - combobox "工具排序":
+    - option "调用次数降序" [selected]
+    - option "携带次数降序"
+    - option "命中率升序"
+    - option "工具名称"
+  - region "全部工具":
+    - article "read":
+      - img
+      - text: 会话工具
+      - button "read":
+        - heading "read" [level=2]
+      - paragraph: 读取文本文件，并按行号返回内容，便于查看代码、配置和文档。
+      - term: 携带次数
+      - definition: "6"
+      - term: 调用命中率
+      - definition: 33.3%
+      - text: "最近调用: 2026/9/16 {{clock}} 已调用"
+      - strong: "4"
+      - text: 次
+      - button "查看详情"
+    - article "bash":
+      - img
+      - text: 会话工具
+      - button "bash":
+        - heading "bash" [level=2]
+      - paragraph: 执行 Shell 命令，返回标准输出、错误信息和退出状态。每次调用使用独立环境，支持指定工作目录和后台运行。
+      - term: 携带次数
+      - definition: "6"
+      - term: 调用命中率
+      - definition: 33.3%
+      - text: "最近调用: 2026/9/16 {{clock}} 已调用"
+      - strong: "2"
+      - text: 次
+      - button "查看详情"
+    - article "unused_tool":
+      - img
+      - text: 会话工具
+      - button "unused_tool":
+        - heading "unused_tool" [level=2]
+      - paragraph: Unused tool
+      - term: 携带次数
+      - definition: "6"
+      - term: 调用命中率
+      - definition: 0%
+      - text: "最近调用: 尚未调用 已调用"
+      - strong: "0"
+      - text: 次
+      - button "查看详情"

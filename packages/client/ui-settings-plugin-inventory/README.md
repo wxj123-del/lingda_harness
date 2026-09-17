@@ -1,5 +1,5 @@
 ---
-description: "Scope-grouped read-only plugin inventory page for the dsh web client: user-created plugins first, then agent presets and the global plane with category filters and search."
+description: "Read-only plugin module inventory for the dsh web client, grouped by agent preset and global scope with category filters and search."
 kind: "package-reference"
 ---
 
@@ -9,7 +9,7 @@ English | [中文](README.zh.md)
 
 ## Summary
 
-The **Plugin list** page lets Web users inspect plugins without changing their configuration. It presents user-created plugins first, then agent presets, and collapses the global inventory until a search or category filter is active. A category bar groups rows into **Skills & workflows**, **RAG & knowledge**, **Common tools**, **Agents & collaboration**, **Model-related plugins**, **System & sessions**, **Integrations**, and **Other plugins**. Image-generation and voice-model plugins are included in the model-related category. User-authored Skills, workflows, tools, and knowledge bases are read from the `ui-authoring` settings namespace and shown in a separate group with their own names, descriptions, runtime names, enablement, and step or document counts. Categories are inferred from stable module and entry identifiers, so the Remote contract stays compatible with custom plugins. Cards retain the package name as the primary title, identify instances by stable entry id, and expose enablement, source details, runtime status, disabled conditions, and discovery failures; preset-provided global entries name their presets. Search covers both groups and combines with the selected category, while pointing to matches in other presets. The page handles loading, empty, no-match, failure, and retry states without exposing transport details, and still shows the global inventory without a preset roster.
+The **Plugins** page lets Web users inspect plugin modules in agent presets and global entries without changing configuration. Category filters and search narrow the inventory; cards show enablement and runtime details. Actual Skills, workflows, tools, and knowledge bases stay in their respective navigation pages and do not contribute duplicate inventory cards or counts. Reading these views makes no model request.
 
 ## Table of Contents
 
@@ -29,9 +29,11 @@ Select **Plugins** in the product navigation to inspect the Host's plugin invent
 
 ### Reading a card
 
-Each collapsed card uses the short module name as its primary title, shows the stable entry id underneath, and carries a small enablement tag; enabled entries also show a colored root-fiber status dot. A composition-generated subtitle omits its leading `include:` marker, while hover, search, the accessible name, and expanded details retain the complete id. Long entry ids truncate in the row and remain available on hover. Expanding one card reveals the declared entry id, the full module specifier, and the state facts: a preset row names the preset it comes from, its runtime status when the composition is live, and its disable condition when it carries one; a preset-provided global row explains that agent presets provide it per session, names the presets that enable it, and offers a jump into the preset group. User-authored cards also show their description, type, runtime registration name, and configured step or document count. Preset names resolve through the shared `presetDisplayText` fold (`dsh-agent-presets/display`) over [`ui-agent-preset`](../ui-agent-preset/README.md)'s dictionaries: shipped presets follow the active locale while user-authored ones keep their own metadata, so an English surface never echoes the preset files' Chinese names. Search filters both groups by module name and entry id.
+Each collapsed card uses the short module name as its primary title, shows the stable entry id underneath, and carries a small enablement tag; enabled entries also show a colored root-fiber status dot. A composition-generated subtitle omits its leading `include:` marker, while hover, search, the accessible name, and expanded details retain the complete id. Long entry ids truncate in the row and remain available on hover. Expanding one card reveals the declared entry id, the full module specifier, and the state facts: a preset row names the preset it comes from, its runtime status when the composition is live, and its disable condition when it carries one; a preset-provided global row explains that agent presets provide it per session, names the presets that enable it, and offers a jump into the preset group. Preset names resolve through the shared `presetDisplayText` fold (`dsh-agent-presets/display`) over [`ui-agent-preset`](../ui-agent-preset/README.md)'s dictionaries: shipped presets follow the active locale while user-authored ones keep their own metadata, so an English surface never echoes the preset files' Chinese names. Search filters both groups by module name and entry id.
 
 ### Categories and the preset switcher
+
+**Skill & workflow support plugins** groups the modules that load Skills, invoke them, and support workflow execution. It is not a list of available Skills; imported and user-authored Skills are managed in the [Skill marketplace](../ui-layout/README.md), without moving or duplicating their stored content.
 
 The category bar is a browsing filter, not an enablement scope. It keeps the existing **Session plugins** and **Global plugins** sections intact, and the count on each category reflects the currently inspected preset plus the global rows. The classifier checks explicit identifier terms in a fixed order: external integrations and RAG terms take precedence over generic tool terms, model terms include image-generation and voice-model identifiers, and unmatched rows go to **Other plugins**. This makes a custom `feishu`, `lark`, `mcp`, `rag`, `embedding`, `knowledge`, `image-generation`, or `tts` plugin discoverable without requiring a package registration change. Search and categories can be used together.
 
@@ -55,7 +57,7 @@ The tab is a read-only projection of a Host-owned snapshot; it performs no Remot
 
 ### Registration
 
-The browser plugin registers the first `settings.plugins.tab` contribution inside the independent Plugins main page owned by `ui-settings-plugins`. This extension point retains its name for existing contributors; it has no dependency on the Settings modal. Registration uses `ctx.slots.inject()` to follow declaration, redeclaration, and teardown; the renderer supplies locale updates.
+The browser plugin registers the inventory `settings.plugins.tab` contribution inside the independent Plugins main page owned by `ui-settings-plugins`. This extension point retains its name for existing contributors; it has no dependency on the Settings modal. Registration uses `ctx.slots.inject()` to follow declaration, redeclaration, and teardown; the renderer supplies locale updates.
 
 ### Rendering
 

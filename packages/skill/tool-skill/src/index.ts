@@ -61,11 +61,14 @@ function catalogSourceEntries(
 export interface Config {
   /** Maximum normalized description length rendered in the session catalog; minimum 3. */
   catalogDescriptionMaxLength?: number
+  /** Catalog framing: full guidance by default, or compact guidance with the same entries and loading rules. */
+  catalogStyle?: 'full' | 'compact'
 }
 
 /** Validate and default the model-facing skill catalog configuration. */
 export const Config: z<Config> = z.object({
   catalogDescriptionMaxLength: z.number().default(DEFAULT_CATALOG_DESCRIPTION_MAX_LENGTH),
+  catalogStyle: z.union(['full', 'compact']).default('full'),
 })
 
 /**
@@ -239,15 +242,35 @@ export function apply(ctx: Context, config: Config = {}): void {
         ? decision
         : { ...decision, messages: decision.messages.filter(message => message.id !== existing.message.id) }
     }
-    const catalog = history.published
-      ? renderCatalogUpdate(entries)
-      : renderCatalogMessage(entries)
+    const catalog = config.catalogStyle === 'compact'
+      ? renderCompactCatalog(entries, history.published)
+      : history.published
+        ? renderCatalogUpdate(entries)
+        : renderCatalogMessage(entries)
     return {
       ...decision,
       messages: existing === undefined
         ? [...decision.messages, catalog]
         : decision.messages.map(message => message.id === existing.message.id ? catalog : message),
     }
+  })
+}
+
+function renderCompactCatalog(entries: SkillCatalogSource['entries'], update: boolean): UserMessage {
+  return createUserMessage({
+    content: [{ type: 'text', text: [
+      '<system-reminder>',
+      'Available skills (replaces earlier catalogs):',
+      '<available_skills>',
+      ...renderCatalogEntries(entries),
+      '</available_skills>',
+      entries.length === 0
+        ? 'No skills are available through `skill`; do not use earlier catalog names.'
+        : 'Before acting, load every named or clearly matching listed skill with `skill` using its exact name. Summaries are not instructions; follow the loaded content.',
+      'Follow directly supplied <skill_content> without loading that skill again.',
+      '</system-reminder>',
+    ].join('\n') }],
+    source: { kind: 'skill-catalog', form: 'catalog', ...(update ? { update: true } : {}), entries },
   })
 }
 
@@ -362,7 +385,6 @@ function catalogHistory(agent: Agent): { visibleDigest?: string; published: bool
   const visible = new Set(agent.session.surface.nodes)
   let published = false
   for (let index = agent.session.seq - 1; index >= 0; index -= 1) {
-    // oxlint-disable-next-line typescript/no-deprecated -- Existing Session history read; migration deferred.
     const event = agent.session.eventAt(SessionSeq(index))
     if (event === undefined) {
       throw new Error(`skill catalog cannot read seq ${String(index)} below the current Session length`)

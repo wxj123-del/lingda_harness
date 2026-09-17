@@ -5,7 +5,7 @@ import { cleanup } from '@testing-library/react'
 import { LocaleRuntime } from '@deepseek-ai/dsh-client-locale/client'
 import { SlotRegistry } from '@deepseek-ai/dsh-client-ui-renderer/client'
 import { resolveSlotLabel } from '@deepseek-ai/dsh-client-ui-slots'
-import { stubSettingsScope, usePinnedBrowserLanguages } from '@deepseek-ai/dsh-client-test-runtime'
+import { usePinnedBrowserLanguages } from '@deepseek-ai/dsh-client-test-runtime'
 import { apply, inject, NS } from '../src/client/index.ts'
 import { PluginInventorySettingsTab, type PluginInventorySettingsTabInjected } from '../src/client/PluginInventorySettingsTab.tsx'
 import { apply as hostApply } from '../src/index.ts'
@@ -32,7 +32,6 @@ async function bench() {
   const list = vi.fn<() => Promise<ListResult>>()
     .mockResolvedValue({ ok: true, value: EMPTY })
   ctx.provide('remote.pluginInventory', { list })
-  ctx.provide('settingsScope', { bind: () => stubSettingsScope().scope } as never)
   return { ctx, slots: ctx.get('slots') as SlotRegistry, locale, list }
 }
 
@@ -51,7 +50,7 @@ describe('ui-settings-plugin-inventory browser plugin', () => {
   })
 
   it('declares only the services used by the Settings Remote contribution', () => {
-    expect(inject).toEqual(['slots', 'locale', 'remote', 'remote.pluginInventory', 'settingsScope'])
+    expect(inject).toEqual(['slots', 'locale', 'remote', 'remote.pluginInventory'])
   })
 
   it('registers an independent panel without reading the Remote eagerly', async () => {
