@@ -25,17 +25,25 @@ Review the [safety notice](SAFETY.md) before running the project.
 
 ## Run
 
-Install Node.js 24 or later, or Node.js 22.19 or later within the 22.x line, and pnpm 11.7.0 as specified in [package.json](package.json).
+Install Node.js 24 or later, or Node.js 22.19 or later within the 22.x line.
 
-This checkout retains the `dsh` CLI and `@deepseek-ai/*` package names. Run Lingda from this repository's source; the npm package `@deepseek-ai/dsh` is the upstream distribution.
+### Launch with npx
 
-The independent `lingda-harness` npm distribution can be built and tested using the [release guide](distribution/npm/README.md). The command `npx lingda-harness@latest web` requires publishing that distribution to npm first.
+Run the published [lingda-harness](https://www.npmjs.com/package/lingda-harness) package without cloning the repository or installing pnpm:
+
+```sh
+npx --registry=https://registry.npmjs.org/ lingda-harness@latest web
+```
+
+The command uses the official npm registry to avoid mirror synchronization delays. First launch downloads runtime dependencies; later launches reuse the installed runtime. Data is stored in `~/.lingda` by default. See the [distribution guide](distribution/npm/README.md) for configuration and release details.
+
+The default address is `http://127.0.0.1:3081`, leaving the upstream DSH default on port 3080. A local launch opens the browser; an SSH launch only prints the host URL. Add `--no-open` to skip opening the browser, or `--port 3082` to use another port. Exit with Ctrl+C.
 
 <a id="run-from-source"></a>
 
 ### Run from source
 
-To run from a repository checkout:
+To develop from a repository checkout, also install pnpm 11.7.0 as specified in [package.json](package.json):
 
 ```sh
 git clone https://github.com/wxj123-del/lingda_harness.git
@@ -45,9 +53,7 @@ pnpm run build
 pnpm dsh web
 ```
 
-`pnpm run build` prepares the repository artifacts. `pnpm dsh web` uses those built artifacts without rebuilding.
-
-The default address is `http://127.0.0.1:3081`, leaving the upstream DSH default on port 3080. A local launch opens the browser; an SSH launch only prints the host URL. Add `--no-open` to skip opening the browser.
+`pnpm run build` prepares the repository artifacts. `pnpm dsh web` uses those built artifacts without rebuilding. This checkout retains the `dsh` CLI and `@deepseek-ai/*` package names; the npm package `@deepseek-ai/dsh` is the upstream distribution.
 
 ### First conversation
 

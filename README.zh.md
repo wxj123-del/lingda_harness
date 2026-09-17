@@ -25,17 +25,25 @@ Lingda Harness 处于开发者预览阶段，功能和接口仍在迭代，可�
 
 ## 运行
 
-按照 [package.json](package.json) 的要求，安装 Node.js 24 及以上版本，或 22.x 系列中不低于 22.19 的版本，以及 pnpm 11.7.0。
+安装 Node.js 24 及以上版本，或 22.x 系列中不低于 22.19 的版本。
 
-仓库沿用 `dsh` 命令和 `@deepseek-ai/*` 包名。请从本仓库源码运行灵搭；npm 上的 `@deepseek-ai/dsh` 是上游发行版本。
+### 使用 npx 一键启动
 
-独立的 `lingda-harness` npm 发行包可按照[发布指南](distribution/npm/README.zh.md)构建与验证。`npx lingda-harness@latest web` 需要先将该发行包发布到 npm 才能使用。
+直接运行已发布的 [lingda-harness](https://www.npmjs.com/package/lingda-harness) 包，无需克隆仓库或安装 pnpm：
+
+```sh
+npx --registry=https://registry.npmjs.org/ lingda-harness@latest web
+```
+
+命令使用 npm 官方源，避免镜像同步延迟。首次启动会下载运行依赖，后续启动复用已安装的运行环境。数据默认存放在 `~/.lingda`。配置与发布细节见[发行包指南](distribution/npm/README.zh.md)。
+
+默认访问地址为 `http://127.0.0.1:3081`，上游 DSH 仍使用 3080 端口。本机启动时会打开浏览器，通过 SSH 启动时只打印宿主机 URL。添加 `--no-open` 可跳过打开浏览器，添加 `--port 3082` 可使用其他端口。按 Ctrl+C 退出。
 
 <a id="run-from-source"></a>
 
 ### 从源码运行
 
-如需从仓库源码运行：
+如需基于仓库源码开发，还需按照 [package.json](package.json) 的要求安装 pnpm 11.7.0：
 
 ```sh
 git clone https://github.com/wxj123-del/lingda_harness.git
@@ -45,9 +53,7 @@ pnpm run build
 pnpm dsh web
 ```
 
-`pnpm run build` 会准备仓库产物。`pnpm dsh web` 会直接使用这些已构建产物，不会重新构建。
-
-默认访问地址为 `http://127.0.0.1:3081`，上游 DSH 仍使用 3080 端口。本机启动时会打开浏览器，通过 SSH 启动时只打印宿主机 URL。添加 `--no-open` 可跳过打开浏览器。
+`pnpm run build` 会准备仓库产物。`pnpm dsh web` 会直接使用这些已构建产物，不会重新构建。仓库沿用 `dsh` 命令和 `@deepseek-ai/*` 包名；npm 上的 `@deepseek-ai/dsh` 是上游发行版本。
 
 ### 开始第一次对话
 
