@@ -58,6 +58,13 @@ export const knowledgeZh = {
   'kb.fileError': '支持 UTF-8 文本文件，每个文件不超过 1 MB。',
   'kb.charUnit': '字符',
   'kb.titleRequired': '请填写知识库名称和每篇知识的标题。',
+  'kb.chat.enable': '启用知识库',
+  'kb.chat.label': '知识库',
+  'kb.chat.choose': '选择对话使用的知识库',
+  'kb.chat.manage': '管理知识库',
+  'kb.chat.empty': '还没有创建知识库',
+  'kb.chat.loading': '正在读取知识库…',
+  'kb.chat.enableTitle': '点击选择并启用知识库',
 } as const
 export const knowledgeEn: Record<keyof typeof knowledgeZh, string> = {
   'kb.new': 'New library',
@@ -119,4 +126,11 @@ export const knowledgeEn: Record<keyof typeof knowledgeZh, string> = {
   'kb.fileError': 'Use UTF-8 text files up to 1 MB each.',
   'kb.charUnit': 'characters',
   'kb.titleRequired': 'Enter the library name and every document title.',
+  'kb.chat.enable': 'Enable knowledge',
+  'kb.chat.label': 'Knowledge',
+  'kb.chat.choose': 'Choose libraries for this chat',
+  'kb.chat.manage': 'Manage knowledge',
+  'kb.chat.empty': 'No knowledge libraries yet',
+  'kb.chat.loading': 'Loading knowledge libraries…',
+  'kb.chat.enableTitle': 'Choose and enable a knowledge library',
 }

@@ -14,8 +14,16 @@ import { StepsEditor } from './StepsEditor.tsx'
 import { SkillsPanel } from './SkillsPanel.tsx'
 import { ToolsPanel, type ToolsPanelProps } from './ToolsPanel.tsx'
 import { KnowledgePanel, type KnowledgePanelProps } from './KnowledgePanel.tsx'
+import {
+  KnowledgeConversationControl,
+  type KnowledgeConversationControlInjected,
+} from './KnowledgeConversationControl.tsx'
 
 declare module '@deepseek-ai/dsh-client-ui-slots' {
+  interface SlotMap {
+    /** Composer tool-row seat used by the knowledge-base toggle. */
+    'conversation.input.left': { kind: 'list'; scope: 'session' }
+  }
   interface LocaleNamespaceMap { layout: keyof typeof zh }
 }
 
@@ -237,6 +245,20 @@ export function registerAuthoringSurface(
     subscribe: (listener: () => void) => instance.subscribe(listener),
   }
   const select = (id: string | null) => { ctx.layout.selectPanel(id as MainPanelId | null) }
+  ctx.inject(['remote', 'remote.knowledge'], (knowledgeContext: Context) => {
+    const remote = knowledgeContext.remote.knowledge
+    knowledgeContext.slots.inject('conversation.input.left', () => knowledgeContext.slots.register({
+      name: 'conversation.input.left',
+      id: 'knowledge-conversation-control',
+      locale: 'layout',
+      inject: (): KnowledgeConversationControlInjected => ({
+        overview: () => remote.overview(),
+        get: id => remote.get(id),
+        save: draft => remote.save(draft),
+        openManagement: () => { ctx.layout.selectPanel(PANEL_IDS.knowledge as MainPanelId) },
+      }),
+    }, KnowledgeConversationControl))
+  })
   const saveTool = async (item: AuthoringItem): Promise<void> => {
     const snapshot = scope.getSnapshot()
     if (!snapshot.writable || snapshot.value === undefined) throw new Error('Tool storage unavailable')
