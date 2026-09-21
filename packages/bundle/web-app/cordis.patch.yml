@@ -139,7 +139,8 @@
     # ── layer 2: transport/service ──────────────────────────────────────────────
 
     # Plain route-registration carrier; host and port come from the app's
-    # webStartup provider, with these deployment fallbacks. The dist is served by
+    # webStartup provider, with these deployment fallbacks. `--mobile` opts into
+    # the all-interface bind for a phone on the same LAN; the dist is served by
     # the web-runtime row below through the fallback seat.
     - id: webserver
       name: '@deepseek-ai/dsh-host-webserver'
@@ -363,6 +364,12 @@
     - id: ui-trajectory
       name: '@deepseek-ai/dsh-client-ui-trajectory'
 
+    # Per-request Token ledger and the dedicated repository view. Keep this
+    # browser plugin in the shipped Web profile so its conversation tabs are
+    # available outside of the focused step-insight test overlay as well.
+    - id: ui-step-insight
+      name: '@deepseek-ai/dsh-client-ui-step-insight'
+
 # ── the agent plane moves behind agent presets ─────────────────────────────
 #
 # Every row below composes what ONE agent contributes to the host registries:
@@ -499,4 +506,5 @@
     - id: agent-presets
       name: '@deepseek-ai/dsh-agent-presets'
       config:
-        default: standard
+        default: diaosi
+        modeSelectionEnabled: false

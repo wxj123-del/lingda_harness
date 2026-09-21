@@ -58,6 +58,7 @@ async function roster(config: Partial<Config> = {}): Promise<Context> {
 
 interface ShippedEntry {
   id?: unknown
+  name?: unknown
   disabled?: unknown
   config?: unknown
 }
@@ -139,6 +140,12 @@ describe('the shipped preset root', () => {
       }
       expect(toolWeb.config.fetch, id).toBe(true)
     }
+  })
+
+  it('keeps diaosi deliverables visible and bounds foreground shell work', async () => {
+    const entries = await shippedEntries('diaosi')
+    expect(findEntry(entries, 'present')?.name).toBe('@deepseek-ai/dsh-tool-present')
+    expect(findEntry(entries, 'tool-bash')?.config).toEqual({ toolTimeoutMs: 30000 })
   })
 
   it('omits the general workflow tool and its unused engine only from PTC', async () => {

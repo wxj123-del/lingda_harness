@@ -19,13 +19,17 @@ The default embedding model is `Xenova/bge-small-zh-v1.5`, loaded lazily through
 
 ## Understand the implementation
 
-`src/index.ts` owns the manifest, optimistic revisions, atomic writes, stale-index rejection, background rebuilds, and LanceDB table rotation. `src/split.ts` owns preview/index parity. `src/embedding.ts` owns lazy model loading and retryable failures. `src/tools.ts` registers the agent tools. Each successful search returns the library, document, chunk ordinal, original excerpt, and cosine similarity; incomplete indexes are reported in `skippedBases`.
+`src/index.ts` owns the manifest, optimistic revisions, atomic writes, stale-index rejection, background rebuilds, and LanceDB table rotation. `src/split.ts` owns preview/index parity. `src/embedding.ts` owns lazy model loading and retryable failures. `src/tools.ts` registers the agent tools. Each search applies a configurable cosine-similarity threshold, content deduplication, result-count limit, and estimated-token budget before returning the library, document, chunk ordinal, original excerpt, and similarity; incomplete indexes are reported in `skippedBases`.
 
 The plugin imports legacy `ui-authoring.knowledge` records once when the web surface opens. The old settings section is preserved, and imported records are copied into the new manifest so migration does not rewrite the source document.
 
 ## Model Experience
 
-`knowledge_list` and `knowledge_search` are model-visible tools. Search results add retrieved source text to the next model context only when the agent calls the search tool. Indexing and embedding happen locally and do not consume provider tokens. Tool descriptions and returned excerpts do consume context tokens when sent to a model.
+`knowledge_list` and `knowledge_search` are model-visible tools. Retrieved source text enters the model context after an explicit tool call or after a user checks libraries in the current conversation and automatic retrieval runs. Indexing and embedding happen locally and do not consume provider tokens. Tool descriptions and returned excerpts do consume context tokens when sent to a model.
+
+#### Automatic retrieval in conversations
+
+The knowledge-base menu in the composer stores the selection for the current Session instead of changing a global enable flag shared by every Session. After a user checks one or more libraries, the next new user message is searched before the model request and the selected sources are added as attributed context with the library, document, excerpt, similarity, and index status. With no selection, no automatic search runs. Models may still call `knowledge_list` and `knowledge_search` explicitly, but Diaosi mode no longer needs to discover those tools first to use the libraries selected by the user.
 
 #### KV Cache effect
 
@@ -36,7 +40,7 @@ The plugin does not change the model cache policy. A search result is ordinary t
 - **Local model download** — model files are downloaded on first use and require network access; failed downloads remain retryable and are shown in the model state.
 - **Character-based limits** — split size and overlap are measured in characters, not tokenizer tokens. A future tokenizer-aware mode may make cost estimates more exact.
 - **Local single-process ownership** — LanceDB is opened by the Host process and is intended for one active DSH process using a data directory at a time.
-- **No automatic refresh subscription** — the Client refreshes the overview while the panel is open; other clients must request a new overview.
+- **Per-Session selection** — the selection is recorded in the Session log so it can be reconstructed after resume and inherited by a fork; disabled libraries do not participate in automatic retrieval.
 
 ## Dev Note
 

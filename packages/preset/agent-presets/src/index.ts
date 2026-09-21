@@ -107,6 +107,7 @@ export class AgentPresets extends TypertRemoteService {
   /** Runtime schema for the preset roster. */
   static Config = z.object({
     default: z.string().required(),
+    modeSelectionEnabled: z.boolean().default(true),
     roots: z.array(z.object({
       path: z.string().required(),
       trust: z.union(['system', 'user'] as const).default('user'),
@@ -192,7 +193,7 @@ export class AgentPresets extends TypertRemoteService {
       this.settings = settingsCtx.settings.register(
         SETTINGS_NAMESPACE,
         AgentPresetSettingsSchema,
-        { base: { default: config.default, modeSelectionEnabled: true } },
+        { base: { default: config.default, modeSelectionEnabled: config.modeSelectionEnabled ?? true } },
       )
       this.settingsService = settingsCtx.settings
       settingsCtx.effect(() => () => {

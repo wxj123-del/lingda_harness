@@ -18,11 +18,15 @@ import {
   KnowledgeConversationControl,
   type KnowledgeConversationControlInjected,
 } from './KnowledgeConversationControl.tsx'
+import {
+  PersonalModeConversationControl,
+  type PersonalModeConversationControlInjected,
+} from './PersonalModeConversationControl.tsx'
 
 declare module '@deepseek-ai/dsh-client-ui-slots' {
   interface SlotMap {
     /** Composer tool-row seat used by the knowledge-base toggle. */
-    'conversation.input.left': { kind: 'list'; scope: 'session' }
+    'conversation.input.left': { kind: 'list'; scope: 'session'; owner: { draft: string } }
   }
   interface LocaleNamespaceMap { layout: keyof typeof zh }
 }
@@ -253,11 +257,42 @@ export function registerAuthoringSurface(
       locale: 'layout',
       inject: (): KnowledgeConversationControlInjected => ({
         overview: () => remote.overview(),
-        get: id => remote.get(id),
-        save: draft => remote.save(draft),
+        selected: id => remote.selected(id as SessionId),
+        setSelected: (id, baseIds) => remote.setSelected(id as SessionId, baseIds),
         openManagement: () => { ctx.layout.selectPanel(PANEL_IDS.knowledge as MainPanelId) },
       }),
     }, KnowledgeConversationControl))
+  })
+  // The personal-agent service is intentionally host-only; keep the UI face
+  // local to this layout package so mode selection adds no model context.
+  // `remote.personalAgent` is a dotted Cordis service the Remote assembly
+  // publishes after this package activates, so inject it by name and read it
+  // through one lazy accessor: capturing the namespace while only `remote`
+  // exists would freeze `undefined` and stall the control on 'loading modes'.
+  ctx.inject(['remote', 'remote.personalAgent'], (modeContext: Context) => {
+    const personalAgent = (): {
+      current: (agentId: string) => Promise<unknown>
+      modes: () => Promise<unknown>
+      set: (agentId: string, mode: string) => Promise<unknown>
+      suggest: (input: string) => Promise<unknown>
+    } => (modeContext as unknown as { remote: { personalAgent: {
+      current: (agentId: string) => Promise<unknown>
+      modes: () => Promise<unknown>
+      set: (agentId: string, mode: string) => Promise<unknown>
+      suggest: (input: string) => Promise<unknown>
+    } } }).remote.personalAgent
+    modeContext.slots.inject('conversation.input.left', () => modeContext.slots.register({
+      name: 'conversation.input.left',
+      id: 'personal-agent-mode-control',
+      locale: 'layout',
+      order: -10,
+      inject: (): PersonalModeConversationControlInjected => ({
+        current: id => personalAgent().current(id) as Promise<never>,
+        modes: () => personalAgent().modes() as Promise<never>,
+        set: (id, mode) => personalAgent().set(id, mode) as Promise<never>,
+        suggest: input => personalAgent().suggest(input) as Promise<never>,
+      }),
+    }, PersonalModeConversationControl))
   })
   const saveTool = async (item: AuthoringItem): Promise<void> => {
     const snapshot = scope.getSnapshot()

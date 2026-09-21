@@ -402,6 +402,126 @@
       }
     },
     {
+      "key": "event:agent/git-checkpoint",
+      "kind": "event",
+      "event": "agent/git-checkpoint",
+      "surface": false,
+      "digest": "9f3f3a104823b2945b2a840a1521d75b1f9cd441b80cf97e711be5717291267a",
+      "schema": {
+        "root": 0,
+        "nodes": [
+          {
+            "kind": "object",
+            "properties": [
+              {
+                "name": "data",
+                "type": 1,
+                "optional": false
+              },
+              {
+                "name": "ignorable",
+                "type": 7,
+                "optional": true
+              },
+              {
+                "name": "seq",
+                "type": 6,
+                "optional": false
+              },
+              {
+                "name": "time",
+                "type": 6,
+                "optional": false
+              },
+              {
+                "name": "type",
+                "type": 8,
+                "optional": false
+              }
+            ],
+            "indices": []
+          },
+          {
+            "kind": "object",
+            "properties": [
+              {
+                "name": "branch",
+                "type": 2,
+                "optional": true
+              },
+              {
+                "name": "cwd",
+                "type": 2,
+                "optional": false
+              },
+              {
+                "name": "diff",
+                "type": 2,
+                "optional": true
+              },
+              {
+                "name": "diffStat",
+                "type": 2,
+                "optional": true
+              },
+              {
+                "name": "error",
+                "type": 2,
+                "optional": true
+              },
+              {
+                "name": "phase",
+                "type": 3,
+                "optional": false
+              },
+              {
+                "name": "status",
+                "type": 2,
+                "optional": true
+              },
+              {
+                "name": "turn",
+                "type": 6,
+                "optional": false
+              }
+            ],
+            "indices": []
+          },
+          {
+            "kind": "primitive",
+            "type": "string"
+          },
+          {
+            "kind": "union",
+            "types": [
+              4,
+              5
+            ]
+          },
+          {
+            "kind": "literal",
+            "value": "after"
+          },
+          {
+            "kind": "literal",
+            "value": "before"
+          },
+          {
+            "kind": "primitive",
+            "type": "number"
+          },
+          {
+            "kind": "literal",
+            "value": true
+          },
+          {
+            "kind": "literal",
+            "value": "agent/git-checkpoint"
+          }
+        ]
+      }
+    },
+    {
       "key": "event:agent/inbox/spliced",
       "kind": "event",
       "event": "agent/inbox/spliced",
@@ -1553,6 +1673,392 @@
           {
             "kind": "literal",
             "value": "agent/inbox/spliced"
+          }
+        ]
+      }
+    },
+    {
+      "key": "event:agent/mode",
+      "kind": "event",
+      "event": "agent/mode",
+      "surface": false,
+      "digest": "b35ceaaccf4e97b9051dce0f8d2caaef86abe66012a42c01b076f1a3a3fc6faa",
+      "schema": {
+        "root": 0,
+        "nodes": [
+          {
+            "kind": "object",
+            "properties": [
+              {
+                "name": "data",
+                "type": 1,
+                "optional": false
+              },
+              {
+                "name": "ignorable",
+                "type": 7,
+                "optional": true
+              },
+              {
+                "name": "seq",
+                "type": 8,
+                "optional": false
+              },
+              {
+                "name": "time",
+                "type": 8,
+                "optional": false
+              },
+              {
+                "name": "type",
+                "type": 9,
+                "optional": false
+              }
+            ],
+            "indices": []
+          },
+          {
+            "kind": "object",
+            "properties": [
+              {
+                "name": "mode",
+                "type": 2,
+                "optional": false
+              }
+            ],
+            "indices": []
+          },
+          {
+            "kind": "union",
+            "types": [
+              3,
+              4,
+              5,
+              6
+            ]
+          },
+          {
+            "kind": "literal",
+            "value": "coding"
+          },
+          {
+            "kind": "literal",
+            "value": "execution"
+          },
+          {
+            "kind": "literal",
+            "value": "qa"
+          },
+          {
+            "kind": "literal",
+            "value": "research"
+          },
+          {
+            "kind": "literal",
+            "value": true
+          },
+          {
+            "kind": "primitive",
+            "type": "number"
+          },
+          {
+            "kind": "literal",
+            "value": "agent/mode"
+          }
+        ]
+      }
+    },
+    {
+      "key": "event:agent/request-context",
+      "kind": "event",
+      "event": "agent/request-context",
+      "surface": false,
+      "digest": "bbae7a06c6d6a0c6d564389db65fe37975ae248152c931d04b59da9d6e16035a",
+      "schema": {
+        "root": 0,
+        "nodes": [
+          {
+            "kind": "object",
+            "properties": [
+              {
+                "name": "data",
+                "type": 1,
+                "optional": false
+              },
+              {
+                "name": "ignorable",
+                "type": 11,
+                "optional": true
+              },
+              {
+                "name": "seq",
+                "type": 2,
+                "optional": false
+              },
+              {
+                "name": "time",
+                "type": 2,
+                "optional": false
+              },
+              {
+                "name": "type",
+                "type": 12,
+                "optional": false
+              }
+            ],
+            "indices": []
+          },
+          {
+            "kind": "object",
+            "properties": [
+              {
+                "name": "clippedToolResults",
+                "type": 2,
+                "optional": false
+              },
+              {
+                "name": "deduplicatedMessages",
+                "type": 2,
+                "optional": true
+              },
+              {
+                "name": "droppedMessages",
+                "type": 2,
+                "optional": false
+              },
+              {
+                "name": "estimatedInputTokens",
+                "type": 2,
+                "optional": true
+              },
+              {
+                "name": "hiddenTools",
+                "type": 3,
+                "optional": true
+              },
+              {
+                "name": "historyTokens",
+                "type": 2,
+                "optional": true
+              },
+              {
+                "name": "inputMessages",
+                "type": 2,
+                "optional": false
+              },
+              {
+                "name": "knowledgeBaseTokens",
+                "type": 2,
+                "optional": true
+              },
+              {
+                "name": "maxSteps",
+                "type": 2,
+                "optional": false
+              },
+              {
+                "name": "mode",
+                "type": 6,
+                "optional": false
+              },
+              {
+                "name": "outputBudgetTokens",
+                "type": 2,
+                "optional": true
+              },
+              {
+                "name": "outputMessages",
+                "type": 2,
+                "optional": false
+              },
+              {
+                "name": "skillTokens",
+                "type": 2,
+                "optional": true
+              },
+              {
+                "name": "step",
+                "type": 2,
+                "optional": false
+              },
+              {
+                "name": "systemPromptTokens",
+                "type": 2,
+                "optional": true
+              },
+              {
+                "name": "toolResultTokens",
+                "type": 2,
+                "optional": true
+              },
+              {
+                "name": "toolSchemaTokens",
+                "type": 2,
+                "optional": true
+              },
+              {
+                "name": "turn",
+                "type": 2,
+                "optional": false
+              },
+              {
+                "name": "usedSteps",
+                "type": 2,
+                "optional": false
+              }
+            ],
+            "indices": []
+          },
+          {
+            "kind": "primitive",
+            "type": "number"
+          },
+          {
+            "kind": "array",
+            "element": 4
+          },
+          {
+            "kind": "object",
+            "properties": [
+              {
+                "name": "name",
+                "type": 5,
+                "optional": false
+              },
+              {
+                "name": "reason",
+                "type": 5,
+                "optional": false
+              }
+            ],
+            "indices": []
+          },
+          {
+            "kind": "primitive",
+            "type": "string"
+          },
+          {
+            "kind": "union",
+            "types": [
+              7,
+              8,
+              9,
+              10
+            ]
+          },
+          {
+            "kind": "literal",
+            "value": "coding"
+          },
+          {
+            "kind": "literal",
+            "value": "execution"
+          },
+          {
+            "kind": "literal",
+            "value": "qa"
+          },
+          {
+            "kind": "literal",
+            "value": "research"
+          },
+          {
+            "kind": "literal",
+            "value": true
+          },
+          {
+            "kind": "literal",
+            "value": "agent/request-context"
+          }
+        ]
+      }
+    },
+    {
+      "key": "event:agent/tool-denied",
+      "kind": "event",
+      "event": "agent/tool-denied",
+      "surface": false,
+      "digest": "95a88c6c191f903e893fb0f2cc59d22267e8e81aa1ab62ed1ba064811bc439f7",
+      "schema": {
+        "root": 0,
+        "nodes": [
+          {
+            "kind": "object",
+            "properties": [
+              {
+                "name": "data",
+                "type": 1,
+                "optional": false
+              },
+              {
+                "name": "ignorable",
+                "type": 4,
+                "optional": true
+              },
+              {
+                "name": "seq",
+                "type": 3,
+                "optional": false
+              },
+              {
+                "name": "time",
+                "type": 3,
+                "optional": false
+              },
+              {
+                "name": "type",
+                "type": 5,
+                "optional": false
+              }
+            ],
+            "indices": []
+          },
+          {
+            "kind": "object",
+            "properties": [
+              {
+                "name": "code",
+                "type": 2,
+                "optional": false
+              },
+              {
+                "name": "name",
+                "type": 2,
+                "optional": false
+              },
+              {
+                "name": "reason",
+                "type": 2,
+                "optional": false
+              },
+              {
+                "name": "step",
+                "type": 3,
+                "optional": false
+              },
+              {
+                "name": "turn",
+                "type": 3,
+                "optional": false
+              }
+            ],
+            "indices": []
+          },
+          {
+            "kind": "primitive",
+            "type": "string"
+          },
+          {
+            "kind": "primitive",
+            "type": "number"
+          },
+          {
+            "kind": "literal",
+            "value": true
+          },
+          {
+            "kind": "literal",
+            "value": "agent/tool-denied"
           }
         ]
       }
@@ -5778,6 +6284,269 @@
       }
     },
     {
+      "key": "event:knowledge/retrieval",
+      "kind": "event",
+      "event": "knowledge/retrieval",
+      "surface": false,
+      "digest": "0c54f7f4cb8eda46c3e4818f5297f93f382dc251a95d49e21b0171333cb4bffd",
+      "schema": {
+        "root": 0,
+        "nodes": [
+          {
+            "kind": "object",
+            "properties": [
+              {
+                "name": "data",
+                "type": 1,
+                "optional": false
+              },
+              {
+                "name": "ignorable",
+                "type": 10,
+                "optional": true
+              },
+              {
+                "name": "seq",
+                "type": 4,
+                "optional": false
+              },
+              {
+                "name": "time",
+                "type": 4,
+                "optional": false
+              },
+              {
+                "name": "type",
+                "type": 11,
+                "optional": false
+              }
+            ],
+            "indices": []
+          },
+          {
+            "kind": "object",
+            "properties": [
+              {
+                "name": "baseIds",
+                "type": 2,
+                "optional": false
+              },
+              {
+                "name": "deduplicatedHits",
+                "type": 4,
+                "optional": false
+              },
+              {
+                "name": "error",
+                "type": 3,
+                "optional": true
+              },
+              {
+                "name": "estimatedTokens",
+                "type": 4,
+                "optional": false
+              },
+              {
+                "name": "hits",
+                "type": 4,
+                "optional": false
+              },
+              {
+                "name": "maxResultTokens",
+                "type": 4,
+                "optional": false
+              },
+              {
+                "name": "query",
+                "type": 3,
+                "optional": false
+              },
+              {
+                "name": "similarityThreshold",
+                "type": 4,
+                "optional": false
+              },
+              {
+                "name": "skippedBases",
+                "type": 2,
+                "optional": false
+              },
+              {
+                "name": "sources",
+                "type": 5,
+                "optional": false
+              },
+              {
+                "name": "status",
+                "type": 7,
+                "optional": false
+              },
+              {
+                "name": "step",
+                "type": 4,
+                "optional": false
+              },
+              {
+                "name": "turn",
+                "type": 4,
+                "optional": false
+              }
+            ],
+            "indices": []
+          },
+          {
+            "kind": "array",
+            "element": 3
+          },
+          {
+            "kind": "primitive",
+            "type": "string"
+          },
+          {
+            "kind": "primitive",
+            "type": "number"
+          },
+          {
+            "kind": "array",
+            "element": 6
+          },
+          {
+            "kind": "object",
+            "properties": [
+              {
+                "name": "baseId",
+                "type": 3,
+                "optional": false
+              },
+              {
+                "name": "baseTitle",
+                "type": 3,
+                "optional": false
+              },
+              {
+                "name": "documentId",
+                "type": 3,
+                "optional": false
+              },
+              {
+                "name": "documentTitle",
+                "type": 3,
+                "optional": false
+              },
+              {
+                "name": "ordinal",
+                "type": 4,
+                "optional": false
+              },
+              {
+                "name": "score",
+                "type": 4,
+                "optional": false
+              }
+            ],
+            "indices": []
+          },
+          {
+            "kind": "union",
+            "types": [
+              8,
+              9
+            ]
+          },
+          {
+            "kind": "literal",
+            "value": "completed"
+          },
+          {
+            "kind": "literal",
+            "value": "failed"
+          },
+          {
+            "kind": "literal",
+            "value": true
+          },
+          {
+            "kind": "literal",
+            "value": "knowledge/retrieval"
+          }
+        ]
+      }
+    },
+    {
+      "key": "event:knowledge/selection",
+      "kind": "event",
+      "event": "knowledge/selection",
+      "surface": false,
+      "digest": "fb1388960c87089798fe6f094a0ad0afaed619f13cdf7b138aa1f452fcd510c5",
+      "schema": {
+        "root": 0,
+        "nodes": [
+          {
+            "kind": "object",
+            "properties": [
+              {
+                "name": "data",
+                "type": 1,
+                "optional": false
+              },
+              {
+                "name": "ignorable",
+                "type": 4,
+                "optional": true
+              },
+              {
+                "name": "seq",
+                "type": 5,
+                "optional": false
+              },
+              {
+                "name": "time",
+                "type": 5,
+                "optional": false
+              },
+              {
+                "name": "type",
+                "type": 6,
+                "optional": false
+              }
+            ],
+            "indices": []
+          },
+          {
+            "kind": "object",
+            "properties": [
+              {
+                "name": "baseIds",
+                "type": 2,
+                "optional": false
+              }
+            ],
+            "indices": []
+          },
+          {
+            "kind": "array",
+            "element": 3
+          },
+          {
+            "kind": "primitive",
+            "type": "string"
+          },
+          {
+            "kind": "literal",
+            "value": true
+          },
+          {
+            "kind": "primitive",
+            "type": "number"
+          },
+          {
+            "kind": "literal",
+            "value": "knowledge/selection"
+          }
+        ]
+      }
+    },
+    {
       "key": "event:llm/retry",
       "kind": "event",
       "event": "llm/retry",
@@ -9650,6 +10419,1406 @@
           {
             "kind": "literal",
             "value": "system/message"
+          }
+        ]
+      }
+    },
+    {
+      "key": "event:task/cancelled",
+      "kind": "event",
+      "event": "task/cancelled",
+      "surface": false,
+      "digest": "c2517349361edf26b29f088bbb2b3dc4a255d6f98cf5845492c679c52ff1cef4",
+      "schema": {
+        "root": 0,
+        "nodes": [
+          {
+            "kind": "object",
+            "properties": [
+              {
+                "name": "data",
+                "type": 1,
+                "optional": false
+              },
+              {
+                "name": "ignorable",
+                "type": 14,
+                "optional": true
+              },
+              {
+                "name": "seq",
+                "type": 5,
+                "optional": false
+              },
+              {
+                "name": "time",
+                "type": 5,
+                "optional": false
+              },
+              {
+                "name": "type",
+                "type": 15,
+                "optional": false
+              }
+            ],
+            "indices": []
+          },
+          {
+            "kind": "object",
+            "properties": [
+              {
+                "name": "acceptance",
+                "type": 2,
+                "optional": true
+              },
+              {
+                "name": "artifacts",
+                "type": 2,
+                "optional": true
+              },
+              {
+                "name": "budget",
+                "type": 4,
+                "optional": false
+              },
+              {
+                "name": "createdAt",
+                "type": 5,
+                "optional": false
+              },
+              {
+                "name": "error",
+                "type": 3,
+                "optional": true
+              },
+              {
+                "name": "goal",
+                "type": 3,
+                "optional": false
+              },
+              {
+                "name": "id",
+                "type": 3,
+                "optional": false
+              },
+              {
+                "name": "owner",
+                "type": 3,
+                "optional": false
+              },
+              {
+                "name": "parentTask",
+                "type": 3,
+                "optional": true
+              },
+              {
+                "name": "status",
+                "type": 6,
+                "optional": false
+              },
+              {
+                "name": "turn",
+                "type": 5,
+                "optional": false
+              },
+              {
+                "name": "updatedAt",
+                "type": 5,
+                "optional": false
+              }
+            ],
+            "indices": []
+          },
+          {
+            "kind": "array",
+            "element": 3
+          },
+          {
+            "kind": "primitive",
+            "type": "string"
+          },
+          {
+            "kind": "object",
+            "properties": [
+              {
+                "name": "maxConcurrent",
+                "type": 5,
+                "optional": true
+              },
+              {
+                "name": "maxDepth",
+                "type": 5,
+                "optional": true
+              },
+              {
+                "name": "maxSteps",
+                "type": 5,
+                "optional": false
+              },
+              {
+                "name": "maxTokens",
+                "type": 5,
+                "optional": true
+              },
+              {
+                "name": "timeoutMs",
+                "type": 5,
+                "optional": true
+              }
+            ],
+            "indices": []
+          },
+          {
+            "kind": "primitive",
+            "type": "number"
+          },
+          {
+            "kind": "union",
+            "types": [
+              7,
+              8,
+              9,
+              10,
+              11,
+              12,
+              13
+            ]
+          },
+          {
+            "kind": "literal",
+            "value": "cancelled"
+          },
+          {
+            "kind": "literal",
+            "value": "created"
+          },
+          {
+            "kind": "literal",
+            "value": "failed"
+          },
+          {
+            "kind": "literal",
+            "value": "planned"
+          },
+          {
+            "kind": "literal",
+            "value": "running"
+          },
+          {
+            "kind": "literal",
+            "value": "succeeded"
+          },
+          {
+            "kind": "literal",
+            "value": "waiting-human"
+          },
+          {
+            "kind": "literal",
+            "value": true
+          },
+          {
+            "kind": "literal",
+            "value": "task/cancelled"
+          }
+        ]
+      }
+    },
+    {
+      "key": "event:task/created",
+      "kind": "event",
+      "event": "task/created",
+      "surface": false,
+      "digest": "a5c054e888fe194baa2ff9ede075fa0724041e964784ab12e16be2f440af05f1",
+      "schema": {
+        "root": 0,
+        "nodes": [
+          {
+            "kind": "object",
+            "properties": [
+              {
+                "name": "data",
+                "type": 1,
+                "optional": false
+              },
+              {
+                "name": "ignorable",
+                "type": 14,
+                "optional": true
+              },
+              {
+                "name": "seq",
+                "type": 5,
+                "optional": false
+              },
+              {
+                "name": "time",
+                "type": 5,
+                "optional": false
+              },
+              {
+                "name": "type",
+                "type": 15,
+                "optional": false
+              }
+            ],
+            "indices": []
+          },
+          {
+            "kind": "object",
+            "properties": [
+              {
+                "name": "acceptance",
+                "type": 2,
+                "optional": true
+              },
+              {
+                "name": "artifacts",
+                "type": 2,
+                "optional": true
+              },
+              {
+                "name": "budget",
+                "type": 4,
+                "optional": false
+              },
+              {
+                "name": "createdAt",
+                "type": 5,
+                "optional": false
+              },
+              {
+                "name": "error",
+                "type": 3,
+                "optional": true
+              },
+              {
+                "name": "goal",
+                "type": 3,
+                "optional": false
+              },
+              {
+                "name": "id",
+                "type": 3,
+                "optional": false
+              },
+              {
+                "name": "owner",
+                "type": 3,
+                "optional": false
+              },
+              {
+                "name": "parentTask",
+                "type": 3,
+                "optional": true
+              },
+              {
+                "name": "status",
+                "type": 6,
+                "optional": false
+              },
+              {
+                "name": "turn",
+                "type": 5,
+                "optional": false
+              },
+              {
+                "name": "updatedAt",
+                "type": 5,
+                "optional": false
+              }
+            ],
+            "indices": []
+          },
+          {
+            "kind": "array",
+            "element": 3
+          },
+          {
+            "kind": "primitive",
+            "type": "string"
+          },
+          {
+            "kind": "object",
+            "properties": [
+              {
+                "name": "maxConcurrent",
+                "type": 5,
+                "optional": true
+              },
+              {
+                "name": "maxDepth",
+                "type": 5,
+                "optional": true
+              },
+              {
+                "name": "maxSteps",
+                "type": 5,
+                "optional": false
+              },
+              {
+                "name": "maxTokens",
+                "type": 5,
+                "optional": true
+              },
+              {
+                "name": "timeoutMs",
+                "type": 5,
+                "optional": true
+              }
+            ],
+            "indices": []
+          },
+          {
+            "kind": "primitive",
+            "type": "number"
+          },
+          {
+            "kind": "union",
+            "types": [
+              7,
+              8,
+              9,
+              10,
+              11,
+              12,
+              13
+            ]
+          },
+          {
+            "kind": "literal",
+            "value": "cancelled"
+          },
+          {
+            "kind": "literal",
+            "value": "created"
+          },
+          {
+            "kind": "literal",
+            "value": "failed"
+          },
+          {
+            "kind": "literal",
+            "value": "planned"
+          },
+          {
+            "kind": "literal",
+            "value": "running"
+          },
+          {
+            "kind": "literal",
+            "value": "succeeded"
+          },
+          {
+            "kind": "literal",
+            "value": "waiting-human"
+          },
+          {
+            "kind": "literal",
+            "value": true
+          },
+          {
+            "kind": "literal",
+            "value": "task/created"
+          }
+        ]
+      }
+    },
+    {
+      "key": "event:task/failed",
+      "kind": "event",
+      "event": "task/failed",
+      "surface": false,
+      "digest": "1969f58989122497d3d8e1731940f7b34b2bf015441fd72a6afd2f06c4693538",
+      "schema": {
+        "root": 0,
+        "nodes": [
+          {
+            "kind": "object",
+            "properties": [
+              {
+                "name": "data",
+                "type": 1,
+                "optional": false
+              },
+              {
+                "name": "ignorable",
+                "type": 14,
+                "optional": true
+              },
+              {
+                "name": "seq",
+                "type": 5,
+                "optional": false
+              },
+              {
+                "name": "time",
+                "type": 5,
+                "optional": false
+              },
+              {
+                "name": "type",
+                "type": 15,
+                "optional": false
+              }
+            ],
+            "indices": []
+          },
+          {
+            "kind": "object",
+            "properties": [
+              {
+                "name": "acceptance",
+                "type": 2,
+                "optional": true
+              },
+              {
+                "name": "artifacts",
+                "type": 2,
+                "optional": true
+              },
+              {
+                "name": "budget",
+                "type": 4,
+                "optional": false
+              },
+              {
+                "name": "createdAt",
+                "type": 5,
+                "optional": false
+              },
+              {
+                "name": "error",
+                "type": 3,
+                "optional": true
+              },
+              {
+                "name": "goal",
+                "type": 3,
+                "optional": false
+              },
+              {
+                "name": "id",
+                "type": 3,
+                "optional": false
+              },
+              {
+                "name": "owner",
+                "type": 3,
+                "optional": false
+              },
+              {
+                "name": "parentTask",
+                "type": 3,
+                "optional": true
+              },
+              {
+                "name": "status",
+                "type": 6,
+                "optional": false
+              },
+              {
+                "name": "turn",
+                "type": 5,
+                "optional": false
+              },
+              {
+                "name": "updatedAt",
+                "type": 5,
+                "optional": false
+              }
+            ],
+            "indices": []
+          },
+          {
+            "kind": "array",
+            "element": 3
+          },
+          {
+            "kind": "primitive",
+            "type": "string"
+          },
+          {
+            "kind": "object",
+            "properties": [
+              {
+                "name": "maxConcurrent",
+                "type": 5,
+                "optional": true
+              },
+              {
+                "name": "maxDepth",
+                "type": 5,
+                "optional": true
+              },
+              {
+                "name": "maxSteps",
+                "type": 5,
+                "optional": false
+              },
+              {
+                "name": "maxTokens",
+                "type": 5,
+                "optional": true
+              },
+              {
+                "name": "timeoutMs",
+                "type": 5,
+                "optional": true
+              }
+            ],
+            "indices": []
+          },
+          {
+            "kind": "primitive",
+            "type": "number"
+          },
+          {
+            "kind": "union",
+            "types": [
+              7,
+              8,
+              9,
+              10,
+              11,
+              12,
+              13
+            ]
+          },
+          {
+            "kind": "literal",
+            "value": "cancelled"
+          },
+          {
+            "kind": "literal",
+            "value": "created"
+          },
+          {
+            "kind": "literal",
+            "value": "failed"
+          },
+          {
+            "kind": "literal",
+            "value": "planned"
+          },
+          {
+            "kind": "literal",
+            "value": "running"
+          },
+          {
+            "kind": "literal",
+            "value": "succeeded"
+          },
+          {
+            "kind": "literal",
+            "value": "waiting-human"
+          },
+          {
+            "kind": "literal",
+            "value": true
+          },
+          {
+            "kind": "literal",
+            "value": "task/failed"
+          }
+        ]
+      }
+    },
+    {
+      "key": "event:task/planned",
+      "kind": "event",
+      "event": "task/planned",
+      "surface": false,
+      "digest": "4aa65dac12a686eeaeeabc727b383da3d8619c5ff0c98a9bc6aa0e4c420eaed1",
+      "schema": {
+        "root": 0,
+        "nodes": [
+          {
+            "kind": "object",
+            "properties": [
+              {
+                "name": "data",
+                "type": 1,
+                "optional": false
+              },
+              {
+                "name": "ignorable",
+                "type": 14,
+                "optional": true
+              },
+              {
+                "name": "seq",
+                "type": 5,
+                "optional": false
+              },
+              {
+                "name": "time",
+                "type": 5,
+                "optional": false
+              },
+              {
+                "name": "type",
+                "type": 15,
+                "optional": false
+              }
+            ],
+            "indices": []
+          },
+          {
+            "kind": "object",
+            "properties": [
+              {
+                "name": "acceptance",
+                "type": 2,
+                "optional": true
+              },
+              {
+                "name": "artifacts",
+                "type": 2,
+                "optional": true
+              },
+              {
+                "name": "budget",
+                "type": 4,
+                "optional": false
+              },
+              {
+                "name": "createdAt",
+                "type": 5,
+                "optional": false
+              },
+              {
+                "name": "error",
+                "type": 3,
+                "optional": true
+              },
+              {
+                "name": "goal",
+                "type": 3,
+                "optional": false
+              },
+              {
+                "name": "id",
+                "type": 3,
+                "optional": false
+              },
+              {
+                "name": "owner",
+                "type": 3,
+                "optional": false
+              },
+              {
+                "name": "parentTask",
+                "type": 3,
+                "optional": true
+              },
+              {
+                "name": "status",
+                "type": 6,
+                "optional": false
+              },
+              {
+                "name": "turn",
+                "type": 5,
+                "optional": false
+              },
+              {
+                "name": "updatedAt",
+                "type": 5,
+                "optional": false
+              }
+            ],
+            "indices": []
+          },
+          {
+            "kind": "array",
+            "element": 3
+          },
+          {
+            "kind": "primitive",
+            "type": "string"
+          },
+          {
+            "kind": "object",
+            "properties": [
+              {
+                "name": "maxConcurrent",
+                "type": 5,
+                "optional": true
+              },
+              {
+                "name": "maxDepth",
+                "type": 5,
+                "optional": true
+              },
+              {
+                "name": "maxSteps",
+                "type": 5,
+                "optional": false
+              },
+              {
+                "name": "maxTokens",
+                "type": 5,
+                "optional": true
+              },
+              {
+                "name": "timeoutMs",
+                "type": 5,
+                "optional": true
+              }
+            ],
+            "indices": []
+          },
+          {
+            "kind": "primitive",
+            "type": "number"
+          },
+          {
+            "kind": "union",
+            "types": [
+              7,
+              8,
+              9,
+              10,
+              11,
+              12,
+              13
+            ]
+          },
+          {
+            "kind": "literal",
+            "value": "cancelled"
+          },
+          {
+            "kind": "literal",
+            "value": "created"
+          },
+          {
+            "kind": "literal",
+            "value": "failed"
+          },
+          {
+            "kind": "literal",
+            "value": "planned"
+          },
+          {
+            "kind": "literal",
+            "value": "running"
+          },
+          {
+            "kind": "literal",
+            "value": "succeeded"
+          },
+          {
+            "kind": "literal",
+            "value": "waiting-human"
+          },
+          {
+            "kind": "literal",
+            "value": true
+          },
+          {
+            "kind": "literal",
+            "value": "task/planned"
+          }
+        ]
+      }
+    },
+    {
+      "key": "event:task/running",
+      "kind": "event",
+      "event": "task/running",
+      "surface": false,
+      "digest": "2dde4581e88305e75afe04f8dde5b601b09be267131b7cce1a5c78f8be916c72",
+      "schema": {
+        "root": 0,
+        "nodes": [
+          {
+            "kind": "object",
+            "properties": [
+              {
+                "name": "data",
+                "type": 1,
+                "optional": false
+              },
+              {
+                "name": "ignorable",
+                "type": 14,
+                "optional": true
+              },
+              {
+                "name": "seq",
+                "type": 5,
+                "optional": false
+              },
+              {
+                "name": "time",
+                "type": 5,
+                "optional": false
+              },
+              {
+                "name": "type",
+                "type": 15,
+                "optional": false
+              }
+            ],
+            "indices": []
+          },
+          {
+            "kind": "object",
+            "properties": [
+              {
+                "name": "acceptance",
+                "type": 2,
+                "optional": true
+              },
+              {
+                "name": "artifacts",
+                "type": 2,
+                "optional": true
+              },
+              {
+                "name": "budget",
+                "type": 4,
+                "optional": false
+              },
+              {
+                "name": "createdAt",
+                "type": 5,
+                "optional": false
+              },
+              {
+                "name": "error",
+                "type": 3,
+                "optional": true
+              },
+              {
+                "name": "goal",
+                "type": 3,
+                "optional": false
+              },
+              {
+                "name": "id",
+                "type": 3,
+                "optional": false
+              },
+              {
+                "name": "owner",
+                "type": 3,
+                "optional": false
+              },
+              {
+                "name": "parentTask",
+                "type": 3,
+                "optional": true
+              },
+              {
+                "name": "status",
+                "type": 6,
+                "optional": false
+              },
+              {
+                "name": "turn",
+                "type": 5,
+                "optional": false
+              },
+              {
+                "name": "updatedAt",
+                "type": 5,
+                "optional": false
+              }
+            ],
+            "indices": []
+          },
+          {
+            "kind": "array",
+            "element": 3
+          },
+          {
+            "kind": "primitive",
+            "type": "string"
+          },
+          {
+            "kind": "object",
+            "properties": [
+              {
+                "name": "maxConcurrent",
+                "type": 5,
+                "optional": true
+              },
+              {
+                "name": "maxDepth",
+                "type": 5,
+                "optional": true
+              },
+              {
+                "name": "maxSteps",
+                "type": 5,
+                "optional": false
+              },
+              {
+                "name": "maxTokens",
+                "type": 5,
+                "optional": true
+              },
+              {
+                "name": "timeoutMs",
+                "type": 5,
+                "optional": true
+              }
+            ],
+            "indices": []
+          },
+          {
+            "kind": "primitive",
+            "type": "number"
+          },
+          {
+            "kind": "union",
+            "types": [
+              7,
+              8,
+              9,
+              10,
+              11,
+              12,
+              13
+            ]
+          },
+          {
+            "kind": "literal",
+            "value": "cancelled"
+          },
+          {
+            "kind": "literal",
+            "value": "created"
+          },
+          {
+            "kind": "literal",
+            "value": "failed"
+          },
+          {
+            "kind": "literal",
+            "value": "planned"
+          },
+          {
+            "kind": "literal",
+            "value": "running"
+          },
+          {
+            "kind": "literal",
+            "value": "succeeded"
+          },
+          {
+            "kind": "literal",
+            "value": "waiting-human"
+          },
+          {
+            "kind": "literal",
+            "value": true
+          },
+          {
+            "kind": "literal",
+            "value": "task/running"
+          }
+        ]
+      }
+    },
+    {
+      "key": "event:task/succeeded",
+      "kind": "event",
+      "event": "task/succeeded",
+      "surface": false,
+      "digest": "052e010d8aacaf68bff0313a0e25bf21d21395010ffd3320b23260017751cf3e",
+      "schema": {
+        "root": 0,
+        "nodes": [
+          {
+            "kind": "object",
+            "properties": [
+              {
+                "name": "data",
+                "type": 1,
+                "optional": false
+              },
+              {
+                "name": "ignorable",
+                "type": 14,
+                "optional": true
+              },
+              {
+                "name": "seq",
+                "type": 5,
+                "optional": false
+              },
+              {
+                "name": "time",
+                "type": 5,
+                "optional": false
+              },
+              {
+                "name": "type",
+                "type": 15,
+                "optional": false
+              }
+            ],
+            "indices": []
+          },
+          {
+            "kind": "object",
+            "properties": [
+              {
+                "name": "acceptance",
+                "type": 2,
+                "optional": true
+              },
+              {
+                "name": "artifacts",
+                "type": 2,
+                "optional": true
+              },
+              {
+                "name": "budget",
+                "type": 4,
+                "optional": false
+              },
+              {
+                "name": "createdAt",
+                "type": 5,
+                "optional": false
+              },
+              {
+                "name": "error",
+                "type": 3,
+                "optional": true
+              },
+              {
+                "name": "goal",
+                "type": 3,
+                "optional": false
+              },
+              {
+                "name": "id",
+                "type": 3,
+                "optional": false
+              },
+              {
+                "name": "owner",
+                "type": 3,
+                "optional": false
+              },
+              {
+                "name": "parentTask",
+                "type": 3,
+                "optional": true
+              },
+              {
+                "name": "status",
+                "type": 6,
+                "optional": false
+              },
+              {
+                "name": "turn",
+                "type": 5,
+                "optional": false
+              },
+              {
+                "name": "updatedAt",
+                "type": 5,
+                "optional": false
+              }
+            ],
+            "indices": []
+          },
+          {
+            "kind": "array",
+            "element": 3
+          },
+          {
+            "kind": "primitive",
+            "type": "string"
+          },
+          {
+            "kind": "object",
+            "properties": [
+              {
+                "name": "maxConcurrent",
+                "type": 5,
+                "optional": true
+              },
+              {
+                "name": "maxDepth",
+                "type": 5,
+                "optional": true
+              },
+              {
+                "name": "maxSteps",
+                "type": 5,
+                "optional": false
+              },
+              {
+                "name": "maxTokens",
+                "type": 5,
+                "optional": true
+              },
+              {
+                "name": "timeoutMs",
+                "type": 5,
+                "optional": true
+              }
+            ],
+            "indices": []
+          },
+          {
+            "kind": "primitive",
+            "type": "number"
+          },
+          {
+            "kind": "union",
+            "types": [
+              7,
+              8,
+              9,
+              10,
+              11,
+              12,
+              13
+            ]
+          },
+          {
+            "kind": "literal",
+            "value": "cancelled"
+          },
+          {
+            "kind": "literal",
+            "value": "created"
+          },
+          {
+            "kind": "literal",
+            "value": "failed"
+          },
+          {
+            "kind": "literal",
+            "value": "planned"
+          },
+          {
+            "kind": "literal",
+            "value": "running"
+          },
+          {
+            "kind": "literal",
+            "value": "succeeded"
+          },
+          {
+            "kind": "literal",
+            "value": "waiting-human"
+          },
+          {
+            "kind": "literal",
+            "value": true
+          },
+          {
+            "kind": "literal",
+            "value": "task/succeeded"
+          }
+        ]
+      }
+    },
+    {
+      "key": "event:task/waiting-human",
+      "kind": "event",
+      "event": "task/waiting-human",
+      "surface": false,
+      "digest": "a4d4b0db312ffa29b34e21c22f1f7bcf32305b447f5c2220edab34bce18ec765",
+      "schema": {
+        "root": 0,
+        "nodes": [
+          {
+            "kind": "object",
+            "properties": [
+              {
+                "name": "data",
+                "type": 1,
+                "optional": false
+              },
+              {
+                "name": "ignorable",
+                "type": 14,
+                "optional": true
+              },
+              {
+                "name": "seq",
+                "type": 5,
+                "optional": false
+              },
+              {
+                "name": "time",
+                "type": 5,
+                "optional": false
+              },
+              {
+                "name": "type",
+                "type": 15,
+                "optional": false
+              }
+            ],
+            "indices": []
+          },
+          {
+            "kind": "object",
+            "properties": [
+              {
+                "name": "acceptance",
+                "type": 2,
+                "optional": true
+              },
+              {
+                "name": "artifacts",
+                "type": 2,
+                "optional": true
+              },
+              {
+                "name": "budget",
+                "type": 4,
+                "optional": false
+              },
+              {
+                "name": "createdAt",
+                "type": 5,
+                "optional": false
+              },
+              {
+                "name": "error",
+                "type": 3,
+                "optional": true
+              },
+              {
+                "name": "goal",
+                "type": 3,
+                "optional": false
+              },
+              {
+                "name": "id",
+                "type": 3,
+                "optional": false
+              },
+              {
+                "name": "owner",
+                "type": 3,
+                "optional": false
+              },
+              {
+                "name": "parentTask",
+                "type": 3,
+                "optional": true
+              },
+              {
+                "name": "status",
+                "type": 6,
+                "optional": false
+              },
+              {
+                "name": "turn",
+                "type": 5,
+                "optional": false
+              },
+              {
+                "name": "updatedAt",
+                "type": 5,
+                "optional": false
+              }
+            ],
+            "indices": []
+          },
+          {
+            "kind": "array",
+            "element": 3
+          },
+          {
+            "kind": "primitive",
+            "type": "string"
+          },
+          {
+            "kind": "object",
+            "properties": [
+              {
+                "name": "maxConcurrent",
+                "type": 5,
+                "optional": true
+              },
+              {
+                "name": "maxDepth",
+                "type": 5,
+                "optional": true
+              },
+              {
+                "name": "maxSteps",
+                "type": 5,
+                "optional": false
+              },
+              {
+                "name": "maxTokens",
+                "type": 5,
+                "optional": true
+              },
+              {
+                "name": "timeoutMs",
+                "type": 5,
+                "optional": true
+              }
+            ],
+            "indices": []
+          },
+          {
+            "kind": "primitive",
+            "type": "number"
+          },
+          {
+            "kind": "union",
+            "types": [
+              7,
+              8,
+              9,
+              10,
+              11,
+              12,
+              13
+            ]
+          },
+          {
+            "kind": "literal",
+            "value": "cancelled"
+          },
+          {
+            "kind": "literal",
+            "value": "created"
+          },
+          {
+            "kind": "literal",
+            "value": "failed"
+          },
+          {
+            "kind": "literal",
+            "value": "planned"
+          },
+          {
+            "kind": "literal",
+            "value": "running"
+          },
+          {
+            "kind": "literal",
+            "value": "succeeded"
+          },
+          {
+            "kind": "literal",
+            "value": "waiting-human"
+          },
+          {
+            "kind": "literal",
+            "value": true
+          },
+          {
+            "kind": "literal",
+            "value": "task/waiting-human"
           }
         ]
       }
@@ -13803,6 +15972,206 @@
       "sources": []
     },
     {
+      "digest": "052e010d8aacaf68bff0313a0e25bf21d21395010ffd3320b23260017751cf3e",
+      "schema": {
+        "root": 0,
+        "nodes": [
+          {
+            "kind": "object",
+            "properties": [
+              {
+                "name": "data",
+                "type": 1,
+                "optional": false
+              },
+              {
+                "name": "ignorable",
+                "type": 14,
+                "optional": true
+              },
+              {
+                "name": "seq",
+                "type": 5,
+                "optional": false
+              },
+              {
+                "name": "time",
+                "type": 5,
+                "optional": false
+              },
+              {
+                "name": "type",
+                "type": 15,
+                "optional": false
+              }
+            ],
+            "indices": []
+          },
+          {
+            "kind": "object",
+            "properties": [
+              {
+                "name": "acceptance",
+                "type": 2,
+                "optional": true
+              },
+              {
+                "name": "artifacts",
+                "type": 2,
+                "optional": true
+              },
+              {
+                "name": "budget",
+                "type": 4,
+                "optional": false
+              },
+              {
+                "name": "createdAt",
+                "type": 5,
+                "optional": false
+              },
+              {
+                "name": "error",
+                "type": 3,
+                "optional": true
+              },
+              {
+                "name": "goal",
+                "type": 3,
+                "optional": false
+              },
+              {
+                "name": "id",
+                "type": 3,
+                "optional": false
+              },
+              {
+                "name": "owner",
+                "type": 3,
+                "optional": false
+              },
+              {
+                "name": "parentTask",
+                "type": 3,
+                "optional": true
+              },
+              {
+                "name": "status",
+                "type": 6,
+                "optional": false
+              },
+              {
+                "name": "turn",
+                "type": 5,
+                "optional": false
+              },
+              {
+                "name": "updatedAt",
+                "type": 5,
+                "optional": false
+              }
+            ],
+            "indices": []
+          },
+          {
+            "kind": "array",
+            "element": 3
+          },
+          {
+            "kind": "primitive",
+            "type": "string"
+          },
+          {
+            "kind": "object",
+            "properties": [
+              {
+                "name": "maxConcurrent",
+                "type": 5,
+                "optional": true
+              },
+              {
+                "name": "maxDepth",
+                "type": 5,
+                "optional": true
+              },
+              {
+                "name": "maxSteps",
+                "type": 5,
+                "optional": false
+              },
+              {
+                "name": "maxTokens",
+                "type": 5,
+                "optional": true
+              },
+              {
+                "name": "timeoutMs",
+                "type": 5,
+                "optional": true
+              }
+            ],
+            "indices": []
+          },
+          {
+            "kind": "primitive",
+            "type": "number"
+          },
+          {
+            "kind": "union",
+            "types": [
+              7,
+              8,
+              9,
+              10,
+              11,
+              12,
+              13
+            ]
+          },
+          {
+            "kind": "literal",
+            "value": "cancelled"
+          },
+          {
+            "kind": "literal",
+            "value": "created"
+          },
+          {
+            "kind": "literal",
+            "value": "failed"
+          },
+          {
+            "kind": "literal",
+            "value": "planned"
+          },
+          {
+            "kind": "literal",
+            "value": "running"
+          },
+          {
+            "kind": "literal",
+            "value": "succeeded"
+          },
+          {
+            "kind": "literal",
+            "value": "waiting-human"
+          },
+          {
+            "kind": "literal",
+            "value": true
+          },
+          {
+            "kind": "literal",
+            "value": "task/succeeded"
+          }
+        ]
+      },
+      "names": [
+        "event:task/succeeded"
+      ],
+      "sources": []
+    },
+    {
       "digest": "05d2ae1e0c7f8770f83f9a09047afb39a335d8ac986df3193659aa1e581472cf",
       "schema": {
         "root": 0,
@@ -14533,7 +16902,7 @@
         "packages/llm/llm/src/types.ts#StreamChunk"
       ],
       "sources": [
-        "packages/llm/llm/src/types.ts:424"
+        "packages/llm/llm/src/types.ts:426"
       ]
     },
     {
@@ -14793,7 +17162,7 @@
         "packages/llm/llm/src/types.ts#ReplayEnvelope"
       ],
       "sources": [
-        "packages/llm/llm/src/types.ts:402"
+        "packages/llm/llm/src/types.ts:404"
       ]
     },
     {
@@ -15271,6 +17640,195 @@
         ]
       },
       "names": [],
+      "sources": []
+    },
+    {
+      "digest": "0c54f7f4cb8eda46c3e4818f5297f93f382dc251a95d49e21b0171333cb4bffd",
+      "schema": {
+        "root": 0,
+        "nodes": [
+          {
+            "kind": "object",
+            "properties": [
+              {
+                "name": "data",
+                "type": 1,
+                "optional": false
+              },
+              {
+                "name": "ignorable",
+                "type": 10,
+                "optional": true
+              },
+              {
+                "name": "seq",
+                "type": 4,
+                "optional": false
+              },
+              {
+                "name": "time",
+                "type": 4,
+                "optional": false
+              },
+              {
+                "name": "type",
+                "type": 11,
+                "optional": false
+              }
+            ],
+            "indices": []
+          },
+          {
+            "kind": "object",
+            "properties": [
+              {
+                "name": "baseIds",
+                "type": 2,
+                "optional": false
+              },
+              {
+                "name": "deduplicatedHits",
+                "type": 4,
+                "optional": false
+              },
+              {
+                "name": "error",
+                "type": 3,
+                "optional": true
+              },
+              {
+                "name": "estimatedTokens",
+                "type": 4,
+                "optional": false
+              },
+              {
+                "name": "hits",
+                "type": 4,
+                "optional": false
+              },
+              {
+                "name": "maxResultTokens",
+                "type": 4,
+                "optional": false
+              },
+              {
+                "name": "query",
+                "type": 3,
+                "optional": false
+              },
+              {
+                "name": "similarityThreshold",
+                "type": 4,
+                "optional": false
+              },
+              {
+                "name": "skippedBases",
+                "type": 2,
+                "optional": false
+              },
+              {
+                "name": "sources",
+                "type": 5,
+                "optional": false
+              },
+              {
+                "name": "status",
+                "type": 7,
+                "optional": false
+              },
+              {
+                "name": "step",
+                "type": 4,
+                "optional": false
+              },
+              {
+                "name": "turn",
+                "type": 4,
+                "optional": false
+              }
+            ],
+            "indices": []
+          },
+          {
+            "kind": "array",
+            "element": 3
+          },
+          {
+            "kind": "primitive",
+            "type": "string"
+          },
+          {
+            "kind": "primitive",
+            "type": "number"
+          },
+          {
+            "kind": "array",
+            "element": 6
+          },
+          {
+            "kind": "object",
+            "properties": [
+              {
+                "name": "baseId",
+                "type": 3,
+                "optional": false
+              },
+              {
+                "name": "baseTitle",
+                "type": 3,
+                "optional": false
+              },
+              {
+                "name": "documentId",
+                "type": 3,
+                "optional": false
+              },
+              {
+                "name": "documentTitle",
+                "type": 3,
+                "optional": false
+              },
+              {
+                "name": "ordinal",
+                "type": 4,
+                "optional": false
+              },
+              {
+                "name": "score",
+                "type": 4,
+                "optional": false
+              }
+            ],
+            "indices": []
+          },
+          {
+            "kind": "union",
+            "types": [
+              8,
+              9
+            ]
+          },
+          {
+            "kind": "literal",
+            "value": "completed"
+          },
+          {
+            "kind": "literal",
+            "value": "failed"
+          },
+          {
+            "kind": "literal",
+            "value": true
+          },
+          {
+            "kind": "literal",
+            "value": "knowledge/retrieval"
+          }
+        ]
+      },
+      "names": [
+        "event:knowledge/retrieval"
+      ],
       "sources": []
     },
     {
@@ -17485,6 +20043,20 @@
       ]
     },
     {
+      "digest": "1243bd4f09ad34eeafae4e3e85d74021be3cee9cc00c185fb110193dbf61bd7b",
+      "schema": {
+        "root": 0,
+        "nodes": [
+          {
+            "kind": "literal",
+            "value": "execution"
+          }
+        ]
+      },
+      "names": [],
+      "sources": []
+    },
+    {
       "digest": "12a0cfa619ac4a5fc6c3e8e359c8dae15769edc61497a575935c78d5842f8e42",
       "schema": {
         "root": 0,
@@ -17965,6 +20537,20 @@
       "sources": []
     },
     {
+      "digest": "15ac07832a5517f27b7a69eebcac01f2f53f64b3609e4d0cb58765f70566d233",
+      "schema": {
+        "root": 0,
+        "nodes": [
+          {
+            "kind": "literal",
+            "value": "task/succeeded"
+          }
+        ]
+      },
+      "names": [],
+      "sources": []
+    },
+    {
       "digest": "16d0507cb94b4cfc84a87446b1ba7652d6ec1d65ee1684789e747e30d542800e",
       "schema": {
         "root": 0,
@@ -18198,6 +20784,206 @@
         ]
       },
       "names": [],
+      "sources": []
+    },
+    {
+      "digest": "1969f58989122497d3d8e1731940f7b34b2bf015441fd72a6afd2f06c4693538",
+      "schema": {
+        "root": 0,
+        "nodes": [
+          {
+            "kind": "object",
+            "properties": [
+              {
+                "name": "data",
+                "type": 1,
+                "optional": false
+              },
+              {
+                "name": "ignorable",
+                "type": 14,
+                "optional": true
+              },
+              {
+                "name": "seq",
+                "type": 5,
+                "optional": false
+              },
+              {
+                "name": "time",
+                "type": 5,
+                "optional": false
+              },
+              {
+                "name": "type",
+                "type": 15,
+                "optional": false
+              }
+            ],
+            "indices": []
+          },
+          {
+            "kind": "object",
+            "properties": [
+              {
+                "name": "acceptance",
+                "type": 2,
+                "optional": true
+              },
+              {
+                "name": "artifacts",
+                "type": 2,
+                "optional": true
+              },
+              {
+                "name": "budget",
+                "type": 4,
+                "optional": false
+              },
+              {
+                "name": "createdAt",
+                "type": 5,
+                "optional": false
+              },
+              {
+                "name": "error",
+                "type": 3,
+                "optional": true
+              },
+              {
+                "name": "goal",
+                "type": 3,
+                "optional": false
+              },
+              {
+                "name": "id",
+                "type": 3,
+                "optional": false
+              },
+              {
+                "name": "owner",
+                "type": 3,
+                "optional": false
+              },
+              {
+                "name": "parentTask",
+                "type": 3,
+                "optional": true
+              },
+              {
+                "name": "status",
+                "type": 6,
+                "optional": false
+              },
+              {
+                "name": "turn",
+                "type": 5,
+                "optional": false
+              },
+              {
+                "name": "updatedAt",
+                "type": 5,
+                "optional": false
+              }
+            ],
+            "indices": []
+          },
+          {
+            "kind": "array",
+            "element": 3
+          },
+          {
+            "kind": "primitive",
+            "type": "string"
+          },
+          {
+            "kind": "object",
+            "properties": [
+              {
+                "name": "maxConcurrent",
+                "type": 5,
+                "optional": true
+              },
+              {
+                "name": "maxDepth",
+                "type": 5,
+                "optional": true
+              },
+              {
+                "name": "maxSteps",
+                "type": 5,
+                "optional": false
+              },
+              {
+                "name": "maxTokens",
+                "type": 5,
+                "optional": true
+              },
+              {
+                "name": "timeoutMs",
+                "type": 5,
+                "optional": true
+              }
+            ],
+            "indices": []
+          },
+          {
+            "kind": "primitive",
+            "type": "number"
+          },
+          {
+            "kind": "union",
+            "types": [
+              7,
+              8,
+              9,
+              10,
+              11,
+              12,
+              13
+            ]
+          },
+          {
+            "kind": "literal",
+            "value": "cancelled"
+          },
+          {
+            "kind": "literal",
+            "value": "created"
+          },
+          {
+            "kind": "literal",
+            "value": "failed"
+          },
+          {
+            "kind": "literal",
+            "value": "planned"
+          },
+          {
+            "kind": "literal",
+            "value": "running"
+          },
+          {
+            "kind": "literal",
+            "value": "succeeded"
+          },
+          {
+            "kind": "literal",
+            "value": "waiting-human"
+          },
+          {
+            "kind": "literal",
+            "value": true
+          },
+          {
+            "kind": "literal",
+            "value": "task/failed"
+          }
+        ]
+      },
+      "names": [
+        "event:task/failed"
+      ],
       "sources": []
     },
     {
@@ -19952,6 +22738,174 @@
       ],
       "sources": [
         "packages/experimental/agent-team/src/types.ts:115"
+      ]
+    },
+    {
+      "digest": "22a6a3b655443e1503d1030e614dc99423d54ebb555d1d6e0ed5ea906e6f2fd6",
+      "schema": {
+        "root": 0,
+        "nodes": [
+          {
+            "kind": "object",
+            "properties": [
+              {
+                "name": "clippedToolResults",
+                "type": 1,
+                "optional": false
+              },
+              {
+                "name": "deduplicatedMessages",
+                "type": 1,
+                "optional": true
+              },
+              {
+                "name": "droppedMessages",
+                "type": 1,
+                "optional": false
+              },
+              {
+                "name": "estimatedInputTokens",
+                "type": 1,
+                "optional": true
+              },
+              {
+                "name": "hiddenTools",
+                "type": 2,
+                "optional": true
+              },
+              {
+                "name": "historyTokens",
+                "type": 1,
+                "optional": true
+              },
+              {
+                "name": "inputMessages",
+                "type": 1,
+                "optional": false
+              },
+              {
+                "name": "knowledgeBaseTokens",
+                "type": 1,
+                "optional": true
+              },
+              {
+                "name": "maxSteps",
+                "type": 1,
+                "optional": false
+              },
+              {
+                "name": "mode",
+                "type": 5,
+                "optional": false
+              },
+              {
+                "name": "outputBudgetTokens",
+                "type": 1,
+                "optional": true
+              },
+              {
+                "name": "outputMessages",
+                "type": 1,
+                "optional": false
+              },
+              {
+                "name": "skillTokens",
+                "type": 1,
+                "optional": true
+              },
+              {
+                "name": "step",
+                "type": 1,
+                "optional": false
+              },
+              {
+                "name": "systemPromptTokens",
+                "type": 1,
+                "optional": true
+              },
+              {
+                "name": "toolResultTokens",
+                "type": 1,
+                "optional": true
+              },
+              {
+                "name": "toolSchemaTokens",
+                "type": 1,
+                "optional": true
+              },
+              {
+                "name": "turn",
+                "type": 1,
+                "optional": false
+              },
+              {
+                "name": "usedSteps",
+                "type": 1,
+                "optional": false
+              }
+            ],
+            "indices": []
+          },
+          {
+            "kind": "primitive",
+            "type": "number"
+          },
+          {
+            "kind": "array",
+            "element": 3
+          },
+          {
+            "kind": "object",
+            "properties": [
+              {
+                "name": "name",
+                "type": 4,
+                "optional": false
+              },
+              {
+                "name": "reason",
+                "type": 4,
+                "optional": false
+              }
+            ],
+            "indices": []
+          },
+          {
+            "kind": "primitive",
+            "type": "string"
+          },
+          {
+            "kind": "union",
+            "types": [
+              6,
+              7,
+              8,
+              9
+            ]
+          },
+          {
+            "kind": "literal",
+            "value": "coding"
+          },
+          {
+            "kind": "literal",
+            "value": "execution"
+          },
+          {
+            "kind": "literal",
+            "value": "qa"
+          },
+          {
+            "kind": "literal",
+            "value": "research"
+          }
+        ]
+      },
+      "names": [
+        "event:agent/request-context.data"
+      ],
+      "sources": [
+        "packages/interaction/personal-agent/src/index.ts:117"
       ]
     },
     {
@@ -22514,6 +25468,20 @@
       ]
     },
     {
+      "digest": "27e9b87148a76e9073375314b6368ed8db2bf13add4d6c11689ba42c0b54b6d9",
+      "schema": {
+        "root": 0,
+        "nodes": [
+          {
+            "kind": "literal",
+            "value": "created"
+          }
+        ]
+      },
+      "names": [],
+      "sources": []
+    },
+    {
       "digest": "287211846beea1eccb5f9acee00d20388a38fcb2e95858fa2332d6f58529379a",
       "schema": {
         "root": 0,
@@ -23535,7 +26503,7 @@
         "event:assistant/attempt.data.stream[0][3].chunk[2]"
       ],
       "sources": [
-        "packages/llm/llm/src/types.ts:427"
+        "packages/llm/llm/src/types.ts:429"
       ]
     },
     {
@@ -23688,6 +26656,206 @@
       "sources": []
     },
     {
+      "digest": "2dde4581e88305e75afe04f8dde5b601b09be267131b7cce1a5c78f8be916c72",
+      "schema": {
+        "root": 0,
+        "nodes": [
+          {
+            "kind": "object",
+            "properties": [
+              {
+                "name": "data",
+                "type": 1,
+                "optional": false
+              },
+              {
+                "name": "ignorable",
+                "type": 14,
+                "optional": true
+              },
+              {
+                "name": "seq",
+                "type": 5,
+                "optional": false
+              },
+              {
+                "name": "time",
+                "type": 5,
+                "optional": false
+              },
+              {
+                "name": "type",
+                "type": 15,
+                "optional": false
+              }
+            ],
+            "indices": []
+          },
+          {
+            "kind": "object",
+            "properties": [
+              {
+                "name": "acceptance",
+                "type": 2,
+                "optional": true
+              },
+              {
+                "name": "artifacts",
+                "type": 2,
+                "optional": true
+              },
+              {
+                "name": "budget",
+                "type": 4,
+                "optional": false
+              },
+              {
+                "name": "createdAt",
+                "type": 5,
+                "optional": false
+              },
+              {
+                "name": "error",
+                "type": 3,
+                "optional": true
+              },
+              {
+                "name": "goal",
+                "type": 3,
+                "optional": false
+              },
+              {
+                "name": "id",
+                "type": 3,
+                "optional": false
+              },
+              {
+                "name": "owner",
+                "type": 3,
+                "optional": false
+              },
+              {
+                "name": "parentTask",
+                "type": 3,
+                "optional": true
+              },
+              {
+                "name": "status",
+                "type": 6,
+                "optional": false
+              },
+              {
+                "name": "turn",
+                "type": 5,
+                "optional": false
+              },
+              {
+                "name": "updatedAt",
+                "type": 5,
+                "optional": false
+              }
+            ],
+            "indices": []
+          },
+          {
+            "kind": "array",
+            "element": 3
+          },
+          {
+            "kind": "primitive",
+            "type": "string"
+          },
+          {
+            "kind": "object",
+            "properties": [
+              {
+                "name": "maxConcurrent",
+                "type": 5,
+                "optional": true
+              },
+              {
+                "name": "maxDepth",
+                "type": 5,
+                "optional": true
+              },
+              {
+                "name": "maxSteps",
+                "type": 5,
+                "optional": false
+              },
+              {
+                "name": "maxTokens",
+                "type": 5,
+                "optional": true
+              },
+              {
+                "name": "timeoutMs",
+                "type": 5,
+                "optional": true
+              }
+            ],
+            "indices": []
+          },
+          {
+            "kind": "primitive",
+            "type": "number"
+          },
+          {
+            "kind": "union",
+            "types": [
+              7,
+              8,
+              9,
+              10,
+              11,
+              12,
+              13
+            ]
+          },
+          {
+            "kind": "literal",
+            "value": "cancelled"
+          },
+          {
+            "kind": "literal",
+            "value": "created"
+          },
+          {
+            "kind": "literal",
+            "value": "failed"
+          },
+          {
+            "kind": "literal",
+            "value": "planned"
+          },
+          {
+            "kind": "literal",
+            "value": "running"
+          },
+          {
+            "kind": "literal",
+            "value": "succeeded"
+          },
+          {
+            "kind": "literal",
+            "value": "waiting-human"
+          },
+          {
+            "kind": "literal",
+            "value": true
+          },
+          {
+            "kind": "literal",
+            "value": "task/running"
+          }
+        ]
+      },
+      "names": [
+        "event:task/running"
+      ],
+      "sources": []
+    },
+    {
       "digest": "2e4debca12f2c449f96dc6574f3fbf2fb346193443114a241d01a236362ec48c",
       "schema": {
         "root": 0,
@@ -23695,6 +26863,20 @@
           {
             "kind": "literal",
             "value": "team-message"
+          }
+        ]
+      },
+      "names": [],
+      "sources": []
+    },
+    {
+      "digest": "2e575a8f9b6b39b4977692fbe58abdf3a3432d2e71b416a5583095e7eb49b2d3",
+      "schema": {
+        "root": 0,
+        "nodes": [
+          {
+            "kind": "literal",
+            "value": "before"
           }
         ]
       },
@@ -28597,6 +31779,33 @@
       "sources": []
     },
     {
+      "digest": "3b8dac03e28eec7c440d3e84b6c0af6955c86ffa7484d83b4f5a2315d235e932",
+      "schema": {
+        "root": 0,
+        "nodes": [
+          {
+            "kind": "union",
+            "types": [
+              1,
+              2
+            ]
+          },
+          {
+            "kind": "literal",
+            "value": "completed"
+          },
+          {
+            "kind": "literal",
+            "value": "failed"
+          }
+        ]
+      },
+      "names": [
+        "event:knowledge/retrieval.data.status"
+      ],
+      "sources": []
+    },
+    {
       "digest": "3bc287e765d58dc3a22672a0495a6cfd561220dd38fbaecef80aa95b96caed79",
       "schema": {
         "root": 0,
@@ -29177,6 +32386,158 @@
       "sources": []
     },
     {
+      "digest": "441c1ac5f34f0048fc1db0aae50a085321dc6460ee941c41dda7b5602f15277b",
+      "schema": {
+        "root": 0,
+        "nodes": [
+          {
+            "kind": "object",
+            "properties": [
+              {
+                "name": "baseIds",
+                "type": 1,
+                "optional": false
+              },
+              {
+                "name": "deduplicatedHits",
+                "type": 3,
+                "optional": false
+              },
+              {
+                "name": "error",
+                "type": 2,
+                "optional": true
+              },
+              {
+                "name": "estimatedTokens",
+                "type": 3,
+                "optional": false
+              },
+              {
+                "name": "hits",
+                "type": 3,
+                "optional": false
+              },
+              {
+                "name": "maxResultTokens",
+                "type": 3,
+                "optional": false
+              },
+              {
+                "name": "query",
+                "type": 2,
+                "optional": false
+              },
+              {
+                "name": "similarityThreshold",
+                "type": 3,
+                "optional": false
+              },
+              {
+                "name": "skippedBases",
+                "type": 1,
+                "optional": false
+              },
+              {
+                "name": "sources",
+                "type": 4,
+                "optional": false
+              },
+              {
+                "name": "status",
+                "type": 6,
+                "optional": false
+              },
+              {
+                "name": "step",
+                "type": 3,
+                "optional": false
+              },
+              {
+                "name": "turn",
+                "type": 3,
+                "optional": false
+              }
+            ],
+            "indices": []
+          },
+          {
+            "kind": "array",
+            "element": 2
+          },
+          {
+            "kind": "primitive",
+            "type": "string"
+          },
+          {
+            "kind": "primitive",
+            "type": "number"
+          },
+          {
+            "kind": "array",
+            "element": 5
+          },
+          {
+            "kind": "object",
+            "properties": [
+              {
+                "name": "baseId",
+                "type": 2,
+                "optional": false
+              },
+              {
+                "name": "baseTitle",
+                "type": 2,
+                "optional": false
+              },
+              {
+                "name": "documentId",
+                "type": 2,
+                "optional": false
+              },
+              {
+                "name": "documentTitle",
+                "type": 2,
+                "optional": false
+              },
+              {
+                "name": "ordinal",
+                "type": 3,
+                "optional": false
+              },
+              {
+                "name": "score",
+                "type": 3,
+                "optional": false
+              }
+            ],
+            "indices": []
+          },
+          {
+            "kind": "union",
+            "types": [
+              7,
+              8
+            ]
+          },
+          {
+            "kind": "literal",
+            "value": "completed"
+          },
+          {
+            "kind": "literal",
+            "value": "failed"
+          }
+        ]
+      },
+      "names": [
+        "event:knowledge/retrieval.data"
+      ],
+      "sources": [
+        "packages/host/knowledge/src/index.ts:41"
+      ]
+    },
+    {
       "digest": "443371ec07a03a82a0e93d93abca3e70b03bca55ba5b01d507030fcb66e8fbb4",
       "schema": {
         "root": 0,
@@ -29700,6 +33061,20 @@
       "sources": [
         "packages/interaction/user-approval/src/types.ts:44"
       ]
+    },
+    {
+      "digest": "46728923217806e154729b88e50a37189f2c171544f8eea9fb2c90d7098ab68e",
+      "schema": {
+        "root": 0,
+        "nodes": [
+          {
+            "kind": "literal",
+            "value": "agent/request-context"
+          }
+        ]
+      },
+      "names": [],
+      "sources": []
     },
     {
       "digest": "477614bca595a9e7adb5a1870be446b9a8684f3ba8950259d6289f2d3b74f028",
@@ -31030,6 +34405,20 @@
       "sources": []
     },
     {
+      "digest": "4988b03f86756a2d24567b5c1a6b2ad17a1cc5558d5b6d2e23e809a00bf445c5",
+      "schema": {
+        "root": 0,
+        "nodes": [
+          {
+            "kind": "literal",
+            "value": "coding"
+          }
+        ]
+      },
+      "names": [],
+      "sources": []
+    },
+    {
       "digest": "4a9bef9f27a942520cc2279ca7dd3082556e4bff543f66b5c0333e1bbed1cd86",
       "schema": {
         "root": 0,
@@ -31075,6 +34464,206 @@
       "sources": [
         "packages/subagent/subagent/src/continuation-messages.ts:15"
       ]
+    },
+    {
+      "digest": "4aa65dac12a686eeaeeabc727b383da3d8619c5ff0c98a9bc6aa0e4c420eaed1",
+      "schema": {
+        "root": 0,
+        "nodes": [
+          {
+            "kind": "object",
+            "properties": [
+              {
+                "name": "data",
+                "type": 1,
+                "optional": false
+              },
+              {
+                "name": "ignorable",
+                "type": 14,
+                "optional": true
+              },
+              {
+                "name": "seq",
+                "type": 5,
+                "optional": false
+              },
+              {
+                "name": "time",
+                "type": 5,
+                "optional": false
+              },
+              {
+                "name": "type",
+                "type": 15,
+                "optional": false
+              }
+            ],
+            "indices": []
+          },
+          {
+            "kind": "object",
+            "properties": [
+              {
+                "name": "acceptance",
+                "type": 2,
+                "optional": true
+              },
+              {
+                "name": "artifacts",
+                "type": 2,
+                "optional": true
+              },
+              {
+                "name": "budget",
+                "type": 4,
+                "optional": false
+              },
+              {
+                "name": "createdAt",
+                "type": 5,
+                "optional": false
+              },
+              {
+                "name": "error",
+                "type": 3,
+                "optional": true
+              },
+              {
+                "name": "goal",
+                "type": 3,
+                "optional": false
+              },
+              {
+                "name": "id",
+                "type": 3,
+                "optional": false
+              },
+              {
+                "name": "owner",
+                "type": 3,
+                "optional": false
+              },
+              {
+                "name": "parentTask",
+                "type": 3,
+                "optional": true
+              },
+              {
+                "name": "status",
+                "type": 6,
+                "optional": false
+              },
+              {
+                "name": "turn",
+                "type": 5,
+                "optional": false
+              },
+              {
+                "name": "updatedAt",
+                "type": 5,
+                "optional": false
+              }
+            ],
+            "indices": []
+          },
+          {
+            "kind": "array",
+            "element": 3
+          },
+          {
+            "kind": "primitive",
+            "type": "string"
+          },
+          {
+            "kind": "object",
+            "properties": [
+              {
+                "name": "maxConcurrent",
+                "type": 5,
+                "optional": true
+              },
+              {
+                "name": "maxDepth",
+                "type": 5,
+                "optional": true
+              },
+              {
+                "name": "maxSteps",
+                "type": 5,
+                "optional": false
+              },
+              {
+                "name": "maxTokens",
+                "type": 5,
+                "optional": true
+              },
+              {
+                "name": "timeoutMs",
+                "type": 5,
+                "optional": true
+              }
+            ],
+            "indices": []
+          },
+          {
+            "kind": "primitive",
+            "type": "number"
+          },
+          {
+            "kind": "union",
+            "types": [
+              7,
+              8,
+              9,
+              10,
+              11,
+              12,
+              13
+            ]
+          },
+          {
+            "kind": "literal",
+            "value": "cancelled"
+          },
+          {
+            "kind": "literal",
+            "value": "created"
+          },
+          {
+            "kind": "literal",
+            "value": "failed"
+          },
+          {
+            "kind": "literal",
+            "value": "planned"
+          },
+          {
+            "kind": "literal",
+            "value": "running"
+          },
+          {
+            "kind": "literal",
+            "value": "succeeded"
+          },
+          {
+            "kind": "literal",
+            "value": "waiting-human"
+          },
+          {
+            "kind": "literal",
+            "value": true
+          },
+          {
+            "kind": "literal",
+            "value": "task/planned"
+          }
+        ]
+      },
+      "names": [
+        "event:task/planned"
+      ],
+      "sources": []
     },
     {
       "digest": "4ae007ed190a72c92138b22d059b83208079c7551ca13fb59ae8cf5e23693964",
@@ -32031,6 +35620,8 @@
         "packages/experimental/agent-team/src/types.ts#TeamTaskId",
         "packages/feedback/message-feedback/src/types.ts#MessageFeedbackVersion",
         "packages/goal/goal/src/types.ts#GoalId",
+        "packages/host/knowledge/src/types.ts#KnowledgeBaseId",
+        "packages/host/knowledge/src/types.ts#KnowledgeDocumentId",
         "packages/interaction/commands/src/brand.ts#CommandId",
         "packages/interaction/user-approval/src/types.ts#ApprovalRequestId",
         "packages/llm/llm-retry/src/brand.ts#RetryId",
@@ -32056,6 +35647,8 @@
         "packages/experimental/agent-team/src/types.ts:8",
         "packages/feedback/message-feedback/src/types.ts:14",
         "packages/goal/goal/src/types.ts:17",
+        "packages/host/knowledge/src/types.ts:4",
+        "packages/host/knowledge/src/types.ts:5",
         "packages/interaction/commands/src/brand.ts:31",
         "packages/interaction/user-approval/src/types.ts:17",
         "packages/llm/llm-retry/src/brand.ts:4",
@@ -34040,6 +37633,56 @@
       ]
     },
     {
+      "digest": "52cebfa3a29bb262013807b0b0d679fb6705ec1b883f0e0b794da6a6678854ae",
+      "schema": {
+        "root": 0,
+        "nodes": [
+          {
+            "kind": "object",
+            "properties": [
+              {
+                "name": "mode",
+                "type": 1,
+                "optional": false
+              }
+            ],
+            "indices": []
+          },
+          {
+            "kind": "union",
+            "types": [
+              2,
+              3,
+              4,
+              5
+            ]
+          },
+          {
+            "kind": "literal",
+            "value": "coding"
+          },
+          {
+            "kind": "literal",
+            "value": "execution"
+          },
+          {
+            "kind": "literal",
+            "value": "qa"
+          },
+          {
+            "kind": "literal",
+            "value": "research"
+          }
+        ]
+      },
+      "names": [
+        "event:agent/mode.data"
+      ],
+      "sources": [
+        "packages/interaction/personal-agent/src/index.ts:115"
+      ]
+    },
+    {
       "digest": "530da6c0267813bb4511af72883cc518834e624e3b3220a7062955fd57a788a6",
       "schema": {
         "root": 0,
@@ -34079,6 +37722,20 @@
       ]
     },
     {
+      "digest": "5483d830186a03e72ee3a4e37cff6f7b2268f32497f733a14e994f56372f85e5",
+      "schema": {
+        "root": 0,
+        "nodes": [
+          {
+            "kind": "literal",
+            "value": "planned"
+          }
+        ]
+      },
+      "names": [],
+      "sources": []
+    },
+    {
       "digest": "557e148d30b79ee48645850832b30c717d7c3b64641deb5d6133b8b4e91ee0b8",
       "schema": {
         "root": 0,
@@ -34086,6 +37743,20 @@
           {
             "kind": "literal",
             "value": "agent-preset/selected"
+          }
+        ]
+      },
+      "names": [],
+      "sources": []
+    },
+    {
+      "digest": "5623f8877326ca315ace5a7698518f812971fc9800fdab134a88a62883a0c04a",
+      "schema": {
+        "root": 0,
+        "nodes": [
+          {
+            "kind": "literal",
+            "value": "knowledge/selection"
           }
         ]
       },
@@ -34466,6 +38137,20 @@
       "sources": [
         "packages/llm/llm/src/types.ts:152"
       ]
+    },
+    {
+      "digest": "5861c8a7d8d613c76b3b8874babeabd77915b63bbcdd6deff90bf6d2afaf4e99",
+      "schema": {
+        "root": 0,
+        "nodes": [
+          {
+            "kind": "literal",
+            "value": "agent/mode"
+          }
+        ]
+      },
+      "names": [],
+      "sources": []
     },
     {
       "digest": "587bb11da730e06aa52b62c087d217d6f8f22459b25f31cb9e1e1baf17944e5e",
@@ -35010,9 +38695,9 @@
         ]
       },
       "names": [
-        "SessionEventEnvelope[39].sourceEventSeqs",
-        "SessionEventEnvelope[52].sourceEventSeqs",
-        "SessionEventEnvelope[55].sourceEventSeqs",
+        "SessionEventEnvelope[45].sourceEventSeqs",
+        "SessionEventEnvelope[65].sourceEventSeqs",
+        "SessionEventEnvelope[68].sourceEventSeqs",
         "event:assistant/attempt.data.stream[0][0].dt",
         "event:assistant/attempt.data.stream[0][1].dt",
         "event:assistant/attempt.data.stream[0][2].dt",
@@ -36760,7 +40445,7 @@
         "event:assistant/attempt.data.stream[0][3].chunk[0]"
       ],
       "sources": [
-        "packages/llm/llm/src/types.ts:425"
+        "packages/llm/llm/src/types.ts:427"
       ]
     },
     {
@@ -37209,6 +40894,60 @@
       },
       "names": [],
       "sources": []
+    },
+    {
+      "digest": "690f44230b4884bef2209e4840e462fb7c2e1ec257fbbce63ff4266c7ec12aa8",
+      "schema": {
+        "root": 0,
+        "nodes": [
+          {
+            "kind": "union",
+            "types": [
+              1,
+              2,
+              3,
+              4,
+              5,
+              6,
+              7
+            ]
+          },
+          {
+            "kind": "literal",
+            "value": "cancelled"
+          },
+          {
+            "kind": "literal",
+            "value": "created"
+          },
+          {
+            "kind": "literal",
+            "value": "failed"
+          },
+          {
+            "kind": "literal",
+            "value": "planned"
+          },
+          {
+            "kind": "literal",
+            "value": "running"
+          },
+          {
+            "kind": "literal",
+            "value": "succeeded"
+          },
+          {
+            "kind": "literal",
+            "value": "waiting-human"
+          }
+        ]
+      },
+      "names": [
+        "packages/interaction/personal-agent/src/index.ts#AgentTaskStatus"
+      ],
+      "sources": [
+        "packages/interaction/personal-agent/src/index.ts:63"
+      ]
     },
     {
       "digest": "693f4952fb5565da96c06bace8924b098ac2fbc915fde0ff8019701183abc057",
@@ -37942,6 +41681,20 @@
       "sources": []
     },
     {
+      "digest": "6a296e0f89d2b32d7a3299e858ddc7a1b03c39e3ce502ac6514a934489a88909",
+      "schema": {
+        "root": 0,
+        "nodes": [
+          {
+            "kind": "literal",
+            "value": "task/waiting-human"
+          }
+        ]
+      },
+      "names": [],
+      "sources": []
+    },
+    {
       "digest": "6a4f72e2e179e17b922f2a9392c0e1c8f8c707f32494372454850a3eb184a6e7",
       "schema": {
         "root": 0,
@@ -38635,6 +42388,20 @@
       "sources": [
         "packages/llm/llm/src/assistant-stream.ts:28"
       ]
+    },
+    {
+      "digest": "71d18eaaca8130b3d28c3fe9942a1db349340fcf36366be21375c5c2479ed953",
+      "schema": {
+        "root": 0,
+        "nodes": [
+          {
+            "kind": "literal",
+            "value": "agent/git-checkpoint"
+          }
+        ]
+      },
+      "names": [],
+      "sources": []
     },
     {
       "digest": "72ec79127a9c0d0241b1106a74cc2b24c81ce467170f1c3c93f7b71a9496d227",
@@ -40243,7 +44010,7 @@
         ]
       },
       "names": [
-        "SessionEventEnvelope[6]"
+        "SessionEventEnvelope[10]"
       ],
       "sources": []
     },
@@ -40656,7 +44423,7 @@
         "packages/llm/llm/src/types.ts#ToolSchema"
       ],
       "sources": [
-        "packages/llm/llm/src/types.ts:445"
+        "packages/llm/llm/src/types.ts:447"
       ]
     },
     {
@@ -40914,6 +44681,20 @@
       ]
     },
     {
+      "digest": "81cec112cc37f2d180c25e093eb78fb7457a01ab59974402f5ceb8d8b7340f2a",
+      "schema": {
+        "root": 0,
+        "nodes": [
+          {
+            "kind": "literal",
+            "value": "research"
+          }
+        ]
+      },
+      "names": [],
+      "sources": []
+    },
+    {
       "digest": "82470020b5bfcb1a843e2aa05602af7d37df99e82d01f015c7c589ba054fd89d",
       "schema": {
         "root": 0,
@@ -40926,6 +44707,59 @@
       },
       "names": [],
       "sources": []
+    },
+    {
+      "digest": "825c3be55a8260742a2a5cc34bb9b51aff5b3ca8750d931c9c6c377778d07aeb",
+      "schema": {
+        "root": 0,
+        "nodes": [
+          {
+            "kind": "object",
+            "properties": [
+              {
+                "name": "code",
+                "type": 1,
+                "optional": false
+              },
+              {
+                "name": "name",
+                "type": 1,
+                "optional": false
+              },
+              {
+                "name": "reason",
+                "type": 1,
+                "optional": false
+              },
+              {
+                "name": "step",
+                "type": 2,
+                "optional": false
+              },
+              {
+                "name": "turn",
+                "type": 2,
+                "optional": false
+              }
+            ],
+            "indices": []
+          },
+          {
+            "kind": "primitive",
+            "type": "string"
+          },
+          {
+            "kind": "primitive",
+            "type": "number"
+          }
+        ]
+      },
+      "names": [
+        "event:agent/tool-denied.data"
+      ],
+      "sources": [
+        "packages/interaction/personal-agent/src/index.ts:140"
+      ]
     },
     {
       "digest": "829a2fb3be6efd4ba36aef8ed2d381a4c6fb2a0aaf50c823a6f3f8290786b809",
@@ -42233,7 +46067,7 @@
         "event:assistant/attempt.data.stream[0][3].chunk[3]"
       ],
       "sources": [
-        "packages/llm/llm/src/types.ts:428"
+        "packages/llm/llm/src/types.ts:430"
       ]
     },
     {
@@ -43908,7 +47742,7 @@
         "event:assistant/attempt.data.stream[0][3].chunk[4]"
       ],
       "sources": [
-        "packages/llm/llm/src/types.ts:429"
+        "packages/llm/llm/src/types.ts:431"
       ]
     },
     {
@@ -44098,6 +47932,20 @@
       ]
     },
     {
+      "digest": "930ff5169d3e36a977ddec9f242c14a18ef80d61bae567afb6e1a3f4c04513e2",
+      "schema": {
+        "root": 0,
+        "nodes": [
+          {
+            "kind": "literal",
+            "value": "qa"
+          }
+        ]
+      },
+      "names": [],
+      "sources": []
+    },
+    {
       "digest": "935c8d486292b13c87b57ca280eb8c58b5b2f5239be86fcd4334c33fdeb87682",
       "schema": {
         "root": 0,
@@ -44144,9 +47992,14 @@
         "event:assistant/attempt.data.stream[0][0].texts",
         "event:assistant/attempt.data.stream[0][1].texts",
         "event:assistant/attempt.data.stream[0][2].args",
+        "event:knowledge/retrieval.data.baseIds",
+        "event:knowledge/retrieval.data.skippedBases",
+        "event:knowledge/selection.data.baseIds",
         "event:request/header.data.header.config.stop",
         "event:subagent/descriptor.data[1].toolFilter.allow",
         "event:subagent/descriptor.data[1].toolFilter.deny",
+        "event:task/cancelled.data.acceptance",
+        "event:task/cancelled.data.artifacts",
         "event:team/task.data.task.blockedBy",
         "event:team/task.data.task.writeScopes"
       ],
@@ -44240,6 +48093,33 @@
       "sources": []
     },
     {
+      "digest": "94d498a640e06441d3cd2036ea8cf0d205b77268f55fcd6ec3ea65e65e573fea",
+      "schema": {
+        "root": 0,
+        "nodes": [
+          {
+            "kind": "union",
+            "types": [
+              1,
+              2
+            ]
+          },
+          {
+            "kind": "literal",
+            "value": "after"
+          },
+          {
+            "kind": "literal",
+            "value": "before"
+          }
+        ]
+      },
+      "names": [
+        "event:agent/git-checkpoint.data.phase"
+      ],
+      "sources": []
+    },
+    {
       "digest": "95080295115fbd83544520ba247b68a03790131f6a2eac323d388758cb542f65",
       "schema": {
         "root": 0,
@@ -44283,8 +48163,98 @@
         "event:assistant/attempt.data.stream[0][3].chunk[1]"
       ],
       "sources": [
-        "packages/llm/llm/src/types.ts:426"
+        "packages/llm/llm/src/types.ts:428"
       ]
+    },
+    {
+      "digest": "95a88c6c191f903e893fb0f2cc59d22267e8e81aa1ab62ed1ba064811bc439f7",
+      "schema": {
+        "root": 0,
+        "nodes": [
+          {
+            "kind": "object",
+            "properties": [
+              {
+                "name": "data",
+                "type": 1,
+                "optional": false
+              },
+              {
+                "name": "ignorable",
+                "type": 4,
+                "optional": true
+              },
+              {
+                "name": "seq",
+                "type": 3,
+                "optional": false
+              },
+              {
+                "name": "time",
+                "type": 3,
+                "optional": false
+              },
+              {
+                "name": "type",
+                "type": 5,
+                "optional": false
+              }
+            ],
+            "indices": []
+          },
+          {
+            "kind": "object",
+            "properties": [
+              {
+                "name": "code",
+                "type": 2,
+                "optional": false
+              },
+              {
+                "name": "name",
+                "type": 2,
+                "optional": false
+              },
+              {
+                "name": "reason",
+                "type": 2,
+                "optional": false
+              },
+              {
+                "name": "step",
+                "type": 3,
+                "optional": false
+              },
+              {
+                "name": "turn",
+                "type": 3,
+                "optional": false
+              }
+            ],
+            "indices": []
+          },
+          {
+            "kind": "primitive",
+            "type": "string"
+          },
+          {
+            "kind": "primitive",
+            "type": "number"
+          },
+          {
+            "kind": "literal",
+            "value": true
+          },
+          {
+            "kind": "literal",
+            "value": "agent/tool-denied"
+          }
+        ]
+      },
+      "names": [
+        "event:agent/tool-denied"
+      ],
+      "sources": []
     },
     {
       "digest": "95c0e88fcf0bafb2087f912ad9e2369de6ae6530cc0c4c2772c96205b57f7f60",
@@ -44328,6 +48298,20 @@
       "sources": [
         "packages/core/agent/src/types.ts:30"
       ]
+    },
+    {
+      "digest": "986817b630f2891a797dbc2295028a6606e99fcb9509eda5830ec2e6cf57a33a",
+      "schema": {
+        "root": 0,
+        "nodes": [
+          {
+            "kind": "literal",
+            "value": "waiting-human"
+          }
+        ]
+      },
+      "names": [],
+      "sources": []
     },
     {
       "digest": "9890113e97dd3541787bfe6704f2b223d3a890b5325ca0acae2b0398909b413e",
@@ -44479,9 +48463,9 @@
         ]
       },
       "names": [
-        "SessionEventEnvelope[39]",
-        "SessionEventEnvelope[52]",
-        "SessionEventEnvelope[55]"
+        "SessionEventEnvelope[45]",
+        "SessionEventEnvelope[65]",
+        "SessionEventEnvelope[68]"
       ],
       "sources": []
     },
@@ -44605,6 +48589,42 @@
       "sources": [
         "packages/workflow/tool-workflow/src/types.ts:20"
       ]
+    },
+    {
+      "digest": "9a49e4332fef6131659c412c65f772eb7aa93845d2b78121eb0315acb13bc595",
+      "schema": {
+        "root": 0,
+        "nodes": [
+          {
+            "kind": "array",
+            "element": 1
+          },
+          {
+            "kind": "object",
+            "properties": [
+              {
+                "name": "name",
+                "type": 2,
+                "optional": false
+              },
+              {
+                "name": "reason",
+                "type": 2,
+                "optional": false
+              }
+            ],
+            "indices": []
+          },
+          {
+            "kind": "primitive",
+            "type": "string"
+          }
+        ]
+      },
+      "names": [
+        "event:agent/request-context.data.hiddenTools"
+      ],
+      "sources": []
     },
     {
       "digest": "9acbe713f3f641921dd3333b240aa72e176d795327c24e8d9db9b68b16771b49",
@@ -44805,6 +48825,126 @@
       "sources": [
         "packages/webhook/webhook/src/types.ts:74"
       ]
+    },
+    {
+      "digest": "9f3f3a104823b2945b2a840a1521d75b1f9cd441b80cf97e711be5717291267a",
+      "schema": {
+        "root": 0,
+        "nodes": [
+          {
+            "kind": "object",
+            "properties": [
+              {
+                "name": "data",
+                "type": 1,
+                "optional": false
+              },
+              {
+                "name": "ignorable",
+                "type": 7,
+                "optional": true
+              },
+              {
+                "name": "seq",
+                "type": 6,
+                "optional": false
+              },
+              {
+                "name": "time",
+                "type": 6,
+                "optional": false
+              },
+              {
+                "name": "type",
+                "type": 8,
+                "optional": false
+              }
+            ],
+            "indices": []
+          },
+          {
+            "kind": "object",
+            "properties": [
+              {
+                "name": "branch",
+                "type": 2,
+                "optional": true
+              },
+              {
+                "name": "cwd",
+                "type": 2,
+                "optional": false
+              },
+              {
+                "name": "diff",
+                "type": 2,
+                "optional": true
+              },
+              {
+                "name": "diffStat",
+                "type": 2,
+                "optional": true
+              },
+              {
+                "name": "error",
+                "type": 2,
+                "optional": true
+              },
+              {
+                "name": "phase",
+                "type": 3,
+                "optional": false
+              },
+              {
+                "name": "status",
+                "type": 2,
+                "optional": true
+              },
+              {
+                "name": "turn",
+                "type": 6,
+                "optional": false
+              }
+            ],
+            "indices": []
+          },
+          {
+            "kind": "primitive",
+            "type": "string"
+          },
+          {
+            "kind": "union",
+            "types": [
+              4,
+              5
+            ]
+          },
+          {
+            "kind": "literal",
+            "value": "after"
+          },
+          {
+            "kind": "literal",
+            "value": "before"
+          },
+          {
+            "kind": "primitive",
+            "type": "number"
+          },
+          {
+            "kind": "literal",
+            "value": true
+          },
+          {
+            "kind": "literal",
+            "value": "agent/git-checkpoint"
+          }
+        ]
+      },
+      "names": [
+        "event:agent/git-checkpoint"
+      ],
+      "sources": []
     },
     {
       "digest": "9fe0e77a7816b7fdb4b953ec0e2f0cd7bbd22c5de5c3567e612d1b20eb0992e6",
@@ -46661,7 +50801,7 @@
         "event:assistant/attempt.data.stream[0][3].chunk[6]"
       ],
       "sources": [
-        "packages/llm/llm/src/types.ts:431"
+        "packages/llm/llm/src/types.ts:433"
       ]
     },
     {
@@ -46672,6 +50812,20 @@
           {
             "kind": "literal",
             "value": "error"
+          }
+        ]
+      },
+      "names": [],
+      "sources": []
+    },
+    {
+      "digest": "a33ee6ae36b2b9d891313745153cefc5f272704c54e297f3ad84dcd9d076a4d0",
+      "schema": {
+        "root": 0,
+        "nodes": [
+          {
+            "kind": "literal",
+            "value": "task/created"
           }
         ]
       },
@@ -46827,6 +50981,206 @@
       "sources": [
         "packages/experimental/agent-team/src/types.ts:223"
       ]
+    },
+    {
+      "digest": "a4d4b0db312ffa29b34e21c22f1f7bcf32305b447f5c2220edab34bce18ec765",
+      "schema": {
+        "root": 0,
+        "nodes": [
+          {
+            "kind": "object",
+            "properties": [
+              {
+                "name": "data",
+                "type": 1,
+                "optional": false
+              },
+              {
+                "name": "ignorable",
+                "type": 14,
+                "optional": true
+              },
+              {
+                "name": "seq",
+                "type": 5,
+                "optional": false
+              },
+              {
+                "name": "time",
+                "type": 5,
+                "optional": false
+              },
+              {
+                "name": "type",
+                "type": 15,
+                "optional": false
+              }
+            ],
+            "indices": []
+          },
+          {
+            "kind": "object",
+            "properties": [
+              {
+                "name": "acceptance",
+                "type": 2,
+                "optional": true
+              },
+              {
+                "name": "artifacts",
+                "type": 2,
+                "optional": true
+              },
+              {
+                "name": "budget",
+                "type": 4,
+                "optional": false
+              },
+              {
+                "name": "createdAt",
+                "type": 5,
+                "optional": false
+              },
+              {
+                "name": "error",
+                "type": 3,
+                "optional": true
+              },
+              {
+                "name": "goal",
+                "type": 3,
+                "optional": false
+              },
+              {
+                "name": "id",
+                "type": 3,
+                "optional": false
+              },
+              {
+                "name": "owner",
+                "type": 3,
+                "optional": false
+              },
+              {
+                "name": "parentTask",
+                "type": 3,
+                "optional": true
+              },
+              {
+                "name": "status",
+                "type": 6,
+                "optional": false
+              },
+              {
+                "name": "turn",
+                "type": 5,
+                "optional": false
+              },
+              {
+                "name": "updatedAt",
+                "type": 5,
+                "optional": false
+              }
+            ],
+            "indices": []
+          },
+          {
+            "kind": "array",
+            "element": 3
+          },
+          {
+            "kind": "primitive",
+            "type": "string"
+          },
+          {
+            "kind": "object",
+            "properties": [
+              {
+                "name": "maxConcurrent",
+                "type": 5,
+                "optional": true
+              },
+              {
+                "name": "maxDepth",
+                "type": 5,
+                "optional": true
+              },
+              {
+                "name": "maxSteps",
+                "type": 5,
+                "optional": false
+              },
+              {
+                "name": "maxTokens",
+                "type": 5,
+                "optional": true
+              },
+              {
+                "name": "timeoutMs",
+                "type": 5,
+                "optional": true
+              }
+            ],
+            "indices": []
+          },
+          {
+            "kind": "primitive",
+            "type": "number"
+          },
+          {
+            "kind": "union",
+            "types": [
+              7,
+              8,
+              9,
+              10,
+              11,
+              12,
+              13
+            ]
+          },
+          {
+            "kind": "literal",
+            "value": "cancelled"
+          },
+          {
+            "kind": "literal",
+            "value": "created"
+          },
+          {
+            "kind": "literal",
+            "value": "failed"
+          },
+          {
+            "kind": "literal",
+            "value": "planned"
+          },
+          {
+            "kind": "literal",
+            "value": "running"
+          },
+          {
+            "kind": "literal",
+            "value": "succeeded"
+          },
+          {
+            "kind": "literal",
+            "value": "waiting-human"
+          },
+          {
+            "kind": "literal",
+            "value": true
+          },
+          {
+            "kind": "literal",
+            "value": "task/waiting-human"
+          }
+        ]
+      },
+      "names": [
+        "event:task/waiting-human"
+      ],
+      "sources": []
     },
     {
       "digest": "a5a8c15f08af1b0f26f40906e0797b6b0920fd01069e660becce35ab7fc48d77",
@@ -47086,6 +51440,206 @@
       "sources": [
         "packages/core/session/src/types.ts:224"
       ]
+    },
+    {
+      "digest": "a5c054e888fe194baa2ff9ede075fa0724041e964784ab12e16be2f440af05f1",
+      "schema": {
+        "root": 0,
+        "nodes": [
+          {
+            "kind": "object",
+            "properties": [
+              {
+                "name": "data",
+                "type": 1,
+                "optional": false
+              },
+              {
+                "name": "ignorable",
+                "type": 14,
+                "optional": true
+              },
+              {
+                "name": "seq",
+                "type": 5,
+                "optional": false
+              },
+              {
+                "name": "time",
+                "type": 5,
+                "optional": false
+              },
+              {
+                "name": "type",
+                "type": 15,
+                "optional": false
+              }
+            ],
+            "indices": []
+          },
+          {
+            "kind": "object",
+            "properties": [
+              {
+                "name": "acceptance",
+                "type": 2,
+                "optional": true
+              },
+              {
+                "name": "artifacts",
+                "type": 2,
+                "optional": true
+              },
+              {
+                "name": "budget",
+                "type": 4,
+                "optional": false
+              },
+              {
+                "name": "createdAt",
+                "type": 5,
+                "optional": false
+              },
+              {
+                "name": "error",
+                "type": 3,
+                "optional": true
+              },
+              {
+                "name": "goal",
+                "type": 3,
+                "optional": false
+              },
+              {
+                "name": "id",
+                "type": 3,
+                "optional": false
+              },
+              {
+                "name": "owner",
+                "type": 3,
+                "optional": false
+              },
+              {
+                "name": "parentTask",
+                "type": 3,
+                "optional": true
+              },
+              {
+                "name": "status",
+                "type": 6,
+                "optional": false
+              },
+              {
+                "name": "turn",
+                "type": 5,
+                "optional": false
+              },
+              {
+                "name": "updatedAt",
+                "type": 5,
+                "optional": false
+              }
+            ],
+            "indices": []
+          },
+          {
+            "kind": "array",
+            "element": 3
+          },
+          {
+            "kind": "primitive",
+            "type": "string"
+          },
+          {
+            "kind": "object",
+            "properties": [
+              {
+                "name": "maxConcurrent",
+                "type": 5,
+                "optional": true
+              },
+              {
+                "name": "maxDepth",
+                "type": 5,
+                "optional": true
+              },
+              {
+                "name": "maxSteps",
+                "type": 5,
+                "optional": false
+              },
+              {
+                "name": "maxTokens",
+                "type": 5,
+                "optional": true
+              },
+              {
+                "name": "timeoutMs",
+                "type": 5,
+                "optional": true
+              }
+            ],
+            "indices": []
+          },
+          {
+            "kind": "primitive",
+            "type": "number"
+          },
+          {
+            "kind": "union",
+            "types": [
+              7,
+              8,
+              9,
+              10,
+              11,
+              12,
+              13
+            ]
+          },
+          {
+            "kind": "literal",
+            "value": "cancelled"
+          },
+          {
+            "kind": "literal",
+            "value": "created"
+          },
+          {
+            "kind": "literal",
+            "value": "failed"
+          },
+          {
+            "kind": "literal",
+            "value": "planned"
+          },
+          {
+            "kind": "literal",
+            "value": "running"
+          },
+          {
+            "kind": "literal",
+            "value": "succeeded"
+          },
+          {
+            "kind": "literal",
+            "value": "waiting-human"
+          },
+          {
+            "kind": "literal",
+            "value": true
+          },
+          {
+            "kind": "literal",
+            "value": "task/created"
+          }
+        ]
+      },
+      "names": [
+        "event:task/created"
+      ],
+      "sources": []
     },
     {
       "digest": "a6567ccb2e530606b775371eb4fa31468d72084339968e8b0440a516a23b39dc",
@@ -49189,6 +53743,64 @@
       "sources": []
     },
     {
+      "digest": "afa34f0a242b42c9e7c8c9d30eabedf71314260106f5198c19ff09fa4437cf92",
+      "schema": {
+        "root": 0,
+        "nodes": [
+          {
+            "kind": "object",
+            "properties": [
+              {
+                "name": "baseId",
+                "type": 1,
+                "optional": false
+              },
+              {
+                "name": "baseTitle",
+                "type": 1,
+                "optional": false
+              },
+              {
+                "name": "documentId",
+                "type": 1,
+                "optional": false
+              },
+              {
+                "name": "documentTitle",
+                "type": 1,
+                "optional": false
+              },
+              {
+                "name": "ordinal",
+                "type": 2,
+                "optional": false
+              },
+              {
+                "name": "score",
+                "type": 2,
+                "optional": false
+              }
+            ],
+            "indices": []
+          },
+          {
+            "kind": "primitive",
+            "type": "string"
+          },
+          {
+            "kind": "primitive",
+            "type": "number"
+          }
+        ]
+      },
+      "names": [
+        "packages/host/knowledge/src/types.ts#KnowledgeRetrievalSource"
+      ],
+      "sources": [
+        "packages/host/knowledge/src/types.ts:77"
+      ]
+    },
+    {
       "digest": "aff60ef947c18b012644852bdd0d5bfe72065e061dd563787c76c646b4a10f6b",
       "schema": {
         "root": 0,
@@ -50134,6 +54746,97 @@
       "sources": []
     },
     {
+      "digest": "b35ceaaccf4e97b9051dce0f8d2caaef86abe66012a42c01b076f1a3a3fc6faa",
+      "schema": {
+        "root": 0,
+        "nodes": [
+          {
+            "kind": "object",
+            "properties": [
+              {
+                "name": "data",
+                "type": 1,
+                "optional": false
+              },
+              {
+                "name": "ignorable",
+                "type": 7,
+                "optional": true
+              },
+              {
+                "name": "seq",
+                "type": 8,
+                "optional": false
+              },
+              {
+                "name": "time",
+                "type": 8,
+                "optional": false
+              },
+              {
+                "name": "type",
+                "type": 9,
+                "optional": false
+              }
+            ],
+            "indices": []
+          },
+          {
+            "kind": "object",
+            "properties": [
+              {
+                "name": "mode",
+                "type": 2,
+                "optional": false
+              }
+            ],
+            "indices": []
+          },
+          {
+            "kind": "union",
+            "types": [
+              3,
+              4,
+              5,
+              6
+            ]
+          },
+          {
+            "kind": "literal",
+            "value": "coding"
+          },
+          {
+            "kind": "literal",
+            "value": "execution"
+          },
+          {
+            "kind": "literal",
+            "value": "qa"
+          },
+          {
+            "kind": "literal",
+            "value": "research"
+          },
+          {
+            "kind": "literal",
+            "value": true
+          },
+          {
+            "kind": "primitive",
+            "type": "number"
+          },
+          {
+            "kind": "literal",
+            "value": "agent/mode"
+          }
+        ]
+      },
+      "names": [
+        "event:agent/mode"
+      ],
+      "sources": []
+    },
+    {
       "digest": "b38f206d59bad891fa58c89f97a0036987b3defe7685acbd318fa55eb85f9751",
       "schema": {
         "root": 0,
@@ -50485,6 +55188,20 @@
       "sources": []
     },
     {
+      "digest": "b5697240ac7278644e1e2c205c7c5fdf7ed8e057ffe8e832918c7fd9408c950e",
+      "schema": {
+        "root": 0,
+        "nodes": [
+          {
+            "kind": "literal",
+            "value": "agent/tool-denied"
+          }
+        ]
+      },
+      "names": [],
+      "sources": []
+    },
+    {
       "digest": "b56f6a885da3dc394c69a3e3cc5c0cfc4da15601b63fda4989eee8f40efc5be4",
       "schema": {
         "root": 0,
@@ -50637,6 +55354,55 @@
       },
       "names": [],
       "sources": []
+    },
+    {
+      "digest": "b5d7dfb266e27b49e407831b5b62ab4d6bc65b8dff963d9c295c401466c2dd5e",
+      "schema": {
+        "root": 0,
+        "nodes": [
+          {
+            "kind": "object",
+            "properties": [
+              {
+                "name": "maxConcurrent",
+                "type": 1,
+                "optional": true
+              },
+              {
+                "name": "maxDepth",
+                "type": 1,
+                "optional": true
+              },
+              {
+                "name": "maxSteps",
+                "type": 1,
+                "optional": false
+              },
+              {
+                "name": "maxTokens",
+                "type": 1,
+                "optional": true
+              },
+              {
+                "name": "timeoutMs",
+                "type": 1,
+                "optional": true
+              }
+            ],
+            "indices": []
+          },
+          {
+            "kind": "primitive",
+            "type": "number"
+          }
+        ]
+      },
+      "names": [
+        "packages/interaction/personal-agent/src/index.ts#AgentTaskBudget"
+      ],
+      "sources": [
+        "packages/interaction/personal-agent/src/index.ts:65"
+      ]
     },
     {
       "digest": "b6ef9c6210be8350cd465f485cf520031fffa6bf3809c61a1e713e834c5982d0",
@@ -51196,6 +55962,20 @@
       "names": [
         "event:web/deepseek-search-llm-request.data.body.messages"
       ],
+      "sources": []
+    },
+    {
+      "digest": "b9b36cdc27ae560576e1105027aca04d563d6c7811e43445df466a2aa92cde36",
+      "schema": {
+        "root": 0,
+        "nodes": [
+          {
+            "kind": "literal",
+            "value": "task/planned"
+          }
+        ]
+      },
+      "names": [],
       "sources": []
     },
     {
@@ -52048,6 +56828,211 @@
       "sources": []
     },
     {
+      "digest": "bbae7a06c6d6a0c6d564389db65fe37975ae248152c931d04b59da9d6e16035a",
+      "schema": {
+        "root": 0,
+        "nodes": [
+          {
+            "kind": "object",
+            "properties": [
+              {
+                "name": "data",
+                "type": 1,
+                "optional": false
+              },
+              {
+                "name": "ignorable",
+                "type": 11,
+                "optional": true
+              },
+              {
+                "name": "seq",
+                "type": 2,
+                "optional": false
+              },
+              {
+                "name": "time",
+                "type": 2,
+                "optional": false
+              },
+              {
+                "name": "type",
+                "type": 12,
+                "optional": false
+              }
+            ],
+            "indices": []
+          },
+          {
+            "kind": "object",
+            "properties": [
+              {
+                "name": "clippedToolResults",
+                "type": 2,
+                "optional": false
+              },
+              {
+                "name": "deduplicatedMessages",
+                "type": 2,
+                "optional": true
+              },
+              {
+                "name": "droppedMessages",
+                "type": 2,
+                "optional": false
+              },
+              {
+                "name": "estimatedInputTokens",
+                "type": 2,
+                "optional": true
+              },
+              {
+                "name": "hiddenTools",
+                "type": 3,
+                "optional": true
+              },
+              {
+                "name": "historyTokens",
+                "type": 2,
+                "optional": true
+              },
+              {
+                "name": "inputMessages",
+                "type": 2,
+                "optional": false
+              },
+              {
+                "name": "knowledgeBaseTokens",
+                "type": 2,
+                "optional": true
+              },
+              {
+                "name": "maxSteps",
+                "type": 2,
+                "optional": false
+              },
+              {
+                "name": "mode",
+                "type": 6,
+                "optional": false
+              },
+              {
+                "name": "outputBudgetTokens",
+                "type": 2,
+                "optional": true
+              },
+              {
+                "name": "outputMessages",
+                "type": 2,
+                "optional": false
+              },
+              {
+                "name": "skillTokens",
+                "type": 2,
+                "optional": true
+              },
+              {
+                "name": "step",
+                "type": 2,
+                "optional": false
+              },
+              {
+                "name": "systemPromptTokens",
+                "type": 2,
+                "optional": true
+              },
+              {
+                "name": "toolResultTokens",
+                "type": 2,
+                "optional": true
+              },
+              {
+                "name": "toolSchemaTokens",
+                "type": 2,
+                "optional": true
+              },
+              {
+                "name": "turn",
+                "type": 2,
+                "optional": false
+              },
+              {
+                "name": "usedSteps",
+                "type": 2,
+                "optional": false
+              }
+            ],
+            "indices": []
+          },
+          {
+            "kind": "primitive",
+            "type": "number"
+          },
+          {
+            "kind": "array",
+            "element": 4
+          },
+          {
+            "kind": "object",
+            "properties": [
+              {
+                "name": "name",
+                "type": 5,
+                "optional": false
+              },
+              {
+                "name": "reason",
+                "type": 5,
+                "optional": false
+              }
+            ],
+            "indices": []
+          },
+          {
+            "kind": "primitive",
+            "type": "string"
+          },
+          {
+            "kind": "union",
+            "types": [
+              7,
+              8,
+              9,
+              10
+            ]
+          },
+          {
+            "kind": "literal",
+            "value": "coding"
+          },
+          {
+            "kind": "literal",
+            "value": "execution"
+          },
+          {
+            "kind": "literal",
+            "value": "qa"
+          },
+          {
+            "kind": "literal",
+            "value": "research"
+          },
+          {
+            "kind": "literal",
+            "value": true
+          },
+          {
+            "kind": "literal",
+            "value": "agent/request-context"
+          }
+        ]
+      },
+      "names": [
+        "event:agent/request-context"
+      ],
+      "sources": []
+    },
+    {
       "digest": "bbc5696e3f13c758237b316e3cf08cda0b9fd51ffe672539883457769faa185d",
       "schema": {
         "root": 0,
@@ -52105,7 +57090,7 @@
         ]
       },
       "names": [
-        "SessionEventEnvelope[6].surfaceOp[1]"
+        "SessionEventEnvelope[10].surfaceOp[1]"
       ],
       "sources": [
         "packages/core/session/src/types.ts:441"
@@ -52201,6 +57186,20 @@
       "sources": [
         "packages/workflow/tool-workflow/src/types.ts:29"
       ]
+    },
+    {
+      "digest": "c14f0df2137034ab07ffb40c64d0c693519d2b848a08cc678c024e330a5f4ef8",
+      "schema": {
+        "root": 0,
+        "nodes": [
+          {
+            "kind": "literal",
+            "value": "task/running"
+          }
+        ]
+      },
+      "names": [],
+      "sources": []
     },
     {
       "digest": "c170da8ab7c37635b10867b2571811d9e317ac3ec394e8ff8efe53f902fc41c1",
@@ -52520,6 +57519,206 @@
       "sources": []
     },
     {
+      "digest": "c2517349361edf26b29f088bbb2b3dc4a255d6f98cf5845492c679c52ff1cef4",
+      "schema": {
+        "root": 0,
+        "nodes": [
+          {
+            "kind": "object",
+            "properties": [
+              {
+                "name": "data",
+                "type": 1,
+                "optional": false
+              },
+              {
+                "name": "ignorable",
+                "type": 14,
+                "optional": true
+              },
+              {
+                "name": "seq",
+                "type": 5,
+                "optional": false
+              },
+              {
+                "name": "time",
+                "type": 5,
+                "optional": false
+              },
+              {
+                "name": "type",
+                "type": 15,
+                "optional": false
+              }
+            ],
+            "indices": []
+          },
+          {
+            "kind": "object",
+            "properties": [
+              {
+                "name": "acceptance",
+                "type": 2,
+                "optional": true
+              },
+              {
+                "name": "artifacts",
+                "type": 2,
+                "optional": true
+              },
+              {
+                "name": "budget",
+                "type": 4,
+                "optional": false
+              },
+              {
+                "name": "createdAt",
+                "type": 5,
+                "optional": false
+              },
+              {
+                "name": "error",
+                "type": 3,
+                "optional": true
+              },
+              {
+                "name": "goal",
+                "type": 3,
+                "optional": false
+              },
+              {
+                "name": "id",
+                "type": 3,
+                "optional": false
+              },
+              {
+                "name": "owner",
+                "type": 3,
+                "optional": false
+              },
+              {
+                "name": "parentTask",
+                "type": 3,
+                "optional": true
+              },
+              {
+                "name": "status",
+                "type": 6,
+                "optional": false
+              },
+              {
+                "name": "turn",
+                "type": 5,
+                "optional": false
+              },
+              {
+                "name": "updatedAt",
+                "type": 5,
+                "optional": false
+              }
+            ],
+            "indices": []
+          },
+          {
+            "kind": "array",
+            "element": 3
+          },
+          {
+            "kind": "primitive",
+            "type": "string"
+          },
+          {
+            "kind": "object",
+            "properties": [
+              {
+                "name": "maxConcurrent",
+                "type": 5,
+                "optional": true
+              },
+              {
+                "name": "maxDepth",
+                "type": 5,
+                "optional": true
+              },
+              {
+                "name": "maxSteps",
+                "type": 5,
+                "optional": false
+              },
+              {
+                "name": "maxTokens",
+                "type": 5,
+                "optional": true
+              },
+              {
+                "name": "timeoutMs",
+                "type": 5,
+                "optional": true
+              }
+            ],
+            "indices": []
+          },
+          {
+            "kind": "primitive",
+            "type": "number"
+          },
+          {
+            "kind": "union",
+            "types": [
+              7,
+              8,
+              9,
+              10,
+              11,
+              12,
+              13
+            ]
+          },
+          {
+            "kind": "literal",
+            "value": "cancelled"
+          },
+          {
+            "kind": "literal",
+            "value": "created"
+          },
+          {
+            "kind": "literal",
+            "value": "failed"
+          },
+          {
+            "kind": "literal",
+            "value": "planned"
+          },
+          {
+            "kind": "literal",
+            "value": "running"
+          },
+          {
+            "kind": "literal",
+            "value": "succeeded"
+          },
+          {
+            "kind": "literal",
+            "value": "waiting-human"
+          },
+          {
+            "kind": "literal",
+            "value": true
+          },
+          {
+            "kind": "literal",
+            "value": "task/cancelled"
+          }
+        ]
+      },
+      "names": [
+        "event:task/cancelled"
+      ],
+      "sources": []
+    },
+    {
       "digest": "c2deb7c9183735d4e0fffddf5c623f4e34daa1c8e96b111982e957dfcbbcf896",
       "schema": {
         "root": 0,
@@ -52778,6 +57977,20 @@
       "sources": [
         "packages/util/values/src/index.ts:4"
       ]
+    },
+    {
+      "digest": "c6e4fa548c431804f6adebfaed3e343205c813699d2a191f990a7b1133e8c5ba",
+      "schema": {
+        "root": 0,
+        "nodes": [
+          {
+            "kind": "literal",
+            "value": "running"
+          }
+        ]
+      },
+      "names": [],
+      "sources": []
     },
     {
       "digest": "c748fb42c80a120038a8c587af80ec39924803c401364db11c8974d5bf6d0262",
@@ -54997,6 +60210,183 @@
       "sources": []
     },
     {
+      "digest": "ccc91b63c4b325e08b1a0bafb77de298588a66b24926f47c247ac28cbe124fe1",
+      "schema": {
+        "root": 0,
+        "nodes": [
+          {
+            "kind": "object",
+            "properties": [
+              {
+                "name": "acceptance",
+                "type": 1,
+                "optional": true
+              },
+              {
+                "name": "artifacts",
+                "type": 1,
+                "optional": true
+              },
+              {
+                "name": "budget",
+                "type": 3,
+                "optional": false
+              },
+              {
+                "name": "createdAt",
+                "type": 4,
+                "optional": false
+              },
+              {
+                "name": "error",
+                "type": 2,
+                "optional": true
+              },
+              {
+                "name": "goal",
+                "type": 2,
+                "optional": false
+              },
+              {
+                "name": "id",
+                "type": 2,
+                "optional": false
+              },
+              {
+                "name": "owner",
+                "type": 2,
+                "optional": false
+              },
+              {
+                "name": "parentTask",
+                "type": 2,
+                "optional": true
+              },
+              {
+                "name": "status",
+                "type": 5,
+                "optional": false
+              },
+              {
+                "name": "turn",
+                "type": 4,
+                "optional": false
+              },
+              {
+                "name": "updatedAt",
+                "type": 4,
+                "optional": false
+              }
+            ],
+            "indices": []
+          },
+          {
+            "kind": "array",
+            "element": 2
+          },
+          {
+            "kind": "primitive",
+            "type": "string"
+          },
+          {
+            "kind": "object",
+            "properties": [
+              {
+                "name": "maxConcurrent",
+                "type": 4,
+                "optional": true
+              },
+              {
+                "name": "maxDepth",
+                "type": 4,
+                "optional": true
+              },
+              {
+                "name": "maxSteps",
+                "type": 4,
+                "optional": false
+              },
+              {
+                "name": "maxTokens",
+                "type": 4,
+                "optional": true
+              },
+              {
+                "name": "timeoutMs",
+                "type": 4,
+                "optional": true
+              }
+            ],
+            "indices": []
+          },
+          {
+            "kind": "primitive",
+            "type": "number"
+          },
+          {
+            "kind": "union",
+            "types": [
+              6,
+              7,
+              8,
+              9,
+              10,
+              11,
+              12
+            ]
+          },
+          {
+            "kind": "literal",
+            "value": "cancelled"
+          },
+          {
+            "kind": "literal",
+            "value": "created"
+          },
+          {
+            "kind": "literal",
+            "value": "failed"
+          },
+          {
+            "kind": "literal",
+            "value": "planned"
+          },
+          {
+            "kind": "literal",
+            "value": "running"
+          },
+          {
+            "kind": "literal",
+            "value": "succeeded"
+          },
+          {
+            "kind": "literal",
+            "value": "waiting-human"
+          }
+        ]
+      },
+      "names": [
+        "packages/interaction/personal-agent/src/index.ts#AgentTaskSnapshot"
+      ],
+      "sources": [
+        "packages/interaction/personal-agent/src/index.ts:73"
+      ]
+    },
+    {
+      "digest": "cced92225fd3b8e5593debee39599ed9e8e852020e35b041cb35746c537f2571",
+      "schema": {
+        "root": 0,
+        "nodes": [
+          {
+            "kind": "literal",
+            "value": "task/cancelled"
+          }
+        ]
+      },
+      "names": [],
+      "sources": []
+    },
+    {
       "digest": "cd186c309e2bef305705e1d324139240f5e681f4f6a957d6a25b0225f65560df",
       "schema": {
         "root": 0,
@@ -55018,6 +60408,20 @@
           {
             "kind": "literal",
             "value": "tool-workflow/run-start"
+          }
+        ]
+      },
+      "names": [],
+      "sources": []
+    },
+    {
+      "digest": "cdd661571352ad461b64a97e8fa778c119f5c7e5b961f83961e1eaae204e156f",
+      "schema": {
+        "root": 0,
+        "nodes": [
+          {
+            "kind": "literal",
+            "value": "task/failed"
           }
         ]
       },
@@ -56436,6 +61840,89 @@
       "sources": []
     },
     {
+      "digest": "d922ff2ea6cb958f1e8d1e8274f1e69772543a04f65ec3d962600d149e90d451",
+      "schema": {
+        "root": 0,
+        "nodes": [
+          {
+            "kind": "object",
+            "properties": [
+              {
+                "name": "branch",
+                "type": 1,
+                "optional": true
+              },
+              {
+                "name": "cwd",
+                "type": 1,
+                "optional": false
+              },
+              {
+                "name": "diff",
+                "type": 1,
+                "optional": true
+              },
+              {
+                "name": "diffStat",
+                "type": 1,
+                "optional": true
+              },
+              {
+                "name": "error",
+                "type": 1,
+                "optional": true
+              },
+              {
+                "name": "phase",
+                "type": 2,
+                "optional": false
+              },
+              {
+                "name": "status",
+                "type": 1,
+                "optional": true
+              },
+              {
+                "name": "turn",
+                "type": 5,
+                "optional": false
+              }
+            ],
+            "indices": []
+          },
+          {
+            "kind": "primitive",
+            "type": "string"
+          },
+          {
+            "kind": "union",
+            "types": [
+              3,
+              4
+            ]
+          },
+          {
+            "kind": "literal",
+            "value": "after"
+          },
+          {
+            "kind": "literal",
+            "value": "before"
+          },
+          {
+            "kind": "primitive",
+            "type": "number"
+          }
+        ]
+      },
+      "names": [
+        "packages/interaction/git-workspace/src/index.ts#GitCheckpoint"
+      ],
+      "sources": [
+        "packages/interaction/git-workspace/src/index.ts:22"
+      ]
+    },
+    {
       "digest": "d9c462b9f62fdd3efc76a44b9524dc8781f6b91cd9c7e584b17d971defafebab",
       "schema": {
         "root": 0,
@@ -56472,6 +61959,66 @@
       "sources": [
         "packages/llm/llm/src/message.ts:29"
       ]
+    },
+    {
+      "digest": "dace738385417efe5da5d925b148a9d17c30ddd8c1120a7dbe48b9c78594d506",
+      "schema": {
+        "root": 0,
+        "nodes": [
+          {
+            "kind": "array",
+            "element": 1
+          },
+          {
+            "kind": "object",
+            "properties": [
+              {
+                "name": "baseId",
+                "type": 2,
+                "optional": false
+              },
+              {
+                "name": "baseTitle",
+                "type": 2,
+                "optional": false
+              },
+              {
+                "name": "documentId",
+                "type": 2,
+                "optional": false
+              },
+              {
+                "name": "documentTitle",
+                "type": 2,
+                "optional": false
+              },
+              {
+                "name": "ordinal",
+                "type": 3,
+                "optional": false
+              },
+              {
+                "name": "score",
+                "type": 3,
+                "optional": false
+              }
+            ],
+            "indices": []
+          },
+          {
+            "kind": "primitive",
+            "type": "string"
+          },
+          {
+            "kind": "primitive",
+            "type": "number"
+          }
+        ]
+      },
+      "names": [
+        "event:knowledge/retrieval.data.sources"
+      ],
+      "sources": []
     },
     {
       "digest": "dacf3d5f3e4ff619c1320e64a48dec5e7ecd7870bece65fbd449a0e63adfa521",
@@ -58410,7 +63957,6 @@
       },
       "names": [
         "SessionEventEnvelope[0]",
-        "SessionEventEnvelope[10]",
         "SessionEventEnvelope[11]",
         "SessionEventEnvelope[12]",
         "SessionEventEnvelope[13]",
@@ -58441,13 +63987,13 @@
         "SessionEventEnvelope[36]",
         "SessionEventEnvelope[37]",
         "SessionEventEnvelope[38]",
+        "SessionEventEnvelope[39]",
         "SessionEventEnvelope[3]",
         "SessionEventEnvelope[40]",
         "SessionEventEnvelope[41]",
         "SessionEventEnvelope[42]",
         "SessionEventEnvelope[43]",
         "SessionEventEnvelope[44]",
-        "SessionEventEnvelope[45]",
         "SessionEventEnvelope[46]",
         "SessionEventEnvelope[47]",
         "SessionEventEnvelope[48]",
@@ -58455,10 +64001,24 @@
         "SessionEventEnvelope[4]",
         "SessionEventEnvelope[50]",
         "SessionEventEnvelope[51]",
+        "SessionEventEnvelope[52]",
         "SessionEventEnvelope[53]",
         "SessionEventEnvelope[54]",
+        "SessionEventEnvelope[55]",
         "SessionEventEnvelope[56]",
+        "SessionEventEnvelope[57]",
+        "SessionEventEnvelope[58]",
+        "SessionEventEnvelope[59]",
         "SessionEventEnvelope[5]",
+        "SessionEventEnvelope[60]",
+        "SessionEventEnvelope[61]",
+        "SessionEventEnvelope[62]",
+        "SessionEventEnvelope[63]",
+        "SessionEventEnvelope[64]",
+        "SessionEventEnvelope[66]",
+        "SessionEventEnvelope[67]",
+        "SessionEventEnvelope[69]",
+        "SessionEventEnvelope[6]",
         "SessionEventEnvelope[7]",
         "SessionEventEnvelope[8]",
         "SessionEventEnvelope[9]"
@@ -59205,6 +64765,45 @@
       "sources": []
     },
     {
+      "digest": "e791051f9a075d2fc8f7e11339ed30bc535cd7a83269116946b8a2ec2fab1ee0",
+      "schema": {
+        "root": 0,
+        "nodes": [
+          {
+            "kind": "union",
+            "types": [
+              1,
+              2,
+              3,
+              4
+            ]
+          },
+          {
+            "kind": "literal",
+            "value": "coding"
+          },
+          {
+            "kind": "literal",
+            "value": "execution"
+          },
+          {
+            "kind": "literal",
+            "value": "qa"
+          },
+          {
+            "kind": "literal",
+            "value": "research"
+          }
+        ]
+      },
+      "names": [
+        "packages/interaction/personal-agent/src/index.ts#AgentMode"
+      ],
+      "sources": [
+        "packages/interaction/personal-agent/src/index.ts:36"
+      ]
+    },
+    {
       "digest": "e7ce49f12953583fad217bf80fb9f1463acff2c3e9471a823782661675fb124c",
       "schema": {
         "root": 0,
@@ -59483,6 +65082,39 @@
       "sources": []
     },
     {
+      "digest": "ed13878d0599759e40cd7ed480cb67053fa38b36f4c22f882850d4f87196f139",
+      "schema": {
+        "root": 0,
+        "nodes": [
+          {
+            "kind": "object",
+            "properties": [
+              {
+                "name": "baseIds",
+                "type": 1,
+                "optional": false
+              }
+            ],
+            "indices": []
+          },
+          {
+            "kind": "array",
+            "element": 2
+          },
+          {
+            "kind": "primitive",
+            "type": "string"
+          }
+        ]
+      },
+      "names": [
+        "event:knowledge/selection.data"
+      ],
+      "sources": [
+        "packages/host/knowledge/src/index.ts:39"
+      ]
+    },
+    {
       "digest": "eefbea819caeeea91ccb02dfafc16c68dd7f961cf9c1b2be25a2084509cf5c5a",
       "schema": {
         "root": 0,
@@ -59727,7 +65359,7 @@
         "event:assistant/attempt.data.stream[0][3].chunk[5]"
       ],
       "sources": [
-        "packages/llm/llm/src/types.ts:430"
+        "packages/llm/llm/src/types.ts:432"
       ]
     },
     {
@@ -59808,7 +65440,7 @@
         "packages/llm/llm/src/types.ts#SystemPromptUpdate"
       ],
       "sources": [
-        "packages/llm/llm/src/types.ts:381"
+        "packages/llm/llm/src/types.ts:383"
       ]
     },
     {
@@ -60553,6 +66185,40 @@
       ]
     },
     {
+      "digest": "f99f464ac10ae9c1bead880f8656a0140ca6707dad32b8c7fa7db50ac17e495e",
+      "schema": {
+        "root": 0,
+        "nodes": [
+          {
+            "kind": "object",
+            "properties": [
+              {
+                "name": "name",
+                "type": 1,
+                "optional": false
+              },
+              {
+                "name": "reason",
+                "type": 1,
+                "optional": false
+              }
+            ],
+            "indices": []
+          },
+          {
+            "kind": "primitive",
+            "type": "string"
+          }
+        ]
+      },
+      "names": [
+        "packages/interaction/personal-agent/src/index.ts#ToolPolicyAudit"
+      ],
+      "sources": [
+        "packages/interaction/personal-agent/src/index.ts:88"
+      ]
+    },
+    {
       "digest": "f9cfc89e8fe085b4fcc9cd32b74b6f103608c54d7d8cd97b47c01de34f252ba3",
       "schema": {
         "root": 0,
@@ -60608,6 +66274,94 @@
           {
             "kind": "literal",
             "value": "rejected"
+          }
+        ]
+      },
+      "names": [],
+      "sources": []
+    },
+    {
+      "digest": "fb1388960c87089798fe6f094a0ad0afaed619f13cdf7b138aa1f452fcd510c5",
+      "schema": {
+        "root": 0,
+        "nodes": [
+          {
+            "kind": "object",
+            "properties": [
+              {
+                "name": "data",
+                "type": 1,
+                "optional": false
+              },
+              {
+                "name": "ignorable",
+                "type": 4,
+                "optional": true
+              },
+              {
+                "name": "seq",
+                "type": 5,
+                "optional": false
+              },
+              {
+                "name": "time",
+                "type": 5,
+                "optional": false
+              },
+              {
+                "name": "type",
+                "type": 6,
+                "optional": false
+              }
+            ],
+            "indices": []
+          },
+          {
+            "kind": "object",
+            "properties": [
+              {
+                "name": "baseIds",
+                "type": 2,
+                "optional": false
+              }
+            ],
+            "indices": []
+          },
+          {
+            "kind": "array",
+            "element": 3
+          },
+          {
+            "kind": "primitive",
+            "type": "string"
+          },
+          {
+            "kind": "literal",
+            "value": true
+          },
+          {
+            "kind": "primitive",
+            "type": "number"
+          },
+          {
+            "kind": "literal",
+            "value": "knowledge/selection"
+          }
+        ]
+      },
+      "names": [
+        "event:knowledge/selection"
+      ],
+      "sources": []
+    },
+    {
+      "digest": "fb404ceeb5c7d599bd0f4b2bffd61bcd1fd34d98aa06cff50dd40552a1433282",
+      "schema": {
+        "root": 0,
+        "nodes": [
+          {
+            "kind": "literal",
+            "value": "knowledge/retrieval"
           }
         ]
       },
@@ -60762,6 +66516,20 @@
       "names": [
         "event:todo/write.data.todos[0].status"
       ],
+      "sources": []
+    },
+    {
+      "digest": "fd76feed4d7a307fc89fe24260cefa8f0918a558e58d2b589f0041d4d64954e2",
+      "schema": {
+        "root": 0,
+        "nodes": [
+          {
+            "kind": "literal",
+            "value": "succeeded"
+          }
+        ]
+      },
+      "names": [],
       "sources": []
     },
     {

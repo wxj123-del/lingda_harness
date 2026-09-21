@@ -54,6 +54,9 @@ export interface DshDesktopApi {
   }
 }
 
+/** The narrow bridge exposed to the application renderer. */
+export type DshDesktopApplicationApi = Pick<DshDesktopApi, 'protocolVersion' | 'updates'>
+
 /** Startup-page controls, unavailable to backend-provided application documents. */
 export interface DshDesktopStartupApi extends Pick<DshDesktopApi, 'protocolVersion' | 'locale'> {
   readonly backend: Omit<DshDesktopApi['backend'], 'retry'>

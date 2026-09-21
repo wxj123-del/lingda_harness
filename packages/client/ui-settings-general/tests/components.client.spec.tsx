@@ -1,13 +1,14 @@
 // @vitest-environment jsdom
 import type { GlobalStandardProps } from '@deepseek-ai/dsh-client-ui-slots'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { bindSnapshotSelector, RemoteError } from '@deepseek-ai/dsh-client-test-runtime'
 import type { GeneralSectionComponentProps } from '../src/client/GeneralSection.tsx'
 import { GeneralSection } from '../src/client/GeneralSection.tsx'
 import { CloseLabel, HeaderContent, TriggerContent } from '../src/client/chrome.tsx'
 import type { TriggerContentProps } from '../src/client/chrome.tsx'
 import { SettingsDocumentAction } from '../src/client/SettingsDocumentAction.tsx'
+import { UpdateRow } from '../src/client/UpdateRow.tsx'
 import { SettingsDescribeMirror } from '@deepseek-ai/dsh-client-ui-settings/src/client/settings-mirror.ts'
 import { SettingsDocumentStore } from '../src/client/settings-document-store.ts'
 
@@ -22,7 +23,11 @@ function derivedDocumentStore(remote: object) {
 }
 import { en } from '../src/client/locales.ts'
 
-afterEach(cleanup)
+afterEach(() => {
+  cleanup()
+  vi.unstubAllGlobals()
+  delete (globalThis as { dshDesktop?: unknown }).dshDesktop
+})
 
 // The seat's key domain is settings ∪ common; the stub answers from the
 // package dictionary and falls back to the key like the real chain.
@@ -70,6 +75,130 @@ describe('GeneralSection', () => {
     const { renderSlot } = mount()
     expect(renderSlot).toHaveBeenCalledWith('settings.general.item', {})
     expect(screen.getByTestId('slot-settings.general.item')).toBeTruthy()
+  })
+})
+
+describe('UpdateRow', () => {
+  it('renders a source checkout row outside the Electron application bridge', () => {
+    render(<UpdateRow {...kit} t={t} />)
+    expect(screen.getByText('Software updates')).toBeTruthy()
+    expect(screen.getByText('Source checkout: check GitCode commits')).toBeTruthy()
+    expect(screen.getByRole('button', { name: 'Check for updates' })).toBeTruthy()
+  })
+
+  it('checks the GitCode source commit outside Electron', async () => {
+    vi.stubEnv('DSH_CLIENT_COMMIT_HASH', '1234567')
+    const fetch = vi.fn(() => Promise.resolve(new Response(
+      JSON.stringify({ sha: 'abcdef0123456789' }),
+      { status: 200, headers: { 'Content-Type': 'application/json' } },
+    )))
+    vi.stubGlobal('fetch', fetch)
+    render(<UpdateRow {...kit} t={t} />)
+    fireEvent.click(screen.getByRole('button', { name: 'Check for updates' }))
+    expect(await screen.findByText('Update available · abcdef0')).toBeTruthy()
+    expect(fetch).toHaveBeenCalledWith(
+      'https://api.gitcode.com/api/v5/repos/XJ-Cyber/lingda-harness/commits/main',
+      { headers: { Accept: 'application/json' } },
+    )
+  })
+
+  it('checks the Host checkout on mount and offers an in-app fast-forward update', async () => {
+    const check = vi.fn(() => Promise.resolve({ ok: true as const, value: {
+      repositoryRoot: '/tmp/project', remote: 'gitcode', branch: 'main', remoteBranch: 'main',
+      localHead: '1234567', remoteHead: 'abcdef0123456789', ahead: 0, behind: 1, state: 'available' as const,
+    } }))
+    const update = vi.fn(() => Promise.resolve({ ok: true as const, value: {
+      repositoryRoot: '/tmp/project', remote: 'gitcode', branch: 'main', remoteBranch: 'main',
+      localHead: 'abcdef0123456789', remoteHead: 'abcdef0123456789', ahead: 0, behind: 0, state: 'current' as const,
+      updated: true, restartScheduled: false,
+    } }))
+    render(<UpdateRow {...kit} t={t} repository={{ check, update }} />)
+    expect(await screen.findByText('Update available · abcdef0')).toBeTruthy()
+    fireEvent.click(screen.getByRole('button', { name: 'Install and restart' }))
+    await waitFor(() => { expect(update).toHaveBeenCalledOnce() })
+    expect(await screen.findByText('Update complete, restart the application')).toBeTruthy()
+  })
+
+  it('checks for a release and renders the current status', async () => {
+    const check = vi.fn(() => Promise.resolve({ phase: 'idle' as const }))
+    Object.defineProperty(globalThis, 'dshDesktop', {
+      configurable: true,
+      value: { updates: { check, install: vi.fn(), subscribe: vi.fn(() => () => {}) } },
+    })
+    render(<UpdateRow {...kit} t={t} />)
+    fireEvent.click(screen.getByRole('button', { name: 'Check for updates' }))
+    await waitFor(() => { expect(check).toHaveBeenCalledOnce() })
+    expect(screen.getByText('You are up to date')).toBeTruthy()
+  })
+
+  it('offers install when the bridge reports an available release', async () => {
+    const listeners: Array<(state: { phase: 'available'; version: string }) => void> = []
+    const install = vi.fn(() => Promise.resolve())
+    Object.defineProperty(globalThis, 'dshDesktop', {
+      configurable: true,
+      value: {
+        updates: {
+          check: vi.fn(), install,
+          subscribe: (listener: (state: { phase: 'available'; version: string }) => void) => {
+            listeners.push(listener)
+            return () => {}
+          },
+        },
+      },
+    })
+    render(<UpdateRow {...kit} t={t} />)
+    listeners[0]!({ phase: 'available', version: '1.2.3' })
+    expect(await screen.findByText('Update available · 1.2.3')).toBeTruthy()
+    fireEvent.click(screen.getByRole('button', { name: 'Install and restart' }))
+    await waitFor(() => { expect(install).toHaveBeenCalledOnce() })
+  })
+
+  it('renders every updater state and reports rejected checks', async () => {
+    const listeners: Array<(state: { phase: string; version?: string; message?: string }) => void> = []
+    const pending = Promise.withResolvers<{ phase: 'idle' }>()
+    const check = vi.fn()
+      .mockReturnValueOnce(pending.promise)
+      .mockRejectedValueOnce(new Error('network unavailable'))
+      .mockRejectedValueOnce('offline')
+    Object.defineProperty(globalThis, 'dshDesktop', {
+      configurable: true,
+      value: {
+        updates: {
+          check, install: vi.fn(),
+          subscribe: (listener: (state: { phase: string; version?: string; message?: string }) => void) => {
+            listeners.push(listener)
+            return () => {}
+          },
+        },
+      },
+    })
+    render(<UpdateRow {...kit} t={t} />)
+    fireEvent.click(screen.getByRole('button', { name: 'Check for updates' }))
+    expect(screen.getByRole('button', { name: 'Check for updates' })).toHaveProperty('disabled', true)
+    await act(async () => { pending.resolve({ phase: 'idle' }); await pending.promise })
+    for (const state of [
+      { phase: 'checking' as const },
+      { phase: 'installing' as const },
+      { phase: 'ready' as const },
+      { phase: 'error' as const },
+      { phase: 'error' as const, message: 'broken' },
+      { phase: 'available' as const },
+    ]) {
+      act(() => { listeners[0]!(state) })
+      expect(screen.getByText(
+        state.phase === 'checking' ? 'Checking for updates…'
+          : state.phase === 'installing' ? 'Installing update…'
+            : state.phase === 'ready' ? 'Update installed, restarting…'
+              : state.phase === 'error' ? (state.message ?? 'Update check failed')
+                : 'Update available ·',
+      )).toBeTruthy()
+    }
+    act(() => { listeners[0]!({ phase: 'idle' }) })
+    fireEvent.click(screen.getByRole('button', { name: 'Check for updates' }))
+    expect((await screen.findByRole('alert')).textContent).toBe('network unavailable')
+    fireEvent.click(screen.getByRole('button', { name: 'Check for updates' }))
+    expect((await screen.findByRole('alert')).textContent).toBe('offline')
+    expect(check).toHaveBeenCalledTimes(3)
   })
 })
 

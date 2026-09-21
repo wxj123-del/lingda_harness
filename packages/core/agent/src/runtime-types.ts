@@ -8,7 +8,7 @@
 import type { Context } from '@deepseek-ai/cordis'
 import type { Scoped } from '@deepseek-ai/dsh-scope'
 import type {
-  LlmAttemptId, LlmCallConfig, LlmFailure, MessageId, ReasoningEffortId, ResolvedRetryPolicy, StreamChunk,
+  LlmAttemptId, LlmCallConfig, LlmFailure, Message, MessageId, ReasoningEffortId, ResolvedRetryPolicy, StreamChunk,
 } from '@deepseek-ai/dsh-llm'
 import type { AgentCancelCause, Session, SessionSeq, UserMessage } from '@deepseek-ai/dsh-session'
 export type { AgentCancelCause } from '@deepseek-ai/dsh-session'
@@ -335,6 +335,18 @@ declare module '@deepseek-ai/cordis' {
      * @mode waterfall
     */
     'agent/request'(this: Scoped<Agent>, payload: { agent: Agent; turn: number; step: number; signal: AbortSignal }, next: () => Promise<LlmCallConfig>): Promise<LlmCallConfig>
+    /**
+     * Bound the model-visible message context immediately before a request is
+     * constructed. Durable session history is never deleted; listeners only
+     * choose the request snapshot and may clip oversized tool results.
+     * @param payload.agent - the agent making the model call.
+     * @param payload.turn - the open turn number.
+     * @param payload.step - the step whose request is being built.
+     * @param payload.messages - the durable message snapshot before bounding.
+     * @param payload.signal - the current turn's cancellation signal.
+     * @mode waterfall
+     */
+    'agent/request-context'(this: Scoped<Agent>, payload: { agent: Agent; turn: number; step: number; messages: Message[]; signal: AbortSignal }, next: () => Promise<Message[]>): Promise<Message[]>
     /**
      * Handle one failed model-request attempt before the loop retries or closes
      * its step. A listener returns `{ kind: 'retry' }` without calling `next()`

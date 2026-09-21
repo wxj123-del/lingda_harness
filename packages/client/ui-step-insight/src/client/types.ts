@@ -1,6 +1,9 @@
 /** Browser-local ledger values derived from the loaded Session event window. */
 import type { SessionEventSource } from '@deepseek-ai/dsh-api-session-controller/client'
 import type { ContentBlock, TokenUsage } from '@deepseek-ai/dsh-llm/types'
+import type { GitCheckpoint, GitCommitAudit, GitSyncState } from '@deepseek-ai/dsh-git-workspace'
+
+export type { GitCheckpoint, GitCommitAudit, GitSyncState }
 
 /** Missing counters remain null, including unreported cache buckets. */
 export interface Usage {
@@ -38,7 +41,80 @@ export interface StepRow {
   tools: ToolRow[]
   evidence: number[]
   error?: string | undefined
+  context?: RequestContextAudit | undefined
+  /** Read-only workspace snapshots captured around this turn. */
+  gitCheckpoints?: GitCheckpointAudit[] | undefined
+  toolSelectionReasons?: ToolSelectionReason[] | undefined
+  knowledgeRetrieval?: KnowledgeRetrievalAudit[] | undefined
+  blockedTools?: ToolDeniedAudit[] | undefined
 }
+
+/** Durable audit emitted after the personal Agent bounds a request snapshot. */
+export interface RequestContextAudit {
+  mode: 'qa' | 'research' | 'coding' | 'execution'
+  maxSteps: number
+  usedSteps: number
+  inputMessages: number
+  outputMessages: number
+  clippedToolResults: number
+  droppedMessages: number
+  systemPromptTokens?: number
+  toolSchemaTokens?: number
+  historyTokens?: number
+  knowledgeBaseTokens?: number
+  skillTokens?: number
+  toolResultTokens?: number
+  estimatedInputTokens?: number
+  outputBudgetTokens?: number
+  deduplicatedMessages?: number
+  hiddenTools?: ToolPolicyAudit[]
+}
+
+export interface ToolPolicyAudit {
+  name: string
+  reason: string
+}
+
+export interface ToolSelectionReason {
+  name: string
+  reason: string
+}
+
+export interface KnowledgeRetrievalAudit {
+  query: string
+  turn: number
+  step: number
+  baseIds: string[]
+  status: 'completed' | 'failed'
+  hits: number
+  skippedBases: string[]
+  deduplicatedHits: number
+  estimatedTokens: number
+  similarityThreshold?: number
+  maxResultTokens?: number
+  sources?: KnowledgeRetrievalSource[]
+  error?: string
+}
+
+export interface KnowledgeRetrievalSource {
+  baseId: string
+  baseTitle: string
+  documentId: string
+  documentTitle: string
+  ordinal: number
+  score: number
+}
+
+export interface ToolDeniedAudit {
+  turn: number
+  step: number
+  name: string
+  code: string
+  reason: string
+}
+
+/** Durable, bounded Git status/diff audit for a coding task. */
+export type GitCheckpointAudit = GitCheckpoint
 
 /** A tool operation is not an additional provider token charge. */
 export interface ToolRow {

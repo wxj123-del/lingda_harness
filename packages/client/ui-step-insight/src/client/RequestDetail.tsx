@@ -7,6 +7,7 @@ import { inspectInput } from './input-parts.ts'
 import { contentText, estimateText, hasMedia } from './usage.ts'
 import { accounted, number, rowLabel } from './format.ts'
 import { ToolSimilarityList } from './ToolSimilarityList.tsx'
+import { GitWorkspaceView } from './GitWorkspaceView.tsx'
 import css from './ledger.module.css'
 
 interface DetailProps {
@@ -52,6 +53,57 @@ export function RequestDetail({ row, window, t, initialTab = 'inputTab' }: Detai
       <div><dt>{t('cacheRate')}</dt><dd>{number(usage.prompt !== null && usage.prompt > 0 && usage.cacheRead !== null ? usage.cacheRead / usage.prompt * 100 : null)}%</dd></div>
     </dl>
     {row.error !== undefined && <p role="alert" className={css.notice}>{row.error}</p>}
+    {row.context !== undefined && <p className={css.requestAudit}>
+      <b>{t('mode')}</b> {t(row.context.mode === 'qa' ? 'modeQa' : row.context.mode === 'research' ? 'modeResearch' : row.context.mode === 'coding' ? 'modeCoding' : 'modeExecution')}
+      {' · '}{t('toolBudget')} {row.context.usedSteps}/{row.context.maxSteps}
+      {' · '}{t('contextMessages')} {row.context.outputMessages}/{row.context.inputMessages}
+      {(row.context.droppedMessages > 0 || row.context.clippedToolResults > 0)
+        && ` · ${t('contextTrimmed')} ${row.context.droppedMessages} / ${row.context.clippedToolResults}`}
+      {row.context.deduplicatedMessages !== undefined && row.context.deduplicatedMessages > 0
+        && ` · ${t('deduplicated')} ${row.context.deduplicatedMessages}`}
+    </p>}
+    {row.context?.estimatedInputTokens !== undefined && <div className={css.contextBreakdown}>
+      <b>{t('contextBreakdown')}</b>
+      <div className={css.contextBreakdownGrid}>
+        <span>{t('contextSystem')} <strong>~{number(row.context.systemPromptTokens ?? 0)}</strong></span>
+        <span>{t('contextSchema')} <strong>~{number(row.context.toolSchemaTokens ?? 0)}</strong></span>
+        <span>{t('contextHistory')} <strong>~{number(row.context.historyTokens ?? 0)}</strong></span>
+        <span>{t('contextKnowledge')} <strong>~{number(row.context.knowledgeBaseTokens ?? 0)}</strong></span>
+        <span>{t('contextSkills')} <strong>~{number(row.context.skillTokens ?? 0)}</strong></span>
+        <span>{t('contextToolResults')} <strong>~{number(row.context.toolResultTokens ?? 0)}</strong></span>
+        <span>{t('contextEstimatedInput')} <strong>~{number(row.context.estimatedInputTokens)}</strong></span>
+        {row.context.outputBudgetTokens !== undefined && <span>{t('contextOutputBudget')} <strong>~{number(row.context.outputBudgetTokens)}</strong></span>}
+      </div>
+    </div>}
+    {row.context?.hiddenTools !== undefined && row.context.hiddenTools.length > 0 && <section className={css.requestAudit}>
+      <b>{t('hiddenTools')}</b>
+      <ul>{row.context.hiddenTools.map((item, index) => <li key={`${item.name}-${index}`}><code>{item.name}</code> · {t('hiddenToolReason')}: {item.reason}</li>)}</ul>
+    </section>}
+    {row.toolSelectionReasons !== undefined && row.toolSelectionReasons.length > 0 && <section className={css.requestAudit}>
+      <b>{t('selectionReasons')}</b>
+      <ul>{row.toolSelectionReasons.map((item, index) => <li key={`${item.name}-${index}`}><code>{item.name}</code> · {item.reason}</li>)}</ul>
+    </section>}
+    {row.knowledgeRetrieval !== undefined && row.knowledgeRetrieval.length > 0 && <section className={css.requestAudit}>
+      <b>{t('knowledgeAudit')}</b>
+      {row.knowledgeRetrieval.map((item, index) => <div key={`${item.turn}-${item.step}-${index}`}>
+        <span>{item.status === 'completed' ? `${t('knowledgeHits')}: ${item.hits}` : t('knowledgeFailed')} · ~{number(item.estimatedTokens)} {t('token')}</span>
+        {item.similarityThreshold !== undefined && <span> · {t('knowledgeThreshold')}: {item.similarityThreshold}</span>}
+        {item.maxResultTokens !== undefined && <span> · {t('knowledgeBudget')}: {item.maxResultTokens}</span>}
+        {item.skippedBases.length > 0 && <span> · {t('knowledgeSkipped')}: {item.skippedBases.join(', ')}</span>}
+        {item.sources !== undefined && item.sources.length > 0 && <div className={css.knowledgeSources}>
+          <span>{t('knowledgeSources')}</span>
+          <ul>{item.sources.map((source, sourceIndex) => <li key={`${source.baseId}-${source.documentId}-${source.ordinal}-${sourceIndex}`}>
+            {t('knowledgeSource')}: {source.baseTitle} / {source.documentTitle} · {t('similarity')} {source.score.toFixed(3)} · #{source.ordinal + 1}
+          </li>)}</ul>
+        </div>}
+        {item.error !== undefined && <div className={css.notice}>{item.error}</div>}
+      </div>)}
+    </section>}
+    {row.blockedTools !== undefined && row.blockedTools.length > 0 && <section className={css.requestAudit}>
+      <b>{t('blockedTools')}</b>
+      <ul>{row.blockedTools.map((item, index) => <li key={`${item.name}-${index}`}><code>{item.name}</code> · {item.reason}</li>)}</ul>
+    </section>}
+    {row.gitCheckpoints !== undefined && row.gitCheckpoints.length > 0 && <GitWorkspaceView checkpoints={row.gitCheckpoints} t={t} />}
     <div className={css.tabs} role="tablist" aria-label={t('select')}>
       {(['inputTab', 'outputTab', 'toolsTab', 'rawTab'] as const).map(key => <button key={key} type="button" role="tab"
         aria-selected={tab === key} onClick={() =>{  setTab(key) }}>{t(key)}{key === 'toolsTab' ? ` (${row.tools.length})` : ''}</button>)}

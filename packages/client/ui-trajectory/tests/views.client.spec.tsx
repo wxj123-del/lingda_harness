@@ -382,7 +382,7 @@ function mount(fixture: Awaited<ReturnType<typeof bench>>) {
         }
       })()
       : injected
-    const viewProps: ConvViewProps = { ...owner, ...standardProps }
+    const viewProps: ConvViewProps = { ...owner, ...standardProps, t: tZh }
     return (
       <View
         {...viewProps}
@@ -417,11 +417,12 @@ function mount(fixture: Awaited<ReturnType<typeof bench>>) {
 }
 
 describe('plugin registration', () => {
-  it('registers trajectory after chat on the ring', async () => {
+  it('registers trajectory and workflow after chat on the ring', async () => {
     const b = await bench()
     expect(tabsOf(b.slots)).toEqual([
       { id: 'chat', label: 'Chat' },
       { id: 'trajectory', label: 'Trajectory' },
+      { id: 'workflow', label: 'Workflow' },
     ])
   })
 
@@ -497,11 +498,11 @@ describe('plugin registration', () => {
 })
 
 describe('tab switching in ConversationRoot', () => {
-  it('renders two tabs, defaults to chat, and switches to the trajectory ledger', async () => {
+  it('renders the conversation views and switches to the trajectory ledger', async () => {
     const b = await bench()
     const view = mount(b)
     expect(screen.getByTestId('chat-body')).toBeTruthy()
-    expect(screen.getAllByRole('tab').map(t => t.textContent)).toEqual(['Chat', 'Trajectory'])
+    expect(screen.getAllByRole('tab').map(t => t.textContent)).toEqual(['Chat', 'Trajectory', 'Workflow'])
 
     fireEvent.click(screen.getByRole('tab', { name: 'Trajectory' }))
     expect(screen.queryByText(/turns ·/)).toBeNull()
@@ -518,6 +519,38 @@ describe('tab switching in ConversationRoot', () => {
     expect(b.loadOlder).not.toHaveBeenCalled()
     fireEvent.click(screen.getByRole('tab', { name: 'Chat' }))
     expect(b.loadOlder).not.toHaveBeenCalled()
+  })
+
+  it('keeps workflow inspection inside the workflow view', async () => {
+    const b = await bench()
+    mount(b)
+    fireEvent.click(screen.getByRole('tab', { name: 'Workflow' }))
+
+    fireEvent.click(screen.getByText('c1'))
+    const inspector = screen.getByRole('complementary', { name: '工作流节点详情' })
+    expect(inspector.textContent).toContain('工具调用')
+    expect(screen.queryByRole('toolbar', { name: '轨迹工具栏' })).toBeNull()
+
+    fireEvent.click(screen.getByRole('button', { name: '关闭详情' }))
+    expect(screen.queryByRole('complementary', { name: '工作流节点详情' })).toBeNull()
+    expect(screen.getByRole('tab', { name: 'Workflow' }).getAttribute('aria-selected')).toBe('true')
+  })
+
+  it('collapses the workflow canvas and keeps the inspector synced to the clicked tool', async () => {
+    const b = await bench()
+    mount(b)
+    fireEvent.click(screen.getByRole('tab', { name: 'Workflow' }))
+
+    const collapse = screen.getByRole('button', { name: '收起工作流' })
+    fireEvent.click(collapse)
+    expect(screen.getByRole('button', { name: '展开工作流' })).toBeTruthy()
+    expect(screen.getByRole('button', { name: '工作流' })).toBeTruthy()
+
+    fireEvent.click(screen.getByRole('button', { name: '展开工作流' }))
+    expect(screen.getByRole('button', { name: '收起工作流' })).toBeTruthy()
+
+    fireEvent.click(screen.getByRole('button', { name: /c1/ }))
+    expect(screen.getByRole('complementary', { name: '工作流节点详情' }).textContent).toContain('c1')
   })
 
   it('labels the trajectory tab in the active locale', async () => {

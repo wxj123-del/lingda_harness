@@ -120,10 +120,12 @@ Source: [`packages/core/agent-loop/src/index.ts:317`](../packages/core/agent-loo
 Requires: `loader` · `sessionProjections`
 
 ```ts config-catalog
-/** Plugin config: which preset is the default, and where presets live. */
+/** Plugin config: which preset is the default, how it is exposed, and where presets live. */
 export interface Config {
   /** Preset id mounted when a caller names none. Missing at mount time fails loud. */
   default: string
+  /** Whether the browser exposes the preset picker for new sessions. */
+  modeSelectionEnabled?: boolean
   /** Scanned roots in precedence order; an earlier root wins a duplicate id. */
   roots: PresetRoot[]
   /**
@@ -2900,6 +2902,8 @@ Requires: `tools` · `shell` · `systemPrompt` · `shellEnv`
 export interface Config {
   /** Expose `run_in_background` (default true); disabled calls are also rejected. */
   enableRunInBackground?: boolean
+  /** Optional outer deadline enforced by the timeout-policy guard for foreground calls. */
+  toolTimeoutMs?: number
 }
 ```
 

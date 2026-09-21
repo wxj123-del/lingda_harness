@@ -15,6 +15,7 @@ import { LOCALE_SETTINGS_NAMESPACE, LocaleSettingsSchema } from '@deepseek-ai/ds
 import { inject } from '../src/client/index.ts'
 import { CloseLabel, HeaderContent, TriggerContent } from '../src/client/chrome.tsx'
 import { GeneralSection } from '../src/client/GeneralSection.tsx'
+import { UpdateRow } from '../src/client/UpdateRow.tsx'
 import { SettingsDocumentAction } from '../src/client/SettingsDocumentAction.tsx'
 import type { SettingsDocumentActionInjected } from '../src/client/SettingsDocumentAction.tsx'
 
@@ -34,6 +35,7 @@ const SEATS = [
   ['settings.close', CloseLabel],
   ['settings.section', GeneralSection],
 ] as const
+const GENERAL_ROWS = [UpdateRow] as const
 
 /** One Host view of the locale preference, including its revision fence. */
 function localeView(preference: string, revision = 0): SettingsNamespaceView {
@@ -88,7 +90,7 @@ function setPageUrl(url: string): void {
 
 describe('ui-settings-general apply', () => {
   it('declares the services it uses', () => {
-    expect(inject).toEqual(['slots', 'locale', 'connection', 'remote', 'remote.settings', 'settingsScope'])
+    expect(inject).toEqual(['slots', 'locale', 'connection', 'remote', 'remote.settings', 'remote.gitWorkspace', 'settingsScope'])
   })
 
   it('fills the five seats of the shell it declares, with the locale-following General label', async ({ mock, start }) => {
@@ -100,8 +102,7 @@ describe('ui-settings-general apply', () => {
     // The nav label is a locale-following thunk; owners resolve at read time.
     expect(generalLabel(c)).toBe('通用设置')
     expect(c.ctx.slots.spec('settings.general.item')).toEqual({ kind: 'list', scope: 'root' })
-    // The General items and the onboarding steps are feature-owned rows; this plugin seats none of its own.
-    expect(c.ctx.slots.entries('settings.general.item').filter(row => row.locale === NS)).toEqual([])
+    expect(c.ctx.slots.entries('settings.general.item').filter(row => row.locale === NS).map(row => row.component)).toEqual(GENERAL_ROWS)
     expect(c.ctx.slots.entries('settings.onboarding').filter(row => row.locale === NS)).toEqual([])
     const { controller, hooks } = actionInjectedOf(c)
     expect(controller.store.getSnapshot().status).toBe('idle')
@@ -110,6 +111,7 @@ describe('ui-settings-general apply', () => {
     for (const [name, component] of SEATS) {
       expect(c.ctx.slots.entries(name).find(row => row.component === component)!.locale).toBe(NS)
     }
+    expect(c.ctx.slots.entries('settings.general.item').find(row => row.component === UpdateRow)!.locale).toBe(NS)
   }, COLD_BOOT_TIMEOUT_MS)
 
   it('registers the zh/en settings dictionaries and frees the seats when its row unloads', async ({ mock, start }) => {
@@ -205,7 +207,7 @@ describe('ui-settings-general apply', () => {
       expect(ownEntries(c, name)[0]).not.toBe(before[index])
     })
     expect(c.ctx.slots.spec('settings.general.item')).toEqual({ kind: 'list', scope: 'root' })
-    expect(c.ctx.slots.entries('settings.general.item').filter(row => row.locale === NS)).toEqual([])
+    expect(c.ctx.slots.entries('settings.general.item').filter(row => row.locale === NS).map(row => row.component)).toEqual(GENERAL_ROWS)
     // The recovered registrations still ride the locale path.
     const english = localeView('en', 1)
     const chinese = localeView('zh', 2)
@@ -229,6 +231,7 @@ describe('ui-settings-general apply', () => {
     await c.unload(SELF)
     await c.flush()
     for (const [name] of SEATS) expect(ownEntries(c, name)).toHaveLength(0)
+    expect(ownEntries(c, 'settings.general.item')).toHaveLength(0)
     expect(c.ctx.slots.spec('settings.general.item')).toBeUndefined()
   })
 })

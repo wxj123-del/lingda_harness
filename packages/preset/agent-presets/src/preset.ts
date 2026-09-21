@@ -48,10 +48,12 @@ export interface PresetRoot {
   trust: PresetTrust
 }
 
-/** Plugin config: which preset is the default, and where presets live. */
+/** Plugin config: which preset is the default, how it is exposed, and where presets live. */
 export interface Config {
   /** Preset id mounted when a caller names none. Missing at mount time fails loud. */
   default: string
+  /** Whether the browser exposes the preset picker for new sessions. */
+  modeSelectionEnabled?: boolean
   /** Scanned roots in precedence order; an earlier root wins a duplicate id. */
   roots: PresetRoot[]
   /**

@@ -16,8 +16,11 @@ it('shadows the trajectory view and restores it after plugin disposal', async ()
     const fiber = ctx.plugin(plugin)
     await fiber.await()
     expect(slots.entries('conversation.view').find(entry => entry.options.id === 'trajectory')?.options.priority).toBe(-10)
+    const repositoryLabel = slots.entries('conversation.view').find(entry => entry.options.id === 'git-workspace')?.options.label
+    expect(typeof repositoryLabel === 'function' ? repositoryLabel() : repositoryLabel).toBe('仓库')
     await fiber.dispose()
     expect(slots.entries('conversation.view').find(entry => entry.options.id === 'trajectory')?.options.label).toBe('Original')
+    expect(slots.entries('conversation.view').some(entry => entry.options.id === 'git-workspace')).toBe(false)
   } finally {
     await ctx.fiber.dispose()
   }

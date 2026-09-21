@@ -4,6 +4,9 @@ import type { ConvViewProps } from '@deepseek-ai/dsh-client-ui-conversation/clie
 import type { InjectFace, PropsLocale } from '@deepseek-ai/dsh-client-ui-slots'
 import { IconDownloadOutline16, IconSearchOutline16, Tooltip } from '@deepseek-ai/dsh-client-ui-primitives'
 import type { StepInsightInjected } from './types.ts'
+// These type-only imports merge the host projections into the client hook.
+import type {} from '@deepseek-ai/dsh-personal-agent/client'
+import type {} from '@deepseek-ai/dsh-token-meter/client'
 import { createStepReader } from './step-model.ts'
 import { contentText, estimateText } from './usage.ts'
 import { accounted, number, rowLabel } from './format.ts'
@@ -14,11 +17,16 @@ import css from './ledger.module.css'
 export type TokenLedgerProps = ConvViewProps & InjectFace<StepInsightInjected> & PropsLocale<'stepInsight'>
 
 /** @param props - renderer-bound Session data. @returns The live accounting view. */
-export function TokenLedger({ useLedgerEvents, useSession, loadOlder, viewRequest, completeViewRequest, t }: TokenLedgerProps) {
+export function TokenLedger({ useLedgerEvents, useSession, useProjection, loadOlder, viewRequest, completeViewRequest, t }: TokenLedgerProps) {
   const window = useLedgerEvents(value => value)
   const loading = useSession(value => value.loadingOlder)
   const readSteps = useMemo(createStepReader, [])
   const rows = readSteps(window)
+  // Older test hosts may not mount the projection kit; absence is a valid
+  // capability state and should leave the ledger usable.
+  const modeProjection = useProjection?.('personalAgentMode')
+  const breakdown = useProjection?.('contextBreakdown')
+  const task = useProjection?.('personalAgentTask')
   const inspectCallId = viewRequest?.view === 'trajectory' ? viewRequest.focus : null
   const [query, setQuery] = useState('')
   const [filter, setFilter] = useState('all')
@@ -57,6 +65,13 @@ export function TokenLedger({ useLedgerEvents, useSession, loadOlder, viewReques
     ['output', totals.output, rows.some(row => row.usage.output !== null), rows.some(row => row.usage.output === null)],
     ['cache', totals.cache, rows.some(row => row.usage.cacheRead !== null), rows.some(row => row.usage.cacheRead === null)],
   ] as const
+  const modeNames = { qa: t('modeQa'), research: t('modeResearch'), coding: t('modeCoding'), execution: t('modeExecution') } as const
+  const mode = modeProjection?.mode
+  const maxSteps = modeProjection?.maxSteps ?? null
+  const latestTurn = rows.at(-1)?.turn
+  const usedSteps = latestTurn === null || latestTurn === undefined
+    ? 0
+    : rows.filter(row => row.turn === latestTurn).reduce((count, row) => count + row.tools.filter(tool => tool.parentId === undefined).length, 0)
   const download = () => {
     try {
       const blob = new Blob([JSON.stringify({ format: 'dsh-token-ledger-v1', scope: 'loaded-history',
@@ -94,6 +109,16 @@ export function TokenLedger({ useLedgerEvents, useSession, loadOlder, viewReques
     <div className={css.summary}>
       {summaries.map(([key, value, known, partial]) => <div key={key}><span>{t(key)}</span><strong>{known && partial ? '≥' : ''}{number(known ? value : null)}</strong></div>)}
     </div>
+    {(mode !== undefined || breakdown !== undefined) && <div className={css.ledgerContext} aria-label={t('contextSummary')}>
+      {mode !== undefined && <span><b>{t('mode')}</b> {modeNames[mode]} · {t('toolBudget')} {usedSteps}/{maxSteps}</span>}
+      {breakdown !== undefined && <span>{t('system')} ~{number(breakdown.systemTokens)} · {t('schema')} ~{number(breakdown.toolsTokens)} · {t('content')} ~{number(breakdown.messageTokens)}</span>}
+    </div>}
+    {task !== undefined && task !== null && <div className={css.ledgerContext} data-task-status={task.status} aria-label={t('task')}>
+      <span><b>{t('task')}</b> · {t('taskStatus')}：{t(task.status === 'created' ? 'taskCreated' : task.status === 'planned' ? 'taskPlanned' : task.status === 'running' ? 'taskRunning' : task.status === 'waiting-human' ? 'taskWaitingHuman' : task.status === 'succeeded' ? 'taskSucceeded' : task.status === 'failed' ? 'taskFailed' : 'taskCancelled')}</span>
+      <span>{t('taskGoal')}：{task.goal}</span>
+      <span>{t('taskOwner')}：{task.owner} · {t('taskBudget')}：{task.budget.maxSteps} {t('toolBudget')}{task.budget.maxTokens === undefined ? '' : ` · ${task.budget.maxTokens} ${t('token')}`}</span>
+      {task.status === 'waiting-human' && <span className={css.taskWaitingHint}>{t('taskWaitingHint')}</span>}
+    </div>}
     <div className={css.scope}><span>{t('loaded')}: {rows.length}</span><span>{t('incomplete')}: {totals.incomplete}</span>
       {window.hasMore && <button type="button" disabled={loading} onClick={() => { void older() }}>{t(loading ? 'loading' : 'loadOlder')}</button>}
     </div>

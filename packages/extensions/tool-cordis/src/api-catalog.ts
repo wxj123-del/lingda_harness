@@ -1180,6 +1180,84 @@ export const SERVICE_API: readonly ServiceApiEntry[] = [
     ],
   },
   {
+    key: 'knowledge',
+    summary: 'Local libraries and vector search shared by the authoring UI and agent tools.',
+    description: 'Local libraries and vector search shared by the authoring UI and agent tools.',
+    methods: [
+      {
+        signature: '@Remote(\'overview\') overview(): Promise<KnowledgeOverview>',
+        description: 'Return knowledge bases, embedding status, and split defaults.',
+        parameters: [],
+        returns: 'Knowledge bases, embedding status, and split defaults.',
+      },
+      {
+        signature: '@Remote(\'get\') get(id: KnowledgeBaseId): Promise<KnowledgeBase>',
+        description: 'Read one knowledge base.',
+        parameters: [{ name: 'id', description: 'Knowledge base id.' }],
+        returns: 'A detached knowledge base.',
+      },
+      {
+        signature: '@Remote(\'selected\') selected(agent: Agent): Promise<KnowledgeBaseId[]>',
+        description: 'Read the session\'s selected bases.',
+        parameters: [{ name: 'agent', description: 'Agent whose session selection is read.' }],
+        returns: 'Selected base ids.',
+      },
+      {
+        signature: '@Remote(\'setSelected\') setSelected(agent: Agent, baseIds: KnowledgeBaseId[]): Promise<KnowledgeSessionSelection>',
+        description: 'Change the session\'s selected bases.',
+        parameters: [{ name: 'agent', description: 'Agent whose session selection is changed.' }, { name: 'baseIds', description: 'Enabled base ids.' }],
+        returns: 'The durable selection.',
+      },
+      {
+        signature: '@Remote(\'save\') async save(draft: KnowledgeBaseDraft): Promise<KnowledgeBase>',
+        description: 'Save a knowledge base draft.',
+        parameters: [{ name: 'draft', description: 'Validated knowledge-base draft.' }],
+        returns: 'The saved base.',
+      },
+      {
+        signature: '@Remote(\'deleteBase\') async deleteBase(id: KnowledgeBaseId, revision: number): Promise<void>',
+        description: 'Delete a knowledge base at an expected revision.',
+        parameters: [{ name: 'id', description: 'Knowledge base id.' }, { name: 'revision', description: 'Expected revision.' }],
+      },
+      {
+        signature: '@Remote(\'reindex\') reindex(id: KnowledgeBaseId): Promise<IndexStatus>',
+        description: 'Schedule knowledge-base indexing.',
+        parameters: [{ name: 'id', description: 'Knowledge base id.' }],
+        returns: 'Current indexing status.',
+      },
+      {
+        signature: '@Remote(\'preview\') async preview( documents: KnowledgeBase[\'documents\'], options: SplitOptions, ): Promise<KnowledgeChunk[]>',
+        description: 'Preview document chunks.',
+        parameters: [{ name: 'documents', description: 'Documents to split.' }, { name: 'options', description: 'Split options.' }],
+        returns: 'Preview chunks.',
+      },
+      {
+        signature: '@Remote(\'importLegacy\') async importLegacy(legacy: LegacyKnowledgeBase[]): Promise<number>',
+        description: 'Import legacy knowledge bases.',
+        parameters: [{ name: 'legacy', description: 'Legacy knowledge-base records.' }],
+        returns: 'Number of imported bases.',
+      },
+      {
+        signature: '@Remote(\'search\') async search(query: string, baseId: string, signal: AbortSignal): Promise<KnowledgeSearch>',
+        description: 'Search an enabled knowledge base.',
+        parameters: [{ name: 'query', description: 'Search text.' }, { name: 'baseId', description: 'Optional base id.' }, { name: 'signal', description: 'Cancellation signal.' }],
+        returns: 'Matching chunks.',
+      },
+      {
+        signature: 'async searchSelected(query: string, baseIds: KnowledgeBaseId[], signal: AbortSignal): Promise<KnowledgeSearch>',
+        description: 'Search selected enabled knowledge bases.',
+        parameters: [{ name: 'query', description: 'Search text.' }, { name: 'baseIds', description: 'Selected base ids.' }, { name: 'signal', description: 'Cancellation signal.' }],
+        returns: 'Matching chunks.',
+      },
+      {
+        signature: 'async searchForSession( query: string, session: Session | undefined, baseId: string, signal: AbortSignal, ): Promise<KnowledgeSearch>',
+        description: 'Search bases selected by a session.',
+        parameters: [{ name: 'query', description: 'Search text.' }, { name: 'session', description: 'Optional session selection source.' }, { name: 'baseId', description: 'Optional base id.' }, { name: 'signal', description: 'Cancellation signal.' }],
+        returns: 'Matching chunks.',
+      },
+    ],
+  },
+  {
     key: 'llm',
     summary: 'The abstract `llm` service: an adapter registry plus a streaming model-call API, interceptable via the `llm/stream` waterfall.',
     description: 'The abstract `llm` service: an adapter registry plus a streaming model-call API, interceptable via the `llm/stream` waterfall.',
@@ -1274,6 +1352,25 @@ export const SERVICE_API: readonly ServiceApiEntry[] = [
         description: 'Stream one model call as raw chunks (token-level deltas). Replay state is retained only when the same adapter instance owns its historical provider and the target provider. Final adapter selection remains fixed through asynchronous exact-model resolution and dispatch. Adapter selection, dispatch, and iteration failures become terminal `error` or `aborted` finish chunks; middleware, nested-call, cleanup, and consumer failures remain thrown.',
         parameters: [{ name: 'options', description: 'the full request; `options.provider` selects the adapter.' }],
         returns: 'the chunk stream, possibly wrapped by `llm/stream` listeners.',
+      },
+    ],
+  },
+  {
+    key: 'localSkillImport',
+    summary: 'Discover local Codex/Agents Skills and package a selected candidate without executing it.',
+    description: 'Discover local Codex/Agents Skills and package a selected candidate without executing it.',
+    methods: [
+      {
+        signature: '@Remote(\'list\') async list(): Promise<LocalSkillScan>',
+        description: 'Scan configured roots and read metadata for each discovered `SKILL.md`.',
+        parameters: [],
+        returns: 'Import candidates, root availability, and the scan timestamp.',
+      },
+      {
+        signature: '@Remote(\'archive\') async archive(id: string): Promise<LocalSkillArchive>',
+        description: 'Revalidate and package one candidate returned by the latest scan.',
+        parameters: [{ name: 'id', description: 'Opaque candidate identifier issued by {@link list}.' }],
+        returns: 'A base64-encoded ZIP compatible with the Skill marketplace importer.',
       },
     ],
   },
@@ -1375,6 +1472,60 @@ export const SERVICE_API: readonly ServiceApiEntry[] = [
         signature: 'set(session: Session, name: string): void',
         description: 'Record a changed preset, then update each changed knob through its own setter. Selecting the effective preset again appends nothing.',
         parameters: [{ name: 'session', description: 'the session the switch belongs to.' }, { name: 'name', description: 'the preset to switch to; unknown names throw.' }],
+      },
+    ],
+  },
+  {
+    key: 'personalAgent',
+    summary: 'Runtime service enforcing personal modes for each Agent session.',
+    description: 'Runtime service enforcing personal modes for each Agent session.',
+    methods: [
+      {
+        signature: '@Remote(\'modes\') modes(): ModeOption[]',
+        description: 'Return the selectable modes and their tool-step caps.',
+        parameters: [],
+        returns: 'Mode options.',
+      },
+      {
+        signature: '@Remote(\'current\') currentRemote(agent: Agent): ModeView',
+        description: 'Return the current Agent\'s durable mode and policy.',
+        parameters: [{ name: 'agent', description: 'Current Agent selected by the Remote context.' }],
+        returns: 'Its durable mode and policy.',
+      },
+      {
+        signature: '@Remote(\'suggest\') suggest(input: string): { mode: AgentMode | null }',
+        description: 'Suggest a mode from draft text without a model call.',
+        parameters: [{ name: 'input', description: 'Draft user input.' }],
+        returns: 'A local mode suggestion, or null.',
+      },
+      {
+        signature: '@Remote(\'set\') setRemote(agent: Agent, mode: AgentMode): ModeView',
+        description: 'Set the mode for subsequent requests.',
+        parameters: [{ name: 'agent', description: 'Current Agent selected by the Remote context.' }, { name: 'mode', description: 'Next-turn mode.' }],
+        returns: 'The updated view.',
+      },
+      {
+        signature: 'current(agent: Agent): AgentMode',
+        description: 'Read an Agent\'s durable mode.',
+        parameters: [{ name: 'agent', description: 'Agent whose durable mode is read.' }],
+        returns: 'The current mode.',
+      },
+      {
+        signature: 'policy(session: Session): ModePolicy',
+        description: 'Resolve the policy selected by a session\'s mode.',
+        parameters: [{ name: 'session', description: 'Session whose durable mode selects a policy.' }],
+        returns: 'The effective policy.',
+      },
+      {
+        signature: 'allowsTool(session: Session, name: string): boolean',
+        description: 'Answer the capability question used by late tool-discovery adapters.\n\nSchema filtering happens in this service too, but discovery is allowed to run after another prompt listener and could otherwise re-add a hidden schema. Keeping this small public predicate lets those adapters apply the same mode ceiling without depending on the concrete service class.',
+        parameters: [{ name: 'session', description: 'Session whose active mode is checked.' }, { name: 'name', description: 'Tool name to authorize.' }],
+        returns: 'Whether the tool is visible and executable in that mode.',
+      },
+      {
+        signature: 'set(agent: Agent, mode: AgentMode): void',
+        description: 'Record a durable mode switch and apply its permissions.',
+        parameters: [{ name: 'agent', description: 'Agent whose session records the switch.' }, { name: 'mode', description: 'Mode applied to future requests.' }],
       },
     ],
   },
@@ -3251,6 +3402,14 @@ export const EVENT_API: readonly EventApiEntry[] = [
     parameters: [{ name: 'payload', description: '.signal - the current turn\'s explicit abort signal. Scope-filtered dispatch (`@deepseek-ai/dsh-scope`): agent-scoped listeners receive only that agent.' }],
   },
   {
+    name: 'agent/request-context',
+    mode: 'waterfall',
+    signature: '\'agent/request-context\'(this: Scoped<Agent>, payload: { agent: Agent; turn: number; step: number; messages: Message[]; signal: AbortSignal }, next: () => Promise<Message[]>): Promise<Message[]>',
+    summary: 'Bound the model-visible message context immediately before a request is constructed.',
+    description: 'Bound the model-visible message context immediately before a request is constructed. Durable session history is never deleted; listeners only choose the request snapshot and may clip oversized tool results.',
+    parameters: [{ name: 'payload', description: '.signal - the current turn\'s cancellation signal.' }],
+  },
+  {
     name: 'agent/request-error',
     mode: 'waterfall',
     signature: '\'agent/request-error\'(this: Scoped<Agent>, payload: { agent: Agent; turn: number; step: number; provider: string; failure: LlmFailure; retryPolicy: ResolvedRetryPolicy | undefined; signal: AbortSignal }, next: () => Promise<RequestErrorAction>): Promise<RequestErrorAction>',
@@ -3741,6 +3900,10 @@ export const TYPE_API: readonly TypeApiEntry[] = [
   {
     name: 'AgentHandle',
     declaration: 'export interface AgentHandle {\n    agent: Agent;\n    dispose(): Promise<void>;\n}',
+  },
+  {
+    name: 'AgentMode',
+    declaration: 'export type AgentMode = typeof AGENT_MODES[number];',
   },
   {
     name: 'AgentOptions',
@@ -4511,6 +4674,10 @@ export const TYPE_API: readonly TypeApiEntry[] = [
     declaration: 'export type IndexInjectionPlacement = \'head\' | \'body\';',
   },
   {
+    name: 'IndexStatus',
+    declaration: 'export interface IndexStatus {\n    status: \'empty\' | \'pending\' | \'indexing\' | \'ready\' | \'error\';\n    chunks: number;\n    completed: number;\n    total: number;\n    error: string | null;\n}',
+  },
+  {
     name: 'InspectorId',
     declaration: 'export type InspectorId<Role extends string> = Branded<Role>;',
   },
@@ -4611,6 +4778,42 @@ export const TYPE_API: readonly TypeApiEntry[] = [
     declaration: 'export type JsonValue = null | boolean | number | string | JsonValue[] | {\n    [key: string]: JsonValue;\n};',
   },
   {
+    name: 'KnowledgeBase',
+    declaration: 'export interface KnowledgeBase {\n    id: KnowledgeBaseId;\n    title: string;\n    description: string;\n    enabled: boolean;\n    split: SplitOptions;\n    documents: KnowledgeDocument[];\n    revision: number;\n    updatedAt: number;\n}',
+  },
+  {
+    name: 'KnowledgeBaseDraft',
+    declaration: 'export interface KnowledgeBaseDraft {\n    id: KnowledgeBaseId;\n    title: string;\n    description: string;\n    enabled: boolean;\n    split: SplitOptions;\n    documents: KnowledgeDocument[];\n    revision: number;\n}',
+  },
+  {
+    name: 'KnowledgeBaseId',
+    declaration: 'export type KnowledgeBaseId = Branded<\'KnowledgeBaseId\'>;',
+  },
+  {
+    name: 'KnowledgeChunk',
+    declaration: 'export interface KnowledgeChunk {\n    documentId: KnowledgeDocumentId;\n    title: string;\n    ordinal: number;\n    content: string;\n}',
+  },
+  {
+    name: 'KnowledgeDocumentId',
+    declaration: 'export type KnowledgeDocumentId = Branded<\'KnowledgeDocumentId\'>;',
+  },
+  {
+    name: 'KnowledgeHit',
+    declaration: 'export interface KnowledgeHit extends KnowledgeChunk {\n    baseId: KnowledgeBaseId;\n    baseTitle: string;\n    score: number;\n}',
+  },
+  {
+    name: 'KnowledgeOverview',
+    declaration: 'export interface KnowledgeOverview {\n    bases: Array<Omit<KnowledgeBase, \'documents\'> & {\n        documentCount: number;\n        index: IndexStatus;\n    }>;\n    model: {\n        id: string;\n        status: \'idle\' | \'loading\' | \'ready\' | \'error\';\n        file: string;\n        progress: number;\n        error: string | null;\n    };\n    defaults: SplitOptions;\n}',
+  },
+  {
+    name: 'KnowledgeSearch',
+    declaration: 'export interface KnowledgeSearch {\n    hits: KnowledgeHit[];\n    skippedBases: KnowledgeBaseId[];\n    deduplicatedHits: number;\n    estimatedTokens: number;\n    similarityThreshold?: number;\n    maxResultTokens?: number;\n}',
+  },
+  {
+    name: 'KnowledgeSessionSelection',
+    declaration: 'export interface KnowledgeSessionSelection {\n    sessionId: SessionId;\n    baseIds: KnowledgeBaseId[];\n}',
+  },
+  {
     name: 'KvFacet',
     declaration: 'export interface KvFacet {\n    open(descriptor: KvUnitDescriptor): Promise<KvUnit>;\n}',
   },
@@ -4625,6 +4828,10 @@ export const TYPE_API: readonly TypeApiEntry[] = [
   {
     name: 'KvUnitDescriptor',
     declaration: 'export interface KvUnitDescriptor {\n    readonly name: string;\n    readonly version: number;\n    readonly tables: readonly string[];\n    readonly hasGlobal: boolean;\n    readonly layout?: \'single\' | \'per-record\';\n    readonly compatibleVersions?: readonly number[];\n}',
+  },
+  {
+    name: 'LegacyKnowledgeBase',
+    declaration: 'export interface LegacyKnowledgeBase {\n    id: string;\n    title: string;\n    description: string;\n    enabled: boolean;\n    body: string;\n    documents?: {\n        id: string;\n        title: string;\n        content: string;\n        updatedAt: number;\n    }[];\n}',
   },
   {
     name: 'LlmAdapter',
@@ -4648,7 +4855,7 @@ export const TYPE_API: readonly TypeApiEntry[] = [
   },
   {
     name: 'LlmDiscoveredModel',
-    declaration: 'export interface LlmDiscoveredModel {\n    id: string;\n    name?: string;\n    contextWindow?: number;\n    maxTokens?: number;\n}',
+    declaration: 'export interface LlmDiscoveredModel {\n    id: string;\n    name?: string;\n    contextWindow?: number;\n    maxTokens?: number;\n    inputModalities?: readonly ModelModality[];\n}',
   },
   {
     name: 'LlmFailure',
@@ -4693,6 +4900,30 @@ export const TYPE_API: readonly TypeApiEntry[] = [
   {
     name: 'LlmRuntime',
     declaration: 'export class LlmRuntime extends TypertRemoteService {\n    constructor(ctx: Context);\n    registerAdapter(providers: string[], adapter: LlmAdapter): AdapterRegistrationHandle;\n    @Remote\n    listProviders(): LlmProviderInfo[];\n    registerConfigurableProviders(entries: readonly LlmConfigurableProvider[]): DirectoryRegistrationHandle;\n    @Remote\n    listConfigurableProviders(): LlmConfigurableProvider[];\n    registerModelDiscovery(settingsNs: string, discover: (request: LlmModelDiscoveryRequest, signal?: AbortSignal) => Promise<readonly LlmDiscoveredModel[]>): () => void;\n    async discoverModels(settingsNs: string, request: LlmModelDiscoveryRequest, signal?: AbortSignal): Promise<LlmDiscoveredModel[]>;\n    @Remote(\'discoverModels\')\n    async remoteDiscoverModels(settingsNs: string, request: LlmModelDiscoveryRequest, signal: AbortSignal): Promise<LlmDiscoveredModel[]>;\n    providerRetryPolicy(provider: string): ResolvedRetryPolicy;\n    imageRequestPricing(provider: string, model: string): LlmImageRequestPricing | undefined;\n    fileRequestText(ref: FileAttachmentRef): string;\n    async listModels(provider: string): Promise<LlmModelInfo[]>;\n    async resolveModelInfo(provider: string, model: string, signal?: AbortSignal): Promise<LlmResolvedModelInfo>;\n    async resolveCallConfig(config: LlmCallConfig, signal?: AbortSignal): Promise<LlmCallConfig>;\n    async prepareCall(config: LlmCallConfig, signal?: AbortSignal): Promise<PreparedLlmCall>;\n    stream(options: GenerateOptions) /* …truncated — full shape in source */',
+  },
+  {
+    name: 'LocalSkillArchive',
+    declaration: 'export interface LocalSkillArchive {\n    archive: string;\n}',
+  },
+  {
+    name: 'LocalSkillCandidate',
+    declaration: 'export interface LocalSkillCandidate {\n    id: string;\n    name: string;\n    description: string;\n    source: LocalSkillSource;\n    sourcePath: string;\n    relativePath: string;\n    fileCount: number;\n    expandedBytes: number;\n    issue: LocalSkillIssue | null;\n}',
+  },
+  {
+    name: 'LocalSkillIssue',
+    declaration: 'export type LocalSkillIssue = \'invalidMetadata\' | \'emptyBody\' | \'tooLarge\' | \'unsafePath\' | \'multipleSkills\' | \'unreadable\';',
+  },
+  {
+    name: 'LocalSkillRoot',
+    declaration: 'export interface LocalSkillRoot {\n    source: LocalSkillSource;\n    path: string;\n    available: boolean;\n}',
+  },
+  {
+    name: 'LocalSkillScan',
+    declaration: 'export interface LocalSkillScan {\n    candidates: LocalSkillCandidate[];\n    roots: LocalSkillRoot[];\n    scannedAt: number;\n}',
+  },
+  {
+    name: 'LocalSkillSource',
+    declaration: 'export type LocalSkillSource = \'codex\' | \'agents\';',
   },
   {
     name: 'LspHover',
@@ -4873,6 +5104,18 @@ export const TYPE_API: readonly TypeApiEntry[] = [
   {
     name: 'ModelReasoningEffort',
     declaration: 'export interface ModelReasoningEffort {\n    readonly id: string;\n    readonly name: string;\n    readonly description?: string;\n}',
+  },
+  {
+    name: 'ModeOption',
+    declaration: 'export interface ModeOption {\n    value: AgentMode;\n    name: string;\n    description: string;\n    maxSteps: number;\n    maxContextTokens: number;\n}',
+  },
+  {
+    name: 'ModePolicy',
+    declaration: 'export interface ModePolicy {\n    mode: AgentMode;\n    visibleTools: readonly string[];\n    maxSteps: number;\n    maxToolResultBytes: number;\n    maxContextTokens: number;\n    historyTurns: number;\n    knowledgeBase: \'off\' | \'explicit\';\n    approval: \'ask\' | \'never\';\n    sandbox: \'read-only\' | \'workspace-write\' | \'danger-full-access\';\n}',
+  },
+  {
+    name: 'ModeView',
+    declaration: 'export interface ModeView {\n    mode: AgentMode;\n    policy: ModePolicy;\n}',
   },
   {
     name: 'ObjectJsonSchema',
@@ -5212,7 +5455,7 @@ export const TYPE_API: readonly TypeApiEntry[] = [
   },
   {
     name: 'Session',
-    declaration: 'export class Session {\n    get surface(): SessionSurface;\n    readonly header: SessionHeader;\n    readonly inheritedEventCount: SessionLogOffset;\n    get id(): SessionId;\n    readonly firstLiveSeq: SessionLogOffset;\n    static create(id: SessionId, seed?: readonly SessionEvent[], header?: SessionHeader, inheritedEventCount?: SessionLogOffset, projections?: readonly SessionMessageProjection[]): Session;\n    static fromRestore(id: SessionId, seed: readonly SessionEvent[], header: SessionHeader, inheritedEventCount: SessionLogOffset, eventState: SessionSeedEventState, projections?: readonly SessionMessageProjection[]): Session;\n    eventAt(seq: SessionSeq): SessionEvent | undefined;\n    snapshotEvents(fromSeq: SessionLogOffset = SessionLogOffset(0), toSeqExclusive: SessionLogOffset = this.seq): readonly SessionEvent[];\n    ownEvents(): readonly SessionEvent[];\n    isOwnSeq(seq: SessionSeq): boolean;\n    get seq(): SessionLogOffset;\n    append<T extends SessionEventType>(type: T, data: SessionEventMap[T], ...opts: T extends SurfaceEventType ? [\n        opts: SurfaceIntent<T>\n    ] : [\n    ]): SessionEvent<T>;\n    requestHeader(): EpochHeader | undefined;\n    requestContext(): RequestContext | undefined;\n    deriveMessages(): Message[];\n    deriveEventMessage(event: SessionEvent): Message | null;\n}',
+    declaration: 'export class Session {\n    get surface(): SessionSurface;\n    readonly header: SessionHeader;\n    readonly inheritedEventCount: SessionLogOffset;\n    get id(): SessionId;\n    readonly firstLiveSeq: SessionLogOffset;\n    static create(id: SessionId, seed?: readonly SessionEvent[], header?: SessionHeader, inheritedEventCount?: SessionLogOffset, projections?: readonly SessionMessageProjection[]): Session;\n    static fromRestore(id: SessionId, seed: readonly SessionEvent[], header: SessionHeader, inheritedEventCount: SessionLogOffset, eventState: SessionSeedEventState, projections?: readonly SessionMessageProjection[]): Session;\n    eventAt(seq: SessionSeq): SessionEvent | undefined;\n    snapshotEvents(fromSeq: SessionLogOffset = SessionLogOffset(0), toSeqExclusive: SessionLogOffset = this.seq): readonly SessionEvent[];\n    ownEvents(): readonly SessionEvent[];\n    isOwnSeq(seq: SessionSeq): boolean;\n    get seq(): SessionLogOffset;\n    append<T extends SessionEventType>(type: T, data: SessionEventMap[T], ...opts: T extends SurfaceEventType ? [\n        opts: SurfaceIntent<T>\n    ] : [\n        opts?: {\n            ignorable?: true;\n        }\n    ]): SessionEvent<T>;\n    requestHeader(): EpochHeader | undefined;\n    requestContext(): RequestContext | undefined;\n    deriveMessages(): Message[];\n    deriveEventMessage(event: SessionEvent): Message | null;\n}',
   },
   {
     name: 'SessionAccess',
@@ -5873,6 +6116,10 @@ export const TYPE_API: readonly TypeApiEntry[] = [
   {
     name: 'SpillSource',
     declaration: 'export type SpillSource = {\n    kind: \'tool\';\n    toolName: string;\n    callId: ToolCallId;\n    label: string;\n} | {\n    kind: \'session-reference\';\n    sessionId: SessionId;\n    label: string;\n};',
+  },
+  {
+    name: 'SplitOptions',
+    declaration: 'export interface SplitOptions {\n    mode: \'recursive\' | \'markdown\' | \'fixed\';\n    size: number;\n    overlap: number;\n}',
   },
   {
     name: 'SshStreamEndpoint',

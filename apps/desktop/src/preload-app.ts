@@ -1,7 +1,7 @@
-/** Startup controls for shell documents; application documents receive only the carrier marker. */
+/** Startup controls for shell documents and a narrow update bridge for app documents. */
 
 import { contextBridge, ipcRenderer } from 'electron'
-import { DESKTOP_IPC, type DshDesktopStartupApi } from './ipc.ts'
+import { DESKTOP_IPC, type DshDesktopApplicationApi, type DshDesktopStartupApi, type DesktopUpdateState } from './ipc.ts'
 import type { DesktopBackendState } from './backend-controller.ts'
 
 const startup: DshDesktopStartupApi = {
@@ -20,5 +20,21 @@ const startup: DshDesktopStartupApi = {
   resetConfiguration: () => ipcRenderer.invoke(DESKTOP_IPC.configurationReset) as Promise<void>,
 }
 
+const application: DshDesktopApplicationApi = {
+  protocolVersion: 1,
+  updates: {
+    check: () => ipcRenderer.invoke(DESKTOP_IPC.updatesCheck) as Promise<DesktopUpdateState>,
+    install: () => ipcRenderer.invoke(DESKTOP_IPC.updatesInstall) as Promise<void>,
+    subscribe(listener) {
+      const handle = (_event: Electron.IpcRendererEvent, state: DesktopUpdateState): void => { listener(state) }
+      ipcRenderer.on(DESKTOP_IPC.updatesState, handle)
+      return () => { ipcRenderer.off(DESKTOP_IPC.updatesState, handle) }
+    },
+  },
+}
+
 contextBridge.exposeInMainWorld('dshDesktop', location.protocol === 'dsh-app:' && location.hostname === 'shell'
-  ? startup : { protocolVersion: 1 })
+  ? startup
+  : location.protocol === 'dsh-app:' && location.hostname === 'app'
+    ? application
+    : { protocolVersion: 1 })

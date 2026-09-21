@@ -10,6 +10,7 @@ type ConversationContentProps = Omit<ConversationSlotProps, 'useSession' | 'useC
   session: SessionSnapshot | undefined
   phase: 'settling' | 'hero' | 'active'
   hero: boolean
+  showComposer: boolean
   onHandleStart: () => number
   onHandleDrag: (width: number) => void
   onHandleCommit: (width: number) => void
@@ -110,6 +111,7 @@ export function ConversationContent({
   sessionId, session, phase, hero, useSessions, useSessionPendingInteraction,
   useWorkspaces, useInput, useComposerBlock, renderSlot, renderSlotChain,
   selectWorkspace, t, onHandleStart, onHandleDrag, onHandleCommit, onHandleEnd,
+  showComposer,
 }: ConversationContentProps) {
   const pendingInteraction = useSessionPendingInteraction(snapshot =>
     sessionId === undefined ? undefined : snapshot.get(sessionId))
@@ -213,8 +215,9 @@ export function ConversationContent({
   // The placeholder chip ("Choose workspace") and the Workspace-trigger input travel
   // together: no workspace picked yet (cold start, no session at all), or a
   // blank session whose workspace vanished (deleted from the sidebar). The
-  // bar is ONE session-maybe slot rendered unconditionally — inert is a prop,
-  // not a different tree, so the textarea DOM survives the transition.
+  // bar is ONE session-maybe slot whenever the Conversation view owns the
+  // composer — inert is a prop, not a different tree, so the textarea DOM
+  // survives blank-to-active transitions on the Chat view.
   const inert = sessionId === undefined || (hero && chipTitle === undefined)
   // A raised block is the same inert posture with the blocker's own reason:
   // one disabled textarea, never a second tree. The no-workspace state wins
@@ -237,30 +240,32 @@ export function ConversationContent({
         : hero ? { placeholder: t('placeholder.hero') } : {}),
   })
 
-  const composerBar = (
+  const composerBar = showComposer ? (
     <div className={clsx(css.composerStack, hero && css.composerHero)}>
       {hero && <HeroShell t={t} renderSlot={renderSlot} />}
       {hero && heroWorkspaceRow}
       {zone !== undefined && renderSlot('conversation.input.dock', zone)}
       {inputBar}
     </div>
-  )
+  ) : null
 
-  const composer = renderSlotChain(
-    'conversation.composer',
-    { sessionId, session, pendingInteraction },
-    { fallback: composerBar, fallbackOnly: sessionId === undefined, overlay: true },
-  )
+  const composer = showComposer
+    ? renderSlotChain(
+      'conversation.composer',
+      { sessionId, session, pendingInteraction },
+      { fallback: composerBar, fallbackOnly: sessionId === undefined, overlay: true },
+    )
+    : null
 
   // Sticky wraps the whole chain output (fallback + elected overlay), not
   // only `.composerStack`: overlay:true renders those as siblings, and sticky
   // on the fallback alone would leave a business-owned takeover at the content
   // end off-screen when the user is not pinned to the floor.
-  const composerSeat = (
+  const composerSeat = showComposer ? (
     <div ref={seatResizeRef} className={css.composerSeat} data-composer-seat="">
       {composer}
     </div>
-  )
+  ) : null
 
   return (
     <div className={css.body}>

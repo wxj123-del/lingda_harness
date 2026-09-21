@@ -55,6 +55,18 @@ pnpm dsh web
 
 `pnpm run build` 会准备仓库产物。`pnpm dsh web` 会直接使用这些已构建产物，不会重新构建。仓库沿用 `dsh` 命令和 `@deepseek-ai/*` 包名；npm 上的 `@deepseek-ai/dsh` 是上游发行版本。
 
+### 更新
+
+对于源码 checkout，可以在**设置 → 通用设置 → 软件更新**中检查 `https://gitcode.com/XJ-Cyber/lingda-harness`，并从它的默认分支执行干净的快进更新。不需要手动配置 Git 远程。更新器会安装锁定依赖、重新构建生成产物并重启 Host。命令行流程仍然可用：
+
+```sh
+git pull --ff-only
+pnpm install
+pnpm run build
+```
+
+已打包的 Desktop 应用提供**设置 → 通用设置 → 软件更新**，会检查配置的签名 Desktop 发布流，安装匹配的壳与 dsh 运行时后重启。通过源码 checkout 启动的浏览器 Web 页面使用本地 Host 更新器。存在未提交修改、分叉、detached HEAD 或本地领先时会拒绝更新，必须手动处理。
+
 ### 开始第一次对话
 
 1. 打开**设置 → 模型**，按照[模型配置指南](docs/user/guide/providers.zh.md)添加提供方和 API 凭据。

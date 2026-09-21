@@ -23,7 +23,7 @@ import {
   launchWebScaffold, recordFixture, watchConsole, webSnapshotMode, type WebScaffold,
 } from './scaffold.ts'
 import {
-  connectFreshWorkspace, expandOwningTurnProcess, newEnglishPage, saveFailureShot, writeComposerDraft, ZH_BROWSER_LOCALE,
+  connectFreshWorkspace, newEnglishPage, saveFailureShot, writeComposerDraft, ZH_BROWSER_LOCALE,
 } from './support.ts'
 
 const SNAPSHOT_DIR = fileURLToPath(new URL('../../../snapshots/web/lifecycle-chrome', import.meta.url))
@@ -274,8 +274,6 @@ describe('web e2e: lifecycle & chrome (workspace flow / reload / dark mode)', ()
     const settled = scaffold.whenTurnSettled()
     await writeComposerDraft(page, input, PROMPT)
     const observeTurn = async () => {
-      const originalViewport = page.viewportSize() ?? { width: 1680, height: 1000 }
-      if (MODE !== 'record') await page.setViewportSize({ width: 480, height: 1000 })
       const observedReasoning = Promise.withResolvers<undefined>()
       const releaseStream = MODE === 'record' ? undefined : scaffold.ctx.on('llm/stream', async function* (_options, next) {
         let reasoning = false
@@ -290,26 +288,19 @@ describe('web e2e: lifecycle & chrome (workspace flow / reload / dark mode)', ()
       try {
         await input.press('Enter')
         if (MODE !== 'record') {
+          // Reasoning is trace-only: the live row signals progress by existing,
+          // and it must expose neither the prose nor an expand affordance. The
+          // held stream keeps the row live until these polls settle.
           const thinking = page.locator('[data-variant="think"][data-state="running"]')
-          await expect.poll(() => thinking.getByRole('button').getAttribute('aria-expanded')).toBe('false')
-          const liveTail = thinking.locator('[data-follow-end]')
-          await expect.poll(async () => {
-            if (await liveTail.count() !== 1) return false
-            return await liveTail.evaluate((element) => {
-              const text = element.firstElementChild
-              if (!(text instanceof HTMLElement)) return false
-              const viewport = element.getBoundingClientRect()
-              const content = text.getBoundingClientRect()
-              return content.width > viewport.width && Math.abs(content.right - viewport.right) <= 1
-            })
-          }, { timeout: 10_000, interval: 10 }).toBe(true)
+          await thinking.waitFor({ timeout: 10_000 })
+          expect(await thinking.locator('[data-follow-end]').count()).toBe(0)
+          expect(await thinking.getByRole('button').count()).toBe(0)
         }
         observedReasoning.resolve(undefined)
         return await settled
       } finally {
         observedReasoning.resolve(undefined)
         releaseStream?.()
-        if (MODE !== 'record') await page.setViewportSize(originalViewport)
       }
     }
     const sessionId = await observeTurn()
@@ -341,45 +332,6 @@ describe('web e2e: lifecycle & chrome (workspace flow / reload / dark mode)', ()
     const turnEnds = sessionEvents.filter(e => e.type === 'turn/end')
     expect(turnEnds).toHaveLength(1)
     expect((turnEnds[0] as SessionEvent & { data: { reason: { kind: string } } }).data.reason.kind).toBe('completed')
-  }, 60_000)
-
-  it.skipIf(MODE === 'record')('pins an open Think header to the conversation scrollport (real layout)', async () => {
-    onTestFailed(() => saveFailureShot(page, 'web-e2e-think-sticky'))
-    // The settled turn collapses its process row, which hides the Think row.
-    // The fixture's recorded reasoning is one line, too short to overflow the
-    // scrollport, so this case proves the CSS resolves onto the Think header in
-    // a real browser (jsdom computes no sticky layout); the pinned-while-
-    // scrolling and z-rank evidence belongs to the compaction path in
-    // seeded-history.e2e.ts, whose summary length that suite controls.
-    const thinkRow = page.locator('[data-variant="think"]').first()
-    await thinkRow.waitFor({ state: 'attached', timeout: 15_000 })
-    const process = page.locator('[data-turn-process]').first()
-    const processWasOpen = await process.getAttribute('aria-expanded') === 'true'
-    try {
-      await expandOwningTurnProcess(page, thinkRow)
-      const collapsedHeader = thinkRow.locator('[data-disclosure-row]').first()
-      await collapsedHeader.waitFor({ timeout: 10_000 })
-      // Collapsed, the rule's `data-open` gate is absent and the header stays in
-      // flow. It is `relative` here — the row is the sweep-glare overlay anchor
-      // — so the assertion is the absence of `sticky`, not a specific value.
-      expect(await collapsedHeader.evaluate(element => getComputedStyle(element).position)).not.toBe('sticky')
-      await collapsedHeader.click()
-      const openHeader = page.locator('[data-variant="think"] [data-open] [data-disclosure-row]').first()
-      await openHeader.waitFor({ timeout: 10_000 })
-      const openStyle = await openHeader.evaluate((element) => {
-        const style = getComputedStyle(element)
-        return { position: style.position, top: style.top }
-      })
-      expect(openStyle.position).toBe('sticky')
-      expect(openStyle.top).toBe('0px')
-    } finally {
-      // Restore the settled state the reload goldens below are captured in.
-      const openThinkRow = page.locator('[data-variant="think"] [data-open] [data-disclosure-row]')
-      if (await openThinkRow.count() > 0) await openThinkRow.first().click()
-      if (!processWasOpen && await process.getAttribute('aria-expanded') === 'true') await process.click()
-    }
-    await expect.poll(() => page.locator('[data-variant="think"] [data-open]').count(), { timeout: 5_000 }).toBe(0)
-    expect(tripwire.pageErrors).toEqual([])
   }, 60_000)
 
   it.skipIf(MODE === 'record')('recovers the whole surface across a reload from the log alone', async () => {

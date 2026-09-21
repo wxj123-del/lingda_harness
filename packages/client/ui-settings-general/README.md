@@ -9,7 +9,7 @@ English | [中文](README.zh.md)
 
 ## Summary
 
-Use this package to give the dsh web client a Settings panel, connection-recovery control, feature-contributed navigation, and sequential first-run onboarding. Users can open it from the sidebar, retry a failed connection immediately, and access a local configuration file when the Host makes one available on a loopback browser. Feature packages supply their own settings rows, sections, and onboarding steps; this package supplies their shared presentation and does not add onboarding copy or built-in General rows.
+Use this package to give the dsh web client a Settings panel, connection-recovery control, feature-contributed navigation, and sequential first-run onboarding. Users can open it from the sidebar, retry a failed connection immediately, and access a local configuration file when the Host makes one available on a loopback browser. Feature packages supply their own settings rows, sections, and onboarding steps; this package supplies their shared presentation and the release/source update row without adding onboarding copy.
 
 ## Table of Contents
 
@@ -29,7 +29,9 @@ Users reach the shell through the sidebar's bottom Settings control; feature plu
 
 ### The General section
 
-The General section holds rows registered into `settings.general.item` by feature packages — it has no built-in rows. Feature plugins own the row copy and behavior; the shell only provides the section and its slot. The Appearance row, for example, lives in ui-theme.
+The General section holds rows registered into `settings.general.item` by feature packages. Feature plugins own the row copy and behavior; the shell only provides the section and its slot. The Appearance row, for example, lives in ui-theme. This package also contributes an update row: Electron checks its signed release stream, while a browser source checkout checks the GitCode source commit.
+
+The update row checks the signed release stream configured by Electron, then offers installation and restart for a verified release. In a browser source checkout it checks `https://gitcode.com/XJ-Cyber/lingda-harness`, reports whether a newer commit exists, and offers a fast-forward-only update that installs the frozen dependencies, rebuilds, and restarts the Host. It works even when the checkout has no `gitcode` remote configured. Dirty, diverged, detached, and local-ahead checkouts are refused.
 
 ### Opening the configuration file
 
@@ -98,7 +100,7 @@ None; this package neither assembles nor sends a provider request.
 
 These limits define what the shell itself provides versus what features must supply; they are current package constraints.
 
-- **The General section has no built-in rows** — each row appears only when its owning feature plugin is mounted; the shell cannot fill the section alone.
+- **Unsafe source states remain manual** — a dirty, diverged, detached, or local-ahead checkout must be repaired or committed before the update row can update it.
 
 <a id="dev-note"></a>
 ### Dev Note

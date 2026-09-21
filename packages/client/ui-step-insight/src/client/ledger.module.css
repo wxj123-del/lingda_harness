@@ -11,6 +11,84 @@
 }
 
 .root * { box-sizing: border-box; }
+.repositoryRoot { height: 100%; min-height: 0; overflow: auto; padding-bottom: calc(var(--dsh-composer-height, 152px) + 24px); color: var(--dsw-alias-label-primary); background: var(--dsw-alias-bg-layer-1); font-size: 12px; letter-spacing: 0; }
+.repositoryRoot * { box-sizing: border-box; }
+.repositoryHeader { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; padding: 18px 20px 8px; border-bottom: 0.5px solid var(--dsw-alias-border-l2); }
+.repositoryHeader h2 { margin: 0; font-size: 16px; font-weight: 600; }
+.repositoryHeader p { margin: 6px 0 0; color: var(--dsw-alias-label-secondary); line-height: 1.5; }
+.repositoryHeader button { flex: 0 0 auto; border: 0.5px solid var(--dsw-alias-border-l2); border-radius: 4px; background: transparent; color: inherit; padding: 6px 10px; cursor: pointer; font: inherit; }
+.repositoryHeader button:hover { background: var(--dsw-alias-interactive-bg-hover); }
+.repositoryHint { margin: 0 20px; color: var(--dsw-alias-label-secondary); line-height: 1.6; }
+.repositoryRoot > .gitWorkspace { max-width: 920px; margin: 16px 20px; }
+.repositoryMonitor, .repositoryFlow { max-width: 1080px; margin: 16px 20px 0; border: 0.5px solid var(--dsw-alias-border-l2); background: var(--dsw-alias-bg-layer-1); }
+.repositoryMonitorHeader, .repositoryFlowHeader { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; padding: 14px 16px 10px; }
+.repositoryMonitorHeader h3, .repositoryFlowHeader h3 { margin: 0; color: var(--dsw-alias-label-primary); font-size: 13px; font-weight: 600; }
+.repositoryMonitorHeader p, .repositoryFlowHeader p { margin: 4px 0 0; color: var(--dsw-alias-label-secondary); line-height: 1.45; }
+.repositoryAdd { padding: 0 16px 12px; }
+.repositoryAdd label { display: block; margin-bottom: 6px; color: var(--dsw-alias-label-secondary); font-size: 11px; }
+.repositoryAddRow { display: flex; align-items: center; gap: 8px; }
+.repositoryAddRow > span { flex: 1; min-width: 0; }
+.repositoryAddRow input { min-width: 0; width: 100%; }
+.repositoryList { display: flex; flex-direction: column; gap: 0; margin: 0; padding: 0; list-style: none; border-top: 0.5px solid var(--dsw-alias-border-l2); }
+.repositoryListItem { display: flex; align-items: center; justify-content: space-between; gap: 14px; min-width: 0; padding: 9px 16px; border-top: 0.5px solid var(--dsw-alias-border-l2); }
+.repositoryListItem:first-child { border-top: 0; }
+.repositoryListMain, .repositoryListActions { display: flex; align-items: center; min-width: 0; gap: 8px; }
+.repositoryListMain { flex: 1; }
+.repositoryListMain code { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--dsw-alias-label-primary); font: 11px/1.5 var(--dsw-font-mono, monospace); }
+.repositoryBranch { flex: 0 0 auto; color: var(--dsw-alias-label-secondary); font: 10px/1.5 var(--dsw-font-mono, monospace); }
+.repositoryListActions { flex: 0 0 auto; }
+.repositoryStatusDot { width: 7px; height: 7px; flex: 0 0 auto; border-radius: 50%; background: var(--dsw-alias-label-tertiary); }
+.repositoryStatusDot[data-enabled="true"] { background: var(--dsw-alias-state-success-primary); }
+.repositoryFlow { margin-top: 16px; overflow: hidden; }
+.repositoryFlowMeta { flex: 0 0 auto; color: var(--dsw-alias-label-secondary); font-size: 11px; font-variant-numeric: tabular-nums; }
+.repositoryFlowActions { display: flex; align-items: center; gap: 6px; }
+.repositoryViewMode { display: inline-flex; align-items: center; border: 0.5px solid var(--dsw-alias-border-l2); border-radius: 4px; overflow: hidden; }
+.repositoryViewMode button { min-height: 28px; border: 0; border-left: 0.5px solid var(--dsw-alias-border-l2); padding: 0 9px; background: transparent; color: var(--dsw-alias-label-secondary); font: inherit; font-size: 11px; cursor: pointer; }
+.repositoryViewMode button:first-child { border-left: 0; }
+.repositoryViewMode button[aria-selected="true"] { background: var(--dsw-alias-interactive-bg-hover); color: var(--dsw-alias-label-primary); font-weight: 600; }
+.flowSteps { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 0; margin: 0; padding: 16px; list-style: none; }
+.flowStep { position: relative; min-width: 0; }
+.flowStep:not(:last-child)::after { position: absolute; top: 21px; right: 0; left: calc(50% + 25px); height: 1px; content: ''; background: var(--dsw-alias-border-l2); }
+.flowStep[data-state="done"]:not(:last-child)::after, .flowStep[data-state="warning"]:not(:last-child)::after, .flowStep[data-state="ongoing"]:not(:last-child)::after { background: var(--dsw-alias-brand-primary); }
+.flowNode { position: relative; z-index: 1; display: flex; align-items: flex-start; gap: 8px; min-width: 0; padding-right: 14px; background: var(--dsw-alias-bg-layer-1); }
+.flowNodeIcon { display: grid; place-items: center; width: 42px; height: 42px; flex: 0 0 auto; border: 1px solid var(--dsw-alias-border-l2); border-radius: 50%; color: var(--dsw-alias-label-secondary); background: var(--dsw-alias-bg-layer-1); }
+.flowStep[data-state="done"] .flowNodeIcon { border-color: var(--dsw-alias-state-success-primary); color: var(--dsw-alias-state-success-primary); }
+.flowStep[data-state="warning"] .flowNodeIcon, .flowStep[data-state="ongoing"] .flowNodeIcon { border-color: var(--dsw-alias-brand-primary); color: var(--dsw-alias-brand-primary); }
+.flowStep[data-state="error"] .flowNodeIcon { border-color: var(--dsw-alias-state-error-primary); color: var(--dsw-alias-state-error-primary); }
+.flowNodeText { display: flex; flex-direction: column; min-width: 0; gap: 4px; padding-top: 4px; }
+.flowNodeText b { color: var(--dsw-alias-label-primary); font-size: 11px; font-weight: 600; }
+.flowNodeText small { overflow: hidden; color: var(--dsw-alias-label-secondary); font-size: 10px; line-height: 1.45; text-overflow: ellipsis; white-space: nowrap; }
+.repositoryTree { padding: 16px 20px 18px; }
+.treeList, .treeChildren { margin: 0; padding: 0; list-style: none; }
+.treeChildren { position: relative; margin: 2px 0 0 20px; padding-left: 25px; }
+.treeChildren::before { position: absolute; top: 0; bottom: 17px; left: 8px; width: 1px; content: ''; background: var(--dsw-alias-border-l2); }
+.treeChildren > li { position: relative; }
+.treeChildren > li::before { position: absolute; top: 22px; left: -17px; width: 17px; height: 1px; content: ''; background: var(--dsw-alias-border-l2); }
+.treeNode { position: relative; display: flex; align-items: center; min-width: 0; gap: 8px; min-height: 42px; padding: 5px 9px; border: 0.5px solid var(--dsw-alias-border-l2); background: var(--dsw-alias-bg-layer-1); }
+.treeNodeIcon { display: grid; place-items: center; width: 28px; height: 28px; flex: 0 0 auto; border: 1px solid var(--dsw-alias-border-l2); border-radius: 50%; color: var(--dsw-alias-label-secondary); }
+.treeNode[data-state="done"] .treeNodeIcon { border-color: var(--dsw-alias-state-success-primary); color: var(--dsw-alias-state-success-primary); }
+.treeNode[data-state="warning"] .treeNodeIcon, .treeNode[data-state="ongoing"] .treeNodeIcon { border-color: var(--dsw-alias-brand-primary); color: var(--dsw-alias-brand-primary); }
+.treeNode[data-state="error"] .treeNodeIcon { border-color: var(--dsw-alias-state-error-primary); color: var(--dsw-alias-state-error-primary); }
+.treeNodeText { display: flex; flex: 1; min-width: 0; flex-direction: column; gap: 2px; }
+.treeNodeText b { overflow: hidden; color: var(--dsw-alias-label-primary); font-size: 11px; font-weight: 600; text-overflow: ellipsis; white-space: nowrap; }
+.treeNodeText small { overflow: hidden; color: var(--dsw-alias-label-secondary); font-size: 10px; line-height: 1.4; text-overflow: ellipsis; white-space: nowrap; }
+.treeCount { flex: 0 0 auto; min-width: 22px; color: var(--dsw-alias-label-secondary); font: 10px/1.5 var(--dsw-font-mono, monospace); text-align: right; }
+.treeLeaf { display: flex; align-items: center; min-width: 0; gap: 7px; min-height: 30px; padding: 4px 8px; color: var(--dsw-alias-label-secondary); }
+.treeLeaf svg { flex: 0 0 auto; }
+.treeLeaf code { min-width: 0; overflow-wrap: anywhere; color: var(--dsw-alias-label-primary); font: 10px/1.45 var(--dsw-font-mono, monospace); }
+.commitTimeline { margin: 0 16px 16px; padding: 12px 14px; border-top: 0.5px solid var(--dsw-alias-border-l2); }
+.commitTimeline header { display: flex; align-items: center; justify-content: space-between; gap: 8px; color: var(--dsw-alias-label-primary); }
+.commitTimeline header span { color: var(--dsw-alias-label-secondary); font: 10px/1.5 var(--dsw-font-mono, monospace); }
+.commitTimeline ol { position: relative; display: flex; flex-direction: column; gap: 0; margin: 12px 0 0; padding: 0 0 0 17px; list-style: none; }
+.commitTimeline ol::before { position: absolute; top: 6px; bottom: 10px; left: 3px; width: 1px; content: ''; background: var(--dsw-alias-border-l2); }
+.commitTimeline li { position: relative; display: flex; flex-direction: column; gap: 3px; min-width: 0; padding: 0 0 12px 12px; }
+.commitTimeline li:last-child { padding-bottom: 0; }
+.commitDot { position: absolute; top: 4px; left: -17px; width: 7px; height: 7px; border: 2px solid var(--dsw-alias-bg-layer-1); border-radius: 50%; background: var(--dsw-alias-brand-primary); box-shadow: 0 0 0 1px var(--dsw-alias-brand-primary); }
+.commitTimeline a { display: flex; align-items: baseline; gap: 8px; min-width: 0; color: var(--dsw-alias-label-primary); text-decoration: none; }
+.commitTimeline a:hover b { text-decoration: underline; }
+.commitTimeline a code { flex: 0 0 auto; color: var(--dsw-alias-brand-primary); font: 10px/1.5 var(--dsw-font-mono, monospace); }
+.commitTimeline a b { overflow: hidden; font-size: 11px; font-weight: 500; text-overflow: ellipsis; white-space: nowrap; }
+.commitTimeline small { color: var(--dsw-alias-label-secondary); font-size: 10px; }
 .toolbar { display: flex; align-items: center; gap: 8px; padding: 10px 16px; border-bottom: 0.5px solid var(--dsw-alias-border-l2); flex-wrap: wrap; }
 .search { display: flex; align-items: center; gap: 8px; flex: 1; min-width: 150px; }
 .search input { width: 100%; min-width: 0; border: 0; outline: 0; background: transparent; color: inherit; padding: 6px 0; font: inherit; }
@@ -24,6 +102,10 @@
 .summary > div { min-width: 0; }
 .summary span { display: block; color: var(--dsw-alias-label-secondary); margin-bottom: 6px; }
 .summary strong { display: block; font-size: 20px; font-weight: 600; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.ledgerContext { display: flex; gap: 12px; flex-wrap: wrap; padding: 8px 16px; border-bottom: 0.5px solid var(--dsw-alias-border-l2); color: var(--dsw-alias-label-secondary); font-size: 11px; font-variant-numeric: tabular-nums; }
+.ledgerContext b { color: var(--dsw-alias-label-primary); font-weight: 600; }
+.ledgerContext[data-task-status='waiting-human'] { border-left: 2px solid var(--dsw-alias-state-warn-primary); }
+.taskWaitingHint { flex-basis: 100%; color: var(--dsw-alias-state-warn-primary); }
 .scope { display: flex; gap: 16px; align-items: center; flex-wrap: wrap; padding: 8px 16px; color: var(--dsw-alias-label-secondary); }
 .scope button, .more { border: 0; background: transparent; text-decoration: underline; padding: 4px; }
 .scope button { margin-left: auto; }
@@ -48,6 +130,50 @@
 .detailHeader { display: flex; flex-direction: column; gap: 6px; padding: 14px 16px; }
 .detailHeader h3 { font-size: 14px; margin: 0; font-weight: 600; }
 .muted { color: var(--dsw-alias-label-secondary); overflow-wrap: anywhere; }
+.requestAudit { margin: 0 16px 12px; padding: 8px 10px; border-left: 2px solid var(--dsw-alias-brand-primary); background: var(--dsw-alias-interactive-bg-hover); color: var(--dsw-alias-label-secondary); line-height: 1.6; }
+.requestAudit b { color: var(--dsw-alias-label-primary); }
+.knowledgeSources { margin-top: 6px; }
+.knowledgeSources ul { margin: 4px 0 0; padding-left: 18px; }
+.knowledgeSources li { overflow-wrap: anywhere; }
+.contextBreakdown { margin: 0 16px 12px; padding: 8px 10px; border: 0.5px solid var(--dsw-alias-border-l2); color: var(--dsw-alias-label-secondary); line-height: 1.6; }
+.contextBreakdown > b { color: var(--dsw-alias-label-primary); }
+.contextBreakdownGrid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 4px 12px; margin-top: 5px; font-variant-numeric: tabular-nums; }
+.contextBreakdownGrid strong { color: var(--dsw-alias-label-primary); font-weight: 600; }
+.gitWorkspace { margin: 0 16px 12px; border: 0.5px solid var(--dsw-alias-border-l2); padding: 10px; color: var(--dsw-alias-label-secondary); }
+.gitWorkspaceHeader { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+.gitWorkspaceHeader h4 { margin: 0; color: var(--dsw-alias-label-primary); font-size: 12px; }
+.gitWorkspaceHeader span { display: block; margin-top: 4px; font-size: 10px; line-height: 1.5; }
+.gitWorkspaceHeader code { max-width: 48%; overflow-wrap: anywhere; color: var(--dsw-alias-label-primary); font: 11px/1.5 var(--dsw-font-mono, monospace); }
+.gitCheckpointStrip { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; margin-top: 10px; }
+.gitCheckpointCard { display: flex; min-width: 0; flex-direction: column; gap: 3px; padding: 7px; background: var(--dsw-alias-interactive-bg-hover); overflow-wrap: anywhere; }
+.gitCheckpointCard b { color: var(--dsw-alias-label-primary); font-size: 11px; }
+.gitCheckpointCard span, .gitCheckpointCard small { font-size: 10px; }
+.gitError { color: var(--dsw-alias-state-error-primary); }
+.gitMetricGrid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin-top: 10px; }
+.gitMetricGrid div { min-width: 0; }
+.gitMetricGrid span { display: block; font-size: 10px; }
+.gitMetricGrid strong { display: block; margin-top: 3px; color: var(--dsw-alias-label-primary); font-size: 14px; font-variant-numeric: tabular-nums; }
+.gitSyncPanel { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; margin-top: 10px; padding-top: 10px; border-top: 0.5px solid var(--dsw-alias-border-l2); }
+.gitSyncPanel div { min-width: 0; }
+.gitSyncPanel span { display: block; font-size: 10px; }
+.gitSyncPanel strong, .gitSyncPanel code { display: block; margin-top: 3px; overflow-wrap: anywhere; color: var(--dsw-alias-label-primary); font: 11px/1.5 var(--dsw-font-mono, monospace); }
+.gitSyncPanel strong { color: var(--dsw-alias-state-success-primary); font-family: inherit; font-weight: 600; }
+.gitSyncPanel p { grid-column: 1 / -1; margin: 0; font-size: 10px; overflow-wrap: anywhere; }
+.commitRow { display: flex; align-items: baseline; min-width: 0; gap: 8px; }
+.commitRow code { flex: 0 0 auto; color: var(--dsw-alias-brand-primary); font: 10px/1.5 var(--dsw-font-mono, monospace); }
+.commitRow b { min-width: 0; overflow: hidden; color: var(--dsw-alias-label-primary); font-size: 11px; font-weight: 500; text-overflow: ellipsis; white-space: nowrap; }
+.commitFiles { margin-top: 3px; font-size: 10px; }
+.commitFiles summary { cursor: pointer; color: var(--dsw-alias-label-secondary); }
+.commitFiles ul { display: flex; flex-direction: column; gap: 2px; margin: 4px 0 0; padding-left: 14px; }
+.commitFiles code { overflow-wrap: anywhere; font: 10px/1.4 var(--dsw-font-mono, monospace); }
+.gitClean { margin: 10px 0 0; font-size: 11px; }
+.gitFileList { display: flex; flex-direction: column; gap: 4px; margin: 10px 0 0; padding: 0; list-style: none; }
+.gitFileList li { display: flex; min-width: 0; justify-content: space-between; gap: 8px; padding: 4px 0; border-top: 0.5px solid var(--dsw-alias-border-l2); }
+.gitFileList code { min-width: 0; overflow-wrap: anywhere; text-align: right; color: var(--dsw-alias-label-primary); font: 11px/1.5 var(--dsw-font-mono, monospace); }
+.gitFileKind { flex: 0 0 auto; font-size: 10px; }
+.gitDiffDetails { margin-top: 10px; border-top: 0.5px solid var(--dsw-alias-border-l2); }
+.gitDiffDetails summary { cursor: pointer; padding: 7px 0 3px; font-size: 11px; }
+.gitDiffDetails pre { max-height: 260px; margin: 4px 0 0; overflow: auto; white-space: pre-wrap; overflow-wrap: anywhere; font: 11px/1.55 var(--dsw-font-mono, monospace); }
 .accounting { margin: 0; padding: 0 16px 12px; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px 18px; font-variant-numeric: tabular-nums; }
 .accounting > div { min-width: 0; }
 .accounting dt { font-size: 11px; color: var(--dsw-alias-label-secondary); }
@@ -105,4 +231,17 @@
   .toolbar { padding: 8px; }
   .search { flex-basis: 100%; }
   .scope { gap: 8px; padding: 8px; }
+  .gitCheckpointStrip { grid-template-columns: 1fr; }
+  .gitWorkspaceHeader { flex-direction: column; }
+  .gitWorkspaceHeader code { max-width: 100%; }
+  .gitSyncPanel { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .repositoryFlowHeader { flex-direction: column; }
+  .repositoryFlowActions { width: 100%; justify-content: space-between; }
+  .repositoryTree { padding-right: 10px; padding-left: 10px; }
+  .repositoryMonitor, .repositoryFlow { margin-right: 8px; margin-left: 8px; }
+  .repositoryListItem { align-items: flex-start; flex-direction: column; gap: 8px; }
+  .repositoryListActions { width: 100%; justify-content: flex-end; }
+  .flowSteps { grid-template-columns: 1fr; gap: 8px; }
+  .flowStep:not(:last-child)::after { top: 42px; right: auto; bottom: -8px; left: 21px; width: 1px; height: 8px; }
+  .flowNode { padding-right: 0; }
 }

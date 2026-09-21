@@ -41,6 +41,7 @@ function resolveContentWidth(columnWidth: number, preference: number | null): nu
  */
 export function ConversationMainPanel(props: ConversationSlotProps) {
   const { sessionId, useSession, useSessions, useConversation, renderSlot } = props
+  const activeView = props.useActiveView?.(value => value)
   const session = useSession(s => s)
   const conversation = useConversation(s => s)
   const shellPhase = session === undefined || conversation === undefined
@@ -136,6 +137,7 @@ export function ConversationMainPanel(props: ConversationSlotProps) {
         session={session}
         phase={phase}
         hero={hero}
+        showComposer={hero || activeView === null || activeView === undefined || activeView === 'chat'}
         onHandleStart={onHandleStart}
         onHandleDrag={onHandleDrag}
         onHandleCommit={onHandleCommit}

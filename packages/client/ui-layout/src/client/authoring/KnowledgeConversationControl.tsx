@@ -13,7 +13,6 @@ import type { MenuEntry } from '@deepseek-ai/dsh-client-ui-primitives'
 import type {
   KnowledgeBase,
   KnowledgeOverview,
-  KnowledgeBaseDraft,
 } from '@deepseek-ai/dsh-api-remotes/client'
 import css from './KnowledgeConversationControl.module.css'
 
@@ -24,8 +23,8 @@ type RemoteResult<T> =
 
 export interface KnowledgeConversationControlInjected {
   overview: () => Promise<RemoteResult<KnowledgeOverview>>
-  get: (id: Id) => Promise<RemoteResult<KnowledgeBase>>
-  save: (draft: KnowledgeBaseDraft) => Promise<RemoteResult<KnowledgeBase>>
+  selected: (sessionId: string) => Promise<RemoteResult<Id[]>>
+  setSelected: (sessionId: string, baseIds: Id[]) => Promise<RemoteResult<{ sessionId: string; baseIds: Id[] }>>
   openManagement: () => void
 }
 
@@ -34,13 +33,13 @@ export type KnowledgeConversationControlProps =
   & InjectFace<KnowledgeConversationControlInjected>
   & PropsLocale<'layout'>
 
-function errorMessage(result: { message?: string; code?: string }): string {
-  return result.message ?? result.code ?? 'Knowledge base operation failed'
+function errorMessage(result: { message?: string; code?: string }, fallback: string): string {
+  return result.message ?? result.code ?? fallback
 }
 
-/** Composer affordance for turning the model-facing knowledge tools on or off. */
+/** Composer affordance for selecting the knowledge bases used by this Session. */
 export function KnowledgeConversationControl({
-  t, overview: readOverview, get, save, openManagement,
+  t, overview: readOverview, selected: readSelected, setSelected, openManagement, sessionId,
 }: KnowledgeConversationControlProps) {
   const [overview, setOverview] = useState<KnowledgeOverview | null>(null)
   const [open, setOpen] = useState(false)
@@ -48,22 +47,42 @@ export function KnowledgeConversationControl({
   const [error, setError] = useState<string | null>(null)
 
   const refresh = async (): Promise<void> => {
-    const result = await readOverview()
-    if (result.ok) {
-      setOverview(result.value)
-      setError(null)
-    } else {
-      setError(errorMessage(result.error))
+    // The base list is independent of this Session's selection: publish it as
+    // soon as it arrives so a failing selection read cannot strand the menu in
+    // its loading state with no usable entries.
+    const overviewResult = await readOverview()
+    if (!overviewResult.ok) {
+      setError(errorMessage(overviewResult.error, t('kb.operationError')))
+      return
     }
+    setOverview(overviewResult.value)
+    let selectedResult: RemoteResult<Id[]>
+    try {
+      selectedResult = await readSelected(sessionId)
+    } catch (cause) {
+      setSelectedIds([])
+      setError(cause instanceof Error ? cause.message : String(cause))
+      return
+    }
+    if (!selectedResult.ok) {
+      setSelectedIds([])
+      setError(errorMessage(selectedResult.error, t('kb.operationError')))
+      return
+    }
+    setSelectedIds(selectedResult.value.filter(id => overviewResult.value.bases.some(
+      base => base.id === id && base.enabled,
+    )))
+    setError(null)
   }
 
   useEffect(() => {
     void refresh()
   }, [])
 
-  const enabled = useMemo(
-    () => overview?.bases.filter(base => base.enabled) ?? [],
-    [overview],
+  const [selectedIds, setSelectedIds] = useState<Id[]>([])
+  const selectedBases = useMemo(
+    () => overview?.bases.filter(base => selectedIds.includes(base.id)) ?? [],
+    [overview, selectedIds],
   )
   const items: readonly MenuEntry[] = overview === null
     ? [{ type: 'label', id: 'loading', text: t('kb.chat.loading') }]
@@ -74,7 +93,7 @@ export function KnowledgeConversationControl({
         ...overview.bases.map(base => ({
           id: base.id,
           label: <span title={base.title}>{base.title}</span>,
-          disabled: busyId !== null,
+          disabled: busyId !== null || !base.enabled,
         })),
       ]
   const footer: readonly MenuEntry[] = [
@@ -88,25 +107,17 @@ export function KnowledgeConversationControl({
       openManagement()
       return
     }
-    const base = overview?.bases.find(candidate => candidate.id === id)
-    if (base === undefined || busyId !== null) return
+    if (overview === null || busyId !== null) return
+    const next = selectedIds.includes(id as Id)
+      ? selectedIds.filter(candidate => candidate !== id)
+      : [...selectedIds, id as Id]
     setBusyId(id)
     setError(null)
     void (async () => {
       try {
-        const current = await get(base.id)
-        if (!current.ok) throw new Error(errorMessage(current.error))
-        const draft: KnowledgeBaseDraft = {
-          id: current.value.id,
-          title: current.value.title,
-          description: current.value.description,
-          enabled: !current.value.enabled,
-          split: current.value.split,
-          documents: current.value.documents,
-          revision: current.value.revision,
-        }
-        const result = await save(draft)
-        if (!result.ok) throw new Error(errorMessage(result.error))
+        const result = await setSelected(sessionId, next)
+        if (!result.ok) throw new Error(errorMessage(result.error, t('kb.operationError')))
+        setSelectedIds(result.value.baseIds)
         await refresh()
       } catch (cause) {
         setError(cause instanceof Error ? cause.message : String(cause))
@@ -116,10 +127,10 @@ export function KnowledgeConversationControl({
     })()
   }
 
-  const label = enabled.length === 0 ? t('kb.chat.enable') : t('kb.chat.label')
-  const title = error ?? (enabled.length === 0
+  const label = selectedBases.length === 0 ? t('kb.chat.enable') : t('kb.chat.label')
+  const title = error ?? (selectedBases.length === 0
     ? t('kb.chat.enableTitle')
-    : enabled.map(base => base.title).join('、'))
+    : selectedBases.map(base => base.title).join('、'))
 
   return (
     <span className={css.wrap} title={title}>
@@ -127,7 +138,7 @@ export function KnowledgeConversationControl({
         open={open}
         items={items}
         footer={footer}
-        selectedIds={enabled.map(base => base.id)}
+        selectedIds={selectedIds}
         selection="check"
         onSelect={toggle}
         onClose={() => { setOpen(false) }}
@@ -136,9 +147,9 @@ export function KnowledgeConversationControl({
         anchor={(
           <button
             type="button"
-            className={`${css.trigger} ${enabled.length > 0 ? css.active : ''}`}
+            className={`${css.trigger} ${selectedBases.length > 0 ? css.active : ''}`}
             aria-label={label}
-            aria-pressed={enabled.length > 0}
+            aria-pressed={selectedBases.length > 0}
             aria-haspopup="menu"
             aria-expanded={open}
             onClick={() => {
@@ -148,7 +159,7 @@ export function KnowledgeConversationControl({
           >
             <span className={css.icon} aria-hidden><IconDatabaseOutline16 size={14} /></span>
             <span className={css.label}>{label}</span>
-            {enabled.length > 0 && <span className={css.count}>{enabled.length}</span>}
+            {selectedBases.length > 0 && <span className={css.count}>{selectedBases.length}</span>}
             <span className={css.chevron} aria-hidden><IconChevronDownOutline14 /></span>
           </button>
         )}

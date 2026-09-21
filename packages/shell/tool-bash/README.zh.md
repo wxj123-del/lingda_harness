@@ -41,11 +41,12 @@ kind: "package-reference"
 - name: '@deepseek-ai/dsh-tool-jobs'
 ```
 
-唯一的配置字段用于开关后台支持。
+配置字段用于开关后台支持，以及可选的前台调用外层限时。
 
 | 字段 | 默认值 | 含义 |
 |---|---|---|
 | `enableRunInBackground` | `true` | 暴露 `run_in_background`；为 `false` 时拒绝强制后台调用 |
+| `toolTimeoutMs` | 未设置 | 为前台 `bash` 调用设置由 `timeout-policy` 执行的外层协作式限时；后台任务的执行阶段不受此项影响 |
 
 生成的[配置目录](../../../docs/config-catalog.zh.md#deepseek-aidsh-tool-bash)是每个受支持字段及其 JSDoc 的穷尽式真源；生成的[工具目录](../../../docs/tool-catalog.zh.md#deepseek-aidsh-tool-bash)携带完整参数 schema。
 

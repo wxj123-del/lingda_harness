@@ -70,6 +70,10 @@ const ABSENT_BLOCK = {
   getSnapshot: (): ComposerBlock | undefined => undefined,
   subscribe: () => () => {},
 }
+const ABSENT_ACTIVE_VIEW = {
+  getSnapshot: (): string | null => null,
+  subscribe: () => () => {},
+}
 const EMPTY_LEXICON: ReadonlyMap<'/' | '@', readonly string[]> = new Map()
 const ABSENT_LEXICON = {
   getSnapshot: () => EMPTY_LEXICON,
@@ -137,6 +141,15 @@ export function apply(ctx: Context, config: Config = Config({})): void {
   ctx.effect(() => ctx.locale.register(NS, { zh, en }), 'ui-conversation: dictionaries')
   const t = ctx.locale.bind(NS)
   const conversationStore = createConversationStore()
+  const activeViewSources = new Map<SessionId, ReturnType<typeof createSnapshotStore<string | null>>>()
+  const activeViewSource = (sessionId: SessionId): ReturnType<typeof createSnapshotStore<string | null>> => {
+    let source = activeViewSources.get(sessionId)
+    if (source === undefined) {
+      source = createSnapshotStore<string | null>(null)
+      activeViewSources.set(sessionId, source)
+    }
+    return source
+  }
   const submissionPolicy = new ComposerSubmissionPolicy(
     ctx.settingsScope.bind<ConversationSettings>({ namespace: CONVERSATION_SETTINGS_NAMESPACE }),
   )
@@ -166,7 +179,10 @@ export function apply(ctx: Context, config: Config = Config({})): void {
   }
   const activateView = (sessionId: SessionId, preferred: string | null): void => {
     const active = resolveActiveView(viewTabs(), preferred)
-    if (active !== undefined) uiConversation.binding(sessionId).activate(active.id)
+    if (active !== undefined) {
+      uiConversation.binding(sessionId).activate(active.id)
+      activeViewSource(sessionId).set(active.id)
+    }
   }
   const restoreView = (sessionId: SessionId): void => {
     activateView(sessionId, readConversationViewPreference(sessionId))
@@ -255,6 +271,7 @@ export function apply(ctx: Context, config: Config = Config({})): void {
     inject: (sessionId: SessionId | undefined): ConversationInjected => ({
       hooks: {
         composerBlock: sessionId === undefined ? ABSENT_BLOCK : composerBlocks.storeFor(sessionId),
+        activeView: sessionId === undefined ? ABSENT_ACTIVE_VIEW : activeViewSource(sessionId),
       },
       selectWorkspace: workspaceId => workspaceNavigation.openWorkspace(workspaceId, (nextId) => {
         if (sessionId !== undefined && nextId !== sessionId) {

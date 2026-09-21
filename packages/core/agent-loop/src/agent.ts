@@ -377,7 +377,7 @@ export class ReactLoopAgent implements Agent {
         }
       }
       firstAttempt = false
-      const request = this.buildRequest(config, preparedCall, assembly.tools, startsRequestSeries, signal)
+      const request = await this.buildRequest(config, preparedCall, assembly.tools, startsRequestSeries, signal, turn, step)
       const live = new AssistantStreamAttempt(
         this.session.id,
         ++this.assistantAttemptCounter,
@@ -551,13 +551,15 @@ export class ReactLoopAgent implements Agent {
   }
 
   /** Log the resolved envelope and derive a frozen request from the admitted surface. */
-  private buildRequest(
+  private async buildRequest(
     config: LlmCallConfig,
     preparedCall: PreparedLlmCall | undefined,
     tools: GenerateOptions['tools'] & object,
     startsRequestSeries: boolean,
     signal: AbortSignal,
-  ): GenerateOptions {
+    turn: number,
+    step: number,
+  ): Promise<GenerateOptions> {
     const { session } = this
     const surfaceGeneration = session.surface.contentGeneration
     const header = canonicalHeader({
@@ -601,7 +603,12 @@ export class ReactLoopAgent implements Agent {
 
     // canonicalHeader is shallow; append logs a detached snapshot, not these local values.
     deepFreeze(header)
-    const boundaryMessages = session.deriveMessages()
+    const derivedMessages = session.deriveMessages()
+    const boundaryMessages = await this.dispatch.waterfall(
+      'agent/request-context',
+      { turn, step, messages: derivedMessages, signal },
+      () => Promise.resolve(derivedMessages),
+    )
     for (const message of boundaryMessages) {
       if (this.frozenMessages.has(message)) continue
       deepFreeze(message)

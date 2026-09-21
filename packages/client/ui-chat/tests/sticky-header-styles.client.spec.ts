@@ -19,15 +19,10 @@ function declarationsFrom(source: string, selector: string): string[] {
 }
 
 describe('pinned collapsible headers', () => {
-  it('pins an open Think header to the scrollport top and masks the prose under it', () => {
-    expect(
-      declarationsFrom(read('ReasoningRow.module.css'), '.root[data-expanded] [data-open] [data-disclosure-row]'),
-    ).toEqual(expect.arrayContaining([
-      'position: sticky',
-      'top: 0',
-      'z-index: 1',
-      'background: var(--dsw-alias-bg-base)',
-    ]))
+  it('leaves the live Think row unpinned: it has no scrollable prose body', () => {
+    const css = read('ReasoningRow.module.css')
+    expect(css).not.toContain('position: sticky')
+    expect(css).not.toContain('data-expanded')
   })
 
   it('ranks the pinned compaction header above the code-block banner', () => {

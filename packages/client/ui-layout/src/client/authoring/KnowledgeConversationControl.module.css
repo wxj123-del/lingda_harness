@@ -4,6 +4,26 @@
   min-width: 0;
 }
 
+.suggestion {
+  height: 28px;
+  max-width: 180px;
+  margin-right: 4px;
+  padding: 0 7px;
+  overflow: hidden;
+  border: 1px solid var(--dsw-alias-interactive-border-hover);
+  border-radius: 14px;
+  background: var(--dsw-alias-interactive-bg-hover);
+  color: var(--dsw-alias-label-secondary);
+  font-size: 11px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.suggestion:hover {
+  color: var(--dsw-alias-label-primary);
+}
+
 .trigger {
   display: inline-flex;
   align-items: center;

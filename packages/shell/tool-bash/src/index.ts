@@ -33,11 +33,14 @@ export const inject = ['tools', 'shell', 'systemPrompt', 'shellEnv']
 export interface Config {
   /** Expose `run_in_background` (default true); disabled calls are also rejected. */
   enableRunInBackground?: boolean
+  /** Optional outer deadline enforced by the timeout-policy guard for foreground calls. */
+  toolTimeoutMs?: number
 }
 
 /** Runtime configuration schema for the bash tool plugin. */
 export const Config: z<Config> = z.object({
   enableRunInBackground: z.boolean().default(true),
+  toolTimeoutMs: z.number().step(1).min(1),
 })
 
 /** Parsed tool args; execute validates value constraints absent from ParameterSchemaSpec. */
@@ -240,6 +243,7 @@ export function apply(ctx: Context, config: Config = {}): void {
 
   ctx.tools.register(defineTool({
     name: 'bash',
+    ...config.toolTimeoutMs !== undefined ? { timeoutMs: config.toolTimeoutMs } : {},
     description: bashDescription(backgroundEnabled, escalationModes),
     parameters: {
       command: { type: 'string', required: true, description: 'The bash command to execute.' },

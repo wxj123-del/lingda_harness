@@ -3,7 +3,7 @@ export const NS = 'stepInsight'
 
 /** Simplified Chinese ledger copy. */
 export const zh = {
-  title: 'Token 轨迹', search: '搜索步骤、模型或工具', export: '导出已加载记录',
+  title: 'Token 轨迹', repositoryView: '仓库', repositoryDescription: '查看当前会话工作区的只读 Git 状态、变更和检查点。', repositoryNoData: '当前会话还没有可用的仓库检查点。', search: '搜索步骤、模型或工具', export: '导出已加载记录',
   total: '已知总用量', input: '输入', output: '输出', cache: '缓存读取',
   cacheWrite: '缓存写入', uncached: '未缓存输入', reasoning: '思考（包含在输出中）',
   unknownInput: '未分类输入', requests: '请求', step: '步骤', turn: '轮', attempt: '次',
@@ -43,6 +43,25 @@ export const zh = {
   toolOrder: '工具排序', schemaOrder: '原始顺序', similarityOrder: '相似度降序',
   comparisonText: '参照文本与计算依据', noComparisonText: '没有可比较的用户文本',
   called: '本步已调用', notComparable: '无法比较', matchedTerms: '匹配词', noMatchingTerms: '没有匹配词',
+  mode: '模式', toolBudget: '工具步骤', contextSummary: '上下文估算',
+  task: '任务', taskGoal: '目标', taskStatus: '状态', taskOwner: '负责人', taskBudget: '任务预算',
+  taskCreated: '已创建', taskPlanned: '已规划', taskRunning: '执行中', taskWaitingHuman: '等待确认', taskWaitingHint: '任务已暂停，完成确认后会继续；刷新页面也会从会话日志恢复状态。',
+  taskSucceeded: '已完成', taskFailed: '失败', taskCancelled: '已取消',
+  contextMessages: '保留消息', contextTrimmed: '裁剪（消息 / 工具结果）',
+  contextBreakdown: '上下文分项', contextSystem: '系统', contextSchema: '工具定义',
+  contextHistory: '历史', contextKnowledge: '知识库', contextSkills: 'Skill', contextToolResults: '工具结果',
+  contextEstimatedInput: '估算输入', contextOutputBudget: '输出预留', deduplicated: '去重',
+  selectionReasons: '工具选择依据', selectionReason: '原因', hiddenTools: '未注入的工具', hiddenToolReason: '未注入原因',
+  knowledgeAudit: '知识库召回审计', knowledgeHits: '命中', knowledgeThreshold: '阈值', knowledgeBudget: '预算', knowledgeSources: '来源', knowledgeSource: '知识库 / 文档',
+  knowledgeSkipped: '跳过知识库', knowledgeFailed: '检索失败', blockedTools: '被策略阻止的工具', blockedReason: '阻止原因',
+  modeQa: '问答', modeResearch: '研究', modeCoding: '编码', modeExecution: '执行 / 媒体',
+  gitCheckpoint: '工作区检查点', gitWorkspace: 'Git 工作区', gitReadOnly: '只读审计，不会自动提交或修改仓库',
+  gitMonitor: '仓库监视', gitTrackedRepositories: '个已添加仓库', gitAddress: '仓库地址', gitAddressPlaceholder: '输入本地路径或 Git URL', gitAdd: '添加', gitRemove: '移除仓库', gitRefresh: '刷新仓库状态', gitMonitorToggle: '监视仓库', gitWatching: '监视中', gitWaiting: '等待连接',
+  gitFlowTitle: '变更流程', gitFlowDescription: '读取工作区未提交状态、提交时间线和远端同步状态。', gitViewFlow: '流程图', gitViewTree: '树状图', gitTreeRoot: '仓库状态', gitTreeCommits: '提交更新点', gitTreeFiles: '涉及文件', gitFlowSource: '仓库', gitFlowScan: '读取状态', gitFlowChanges: '解析变更', gitFlowNotify: '更新监视', gitFlowCheckpoint: '已读取检查点', gitCheckpointCount: '个检查点', gitNoRepository: '尚未发现工作区', gitCommitTimeline: '提交时间线', gitNoCommits: '暂时没有读取到提交', gitUnknownAuthor: '未知作者',
+  gitBefore: '任务前状态', gitAfter: '任务后状态', gitBranch: '分支', gitStatus: '工作区状态', gitDiffStat: '变更统计', gitDiff: '差异', gitError: '检查点读取失败',
+  gitFilesChanged: '变更文件', gitWorktreeChanges: '未提交文件', gitInsertions: '新增行', gitDeletions: '删除行', gitNoChanges: '工作区没有未提交变更',
+  gitSyncStatus: '同步状态', gitSyncSynced: '已与远端同步', gitSyncRemoteAhead: '远端有新提交', gitSyncLocalAhead: '本地有未推送提交', gitSyncDiverged: '本地与远端已分叉', gitSyncDifferent: '本地与远端提交不同', gitSyncUnknown: '暂时无法确认远端状态', gitLocalHead: '本地 HEAD', gitRemoteHead: '远端 HEAD', gitUpstream: '跟踪分支', gitRemoteUnavailable: '无法读取远端 HEAD', gitRecentCommits: '最近提交', gitCommitFiles: '涉及文件', gitNoCommitFiles: '未记录文件清单',
+  gitModified: '修改', gitAdded: '新增', gitDeleted: '删除', gitRenamed: '重命名', gitUntracked: '未跟踪', gitConflicted: '冲突', gitOther: '其他',
 } as const
 
 /** Keys owned by this plugin's locale namespace. */
@@ -52,7 +71,7 @@ export type Translate = (key: StepInsightKey) => string
 
 /** English ledger copy with the same keys as Chinese. */
 export const en: Record<StepInsightKey, string> = {
-  title: 'Token trace', search: 'Search steps, models or tools', export: 'Export loaded records',
+  title: 'Token trace', repositoryView: 'Repository', repositoryDescription: 'Inspect the current session worktree with read-only Git status, changes, and checkpoints.', repositoryNoData: 'No repository checkpoint is available for this session yet.', search: 'Search steps, models or tools', export: 'Export loaded records',
   total: 'Known total', input: 'Input', output: 'Output', cache: 'Cache read',
   cacheWrite: 'Cache write', uncached: 'Uncached input', reasoning: 'Reasoning (included in output)',
   unknownInput: 'Unclassified input', requests: 'Requests', step: 'Step', turn: 'Turn', attempt: 'Attempt',
@@ -92,6 +111,25 @@ export const en: Record<StepInsightKey, string> = {
   toolOrder: 'Tool order', schemaOrder: 'Original order', similarityOrder: 'Highest similarity first',
   comparisonText: 'Reference text and scoring basis', noComparisonText: 'No comparable user text',
   called: 'Called in this step', notComparable: 'Not comparable', matchedTerms: 'Matched terms', noMatchingTerms: 'No matching terms',
+  mode: 'Mode', toolBudget: 'Tool steps', contextSummary: 'Context estimate',
+  task: 'Task', taskGoal: 'Goal', taskStatus: 'Status', taskOwner: 'Owner', taskBudget: 'Task budget',
+  taskCreated: 'Created', taskPlanned: 'Planned', taskRunning: 'Running', taskWaitingHuman: 'Waiting for confirmation', taskWaitingHint: 'The task is paused until confirmation; refreshing restores its state from the session log.',
+  taskSucceeded: 'Succeeded', taskFailed: 'Failed', taskCancelled: 'Cancelled',
+  contextMessages: 'Messages retained', contextTrimmed: 'Trimmed (messages / tool results)',
+  contextBreakdown: 'Context breakdown', contextSystem: 'System', contextSchema: 'Tool schema',
+  contextHistory: 'History', contextKnowledge: 'Knowledge base', contextSkills: 'Skills', contextToolResults: 'Tool results',
+  contextEstimatedInput: 'Estimated input', contextOutputBudget: 'Output budget', deduplicated: 'Deduplicated',
+  selectionReasons: 'Tool selection reasons', selectionReason: 'Reason', hiddenTools: 'Tools not injected', hiddenToolReason: 'Why it was omitted',
+  knowledgeAudit: 'Knowledge retrieval audit', knowledgeHits: 'Hits', knowledgeThreshold: 'Threshold', knowledgeBudget: 'Budget', knowledgeSources: 'Sources', knowledgeSource: 'Library / document',
+  knowledgeSkipped: 'Skipped libraries', knowledgeFailed: 'Retrieval failed', blockedTools: 'Policy-blocked tools', blockedReason: 'Block reason',
+  modeQa: 'Q&A', modeResearch: 'Research', modeCoding: 'Coding', modeExecution: 'Execution / media',
+  gitCheckpoint: 'Workspace checkpoint', gitWorkspace: 'Git workspace', gitReadOnly: 'Read-only audit; no automatic commits or repository writes',
+  gitMonitor: 'Repository monitor', gitTrackedRepositories: 'tracked repositories', gitAddress: 'Repository address', gitAddressPlaceholder: 'Enter a local path or Git URL', gitAdd: 'Add', gitRemove: 'Remove repository', gitRefresh: 'Refresh repository state', gitMonitorToggle: 'Monitor repository', gitWatching: 'Watching', gitWaiting: 'Waiting for connection',
+  gitFlowTitle: 'Change flow', gitFlowDescription: 'Read uncommitted worktree status, commit history, and remote sync state.', gitViewFlow: 'Flow', gitViewTree: 'Tree', gitTreeRoot: 'Repository state', gitTreeCommits: 'Commit updates', gitTreeFiles: 'Files in commit', gitFlowSource: 'Repository', gitFlowScan: 'Read status', gitFlowChanges: 'Parse changes', gitFlowNotify: 'Update monitor', gitFlowCheckpoint: 'Checkpoint captured', gitCheckpointCount: 'checkpoints', gitNoRepository: 'No worktree discovered yet', gitCommitTimeline: 'Commit timeline', gitNoCommits: 'No commits have been loaded yet', gitUnknownAuthor: 'Unknown author',
+  gitBefore: 'Before task', gitAfter: 'After task', gitBranch: 'Branch', gitStatus: 'Worktree status', gitDiffStat: 'Change summary', gitDiff: 'Diff', gitError: 'Checkpoint read failed',
+  gitFilesChanged: 'Changed files', gitWorktreeChanges: 'Uncommitted files', gitInsertions: 'Insertions', gitDeletions: 'Deletions', gitNoChanges: 'No uncommitted changes',
+  gitSyncStatus: 'Sync status', gitSyncSynced: 'Synced with remote', gitSyncRemoteAhead: 'Remote has new commits', gitSyncLocalAhead: 'Local has unpushed commits', gitSyncDiverged: 'Local and remote diverged', gitSyncDifferent: 'Local and remote commits differ', gitSyncUnknown: 'Remote state is not confirmed', gitLocalHead: 'Local HEAD', gitRemoteHead: 'Remote HEAD', gitUpstream: 'Tracking branch', gitRemoteUnavailable: 'Unable to read remote HEAD', gitRecentCommits: 'Recent commits', gitCommitFiles: 'Files in commit', gitNoCommitFiles: 'No file list recorded',
+  gitModified: 'Modified', gitAdded: 'Added', gitDeleted: 'Deleted', gitRenamed: 'Renamed', gitUntracked: 'Untracked', gitConflicted: 'Conflict', gitOther: 'Other',
 }
 
 declare module '@deepseek-ai/dsh-client-ui-slots' {

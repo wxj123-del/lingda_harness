@@ -1,9 +1,10 @@
 /**
- * Opt-in browser stress reproduction for reasoning-stream renderer stalls.
+ * Opt-in browser stress reproduction for reasoning-stream client stalls.
  * A test-owned model adapter emits 100,000 individual chunks through the real
  * Host, Gateway, and browser carriers; the test measures event-loop and
- * scheduled-interaction delay while the assembled React surface keeps a
- * collapsed Think row live.
+ * scheduled-interaction delay while the live Think row stays up. Reasoning
+ * prose is trace-only, so the browser-side completion proof is the row's own
+ * disappearance plus the heartbeat samples, not rendered reasoning text.
  */
 import type { Browser, Page } from 'playwright'
 import { chromium } from 'playwright'
@@ -193,7 +194,9 @@ it('keeps the browser responsive while rendering 100,000 reasoning chunks', asyn
       }), CHUNK_INTERVAL_MS)
     }
     await adapter.completed
-    await expect.poll(() => liveThink.textContent(), { timeout: 60_000, interval: 100 }).toContain(MARKER)
+    // Trace-only reasoning: the browser never receives the prose as DOM text, so
+    // completion is proven by the live row retiring once the step settles.
+    await expect.poll(() => liveThink.count(), { timeout: 60_000, interval: 100 }).toBe(0)
 
     const browserReport = await activePage.evaluate(() => {
       const win = window as StressWindow

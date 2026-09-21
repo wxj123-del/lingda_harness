@@ -9,7 +9,7 @@ English | [中文](README.zh.md)
 
 ## Summary
 
-Run `dsh --profile web` to open an interactive browser GUI with chat, model and settings management, and session history. It uses the same model access, tools, and safety defaults as other dsh surfaces. Startup prints an authenticated URL and normally opens it in the default browser; SSH sessions and `--no-open` leave the URL for manual opening. You can change the port and allow extra hosts, but cannot bind all network interfaces. Choose this package for interactive browser work; use `dsh-headless` for one-shot command-line tasks.
+Run `dsh --profile web` to open an interactive browser GUI with chat, model and settings management, and session history. It uses the same model access, tools, and safety defaults as other dsh surfaces. Startup prints an authenticated URL and normally opens it in the default browser; SSH sessions and `--no-open` leave the URL for manual opening. Use `--mobile` to opt into a LAN bind; the terminal prints a QR code and the LAN URL for a phone connected to the same trusted network. Scan the QR code to sign in without typing the token-bearing URL. Choose this package for interactive browser work; use `dsh-headless` for one-shot command-line tasks.
 
 ## Table of Contents
 
@@ -32,6 +32,7 @@ Start the GUI, open your browser, and start talking to the agent. The default po
 ```sh
 dsh --profile web
 dsh --profile web --no-open --port 8080
+dsh --profile web --mobile --no-open
 ```
 
 After startup you see a `dsh web:` line whose root URL carries a fresh process token. Unless `--no-open` or an SSH session suppresses it, the default browser opens that URL, receives a signed cookie, and redirects to the clean root page. You know it worked when the page loads and you can chat with the agent. Two failures to expect: if the frontend is not built, startup stops with a build hint (`pnpm run build` in a checkout); if the browser cannot be opened, a credential-free diagnostic prints to stderr while the server keeps running — open the printed startup URL yourself.
@@ -42,7 +43,7 @@ Saved model selections override the composition default. Both protocols share `d
 
 ### Configuration
 
-Most users never set these; the command-line flags feed the four settings below — `--host`, `--port`, and `--trusted-host` come from the invocation, and `--no-open` turns the browser handoff off for that invocation:
+Most users never set these; the command-line flags feed the settings below — `--mobile`, `--host`, `--port`, and `--trusted-host` come from the invocation, and `--no-open` turns the browser handoff off for that invocation. `--mobile` is an invocation-only switch and is not a deployment config field:
 
 | Field | Default | Meaning |
 |---|---|---|
@@ -53,9 +54,9 @@ Most users never set these; the command-line flags feed the four settings below 
 
 The generated [configuration catalog](../../../docs/config-catalog.md#deepseek-aidsh-web-app) is the exhaustive source for every accepted field and its JSDoc.
 
-### LAN access and trusted hosts
+### Phone and LAN access
 
-By default the GUI accepts connections from this machine only. A deployment that binds all network interfaces also allows browsers from the LAN, and the printed URL then includes a LAN address; `--trusted-host` adds extra hosts in either case. Host and Origin checks control reachability, while the token exchange authenticates every Host API method and WebSocket stream. The LAN addresses are sampled once at startup, so a network change later is not picked up — restart the GUI to re-advertise.
+By default the GUI accepts connections from this machine only. `--mobile` is an explicit opt-in that binds `0.0.0.0`, derives the machine's non-loopback IPv4 addresses, and prints a terminal QR code plus a `LAN:` URL carrying the process token for this run. Scan the QR code, or open the URL manually, on a phone connected to the same trusted Wi-Fi or wired network. The first page load exchanges the token for a signed cookie; later API and WebSocket requests require that cookie plus the Host/Origin trust checks. Do not share the QR code or URL outside the trusted network, and restart the process if it is exposed accidentally. LAN addresses are sampled once at startup, so a network change later is not picked up — restart the GUI to re-advertise.
 
 ### Running over SSH
 
@@ -63,7 +64,7 @@ When you launch `dsh --profile web` over SSH, the URL line still prints but the 
 
 ### Per-session agent setup
 
-Each browser session composes its own agent from the shipped presets (the `standard` preset by default), instead of sharing one process-wide tool set. You can change the default preset or add your own presets under `$DSH_HOME/.agent-presets`.
+Each browser session composes its own agent from the shipped presets (the `diaosi` preset by default), instead of sharing one process-wide tool set. The daily conversation surface uses that preset directly; the preset picker is disabled by default and can be re-enabled from **Settings → Agent presets**. You can change the default preset or add your own presets under `$DSH_HOME/.agent-presets`.
 
 -----
 
@@ -91,8 +92,8 @@ The URL line and browser handoff are readiness signals: supervisors RPC as soon 
 
 | File | Role |
 |---|---|
-| [`src/index.ts`](src/index.ts) | The `web-app` glue plugin: dist resolution, LAN trust sampling, prompt sections, bash variable, URL line, browser handoff |
-| [`src/startup.ts`](src/startup.ts) | The `web-startup` provider: `--host`, `--port`, `--trusted-host`, `--no-open`, `--help` |
+| [`src/index.ts`](src/index.ts) | The `web-app` glue plugin: dist resolution, LAN trust sampling, prompt sections, bash variable, URL/QR sign-in output, browser handoff |
+| [`src/startup.ts`](src/startup.ts) | The `web-startup` provider: `--mobile`, `--host`, `--port`, `--trusted-host`, `--no-open`, `--help` |
 | [`cordis.patch.yml`](cordis.patch.yml) | The web patch: restated base values, web host rows, browser roster, agent plane behind presets |
 | — | No runtime invariant companion is published; every contribution (frontend-static child plugin, prompt section, bashEnv registration) is registry-disposed with the fiber, and each owning registry's package carries that relation's invariant; the package holds no mutable state of its own to audit. |
 | [`tests/web-app.spec.ts`](tests/web-app.spec.ts) | Dist resolution, fallback seat, prompt sections, readiness |
@@ -150,7 +151,7 @@ These limits tell you what to expect in unusual setups — a source checkout, SS
 - **Only the handoff start is observable** — the GUI reports that the browser was asked to open, not that it actually opened; a later browser exit is never reported, and the printed URL is your manual fallback.
 - **SSH sessions keep the URL but skip the browser handoff** — the printed URL names the remote host's loopback endpoint; the SSH client or editor must expose and open the local forwarded address.
 - **`BROWSER` overrides only come from the environment** — a discovered `.env` cannot set `BROWSER`; only an inherited value can choose the executable for the automatic handoff.
-- **Binding all network interfaces is not supported** — `--host 0.0.0.0` is rejected at startup for safety; use the default loopback host.
+- **Phone access requires an explicit opt-in** — `--mobile` binds all network interfaces for this process. Direct `--host 0.0.0.0` remains rejected so a deployment cannot enable LAN exposure accidentally through a lower-level flag.
 
 <a id="dev-note"></a>
 ### Dev Note

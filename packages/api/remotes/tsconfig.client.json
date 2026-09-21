@@ -94,6 +94,9 @@
     },
     {
       "path": "../terminal-controller/tsconfig.client.json"
+    },
+    {
+      "path": "../../interaction/git-workspace"
     }
   ]
 }

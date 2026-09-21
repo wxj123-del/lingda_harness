@@ -244,6 +244,121 @@ interface Config {
 
 Generated from source by `scripts/gen-cordis-catalog.ts` (verified fresh by `pnpm run verify-cordis-catalog` in doc-sync; regenerate with `pnpm run gen-cordis-catalog`) — the language sides differ only in locale-specific paired document paths. Signature blocks use a `ts cordis-catalog` fence and keep the original source JSDoc; dispatch modes are defined in the [primer](../cordis-primer.zh.md#dispatch-modes), and the framework-inherited `ctx` API lives in [cordis-api/inherited.md](../cordis-api/inherited.md).
 
+<a id="ctxknowledge--knowledgegateway"></a>
+
+### `ctx.knowledge` — `KnowledgeGateway`
+
+Local libraries and vector search shared by the authoring UI and agent tools.
+
+```ts cordis-catalog
+/** Return knowledge bases, embedding status, and split defaults.
+ * @returns Knowledge bases, embedding status, and split defaults.
+ */
+@Remote('overview') overview(): Promise<KnowledgeOverview>
+
+/** Read one knowledge base.
+ * @param id - Knowledge base id.
+ * @returns A detached knowledge base.
+ */
+@Remote('get') get(id: KnowledgeBaseId): Promise<KnowledgeBase>
+
+/** Read the session's selected bases.
+ * @param agent - Agent whose session selection is read.
+ * @returns Selected base ids.
+ */
+@Remote('selected') selected(agent: Agent): Promise<KnowledgeBaseId[]>
+
+/** Change the session's selected bases.
+ * @param agent - Agent whose session selection is changed.
+ * @param baseIds - Enabled base ids.
+ * @returns The durable selection.
+ */
+@Remote('setSelected') setSelected(agent: Agent, baseIds: KnowledgeBaseId[]): Promise<KnowledgeSessionSelection>
+
+/** Save a knowledge base draft.
+ * @param draft - Validated knowledge-base draft.
+ * @returns The saved base.
+ */
+@Remote('save') async save(draft: KnowledgeBaseDraft): Promise<KnowledgeBase>
+
+/** Delete a knowledge base at an expected revision.
+ * @param id - Knowledge base id.
+ * @param revision - Expected revision.
+ */
+@Remote('deleteBase') async deleteBase(id: KnowledgeBaseId, revision: number): Promise<void>
+
+/** Schedule knowledge-base indexing.
+ * @param id - Knowledge base id.
+ * @returns Current indexing status.
+ */
+@Remote('reindex') reindex(id: KnowledgeBaseId): Promise<IndexStatus>
+
+/** Preview document chunks.
+ * @param documents - Documents to split.
+ * @param options - Split options.
+ * @returns Preview chunks.
+ */
+@Remote('preview') async preview( documents: KnowledgeBase['documents'], options: SplitOptions, ): Promise<KnowledgeChunk[]>
+
+/** Import legacy knowledge bases.
+ * @param legacy - Legacy knowledge-base records.
+ * @returns Number of imported bases.
+ */
+@Remote('importLegacy') async importLegacy(legacy: LegacyKnowledgeBase[]): Promise<number>
+
+/** Search an enabled knowledge base.
+ * @param query - Search text.
+ * @param baseId - Optional base id.
+ * @param signal - Cancellation signal.
+ * @returns Matching chunks.
+ */
+@Remote('search') async search(query: string, baseId: string, signal: AbortSignal): Promise<KnowledgeSearch>
+
+/** Search selected enabled knowledge bases.
+ * @param query - Search text.
+ * @param baseIds - Selected base ids.
+ * @param signal - Cancellation signal.
+ * @returns Matching chunks.
+ */
+async searchSelected(query: string, baseIds: KnowledgeBaseId[], signal: AbortSignal): Promise<KnowledgeSearch>
+
+/** Search bases selected by a session.
+ * @param query - Search text.
+ * @param session - Optional session selection source.
+ * @param baseId - Optional base id.
+ * @param signal - Cancellation signal.
+ * @returns Matching chunks.
+ */
+async searchForSession( query: string, session: Session | undefined, baseId: string, signal: AbortSignal, ): Promise<KnowledgeSearch>
+```
+
+Types: [Agent](core.zh.md) · [Session](session.zh.md)
+
+Source: [`packages/host/knowledge/src/index.ts`](../../packages/host/knowledge/src/index.ts)
+
+<a id="ctxlocalskillimport--localskillimportgateway"></a>
+
+### `ctx.localSkillImport` — `LocalSkillImportGateway`
+
+Discover local Codex/Agents Skills and package a selected candidate without executing it.
+
+```ts cordis-catalog
+/**
+ * Scan configured roots and read metadata for each discovered `SKILL.md`.
+ * @returns Import candidates, root availability, and the scan timestamp.
+ */
+@Remote('list') async list(): Promise<LocalSkillScan>
+
+/**
+ * Revalidate and package one candidate returned by the latest scan.
+ * @param id - Opaque candidate identifier issued by {@link list}.
+ * @returns A base64-encoded ZIP compatible with the Skill marketplace importer.
+ */
+@Remote('archive') async archive(id: string): Promise<LocalSkillArchive>
+```
+
+Source: [`packages/host/local-skill-import/src/index.ts`](../../packages/host/local-skill-import/src/index.ts)
+
 <a id="ctxsessionskillcatalog--sessionskillcatalog"></a>
 
 ### `ctx.sessionSkillCatalog` — `SessionSkillCatalog`

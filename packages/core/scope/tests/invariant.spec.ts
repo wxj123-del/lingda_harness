@@ -53,6 +53,7 @@ describe('scoped-dispatch invariants', () => {
       'agent/inbox/discarded': [{ agent, message }],
       'agent/pre-step': [{ agent, messages: [message], turn: 1, step: 1, signal }, () => Promise.resolve({ kind: 'enter', messages: [message] })],
       'agent/request': [{ agent, turn: 1, step: 1, signal }, () => Promise.resolve(config)],
+      'agent/request-context': [{ agent, turn: 1, step: 1, messages: [message], signal }, () => Promise.resolve([message])],
       'agent/assistant-stream': [{
         agent,
         frame: {

@@ -14,6 +14,8 @@
     { "path": "../../core/session" },
     { "path": "../../core/tools" },
     { "path": "../../llm/llm" },
-    { "path": "../../compaction/compaction" }
+    { "path": "../../compaction/compaction" },
+    { "path": "../../interaction/git-workspace" },
+    { "path": "../../host/knowledge" }
   ]
 }

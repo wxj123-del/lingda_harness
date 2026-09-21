@@ -140,6 +140,12 @@ interface SystemPromptSplit {
   messages: readonly Message[]
 }
 
+/** Provider-specific replay safeguards applied after durable history conversion. */
+export interface PiContextSafetyOptions {
+  /** Recover orphaned tool outputs as user text instead of sending invalid toolResult items. */
+  rejectOrphanToolResults?: boolean
+}
+
 /**
  * Select the pi-ai `systemPrompt` source shared by both conversion paths.
  * `options.system` wins when defined and every history message converts,
@@ -178,7 +184,19 @@ function appendAssistant(
   messages.push(assistant)
 }
 
-function textOnlyContext(options: GenerateOptions, onReplayDegrade?: (reason: string) => void): PiContext {
+function orphanToolResultLabel(toolCallId: ToolCallId): string {
+  return `[历史工具结果 ${String(toolCallId)} 未找到对应的工具调用，已按普通文本恢复]`
+}
+
+function orphanToolResultText(toolCallId: ToolCallId, content: string): string {
+  return `${orphanToolResultLabel(toolCallId)}\n${content || '(no output)'}`
+}
+
+function textOnlyContext(
+  options: GenerateOptions,
+  onReplayDegrade?: (reason: string) => void,
+  safety?: PiContextSafetyOptions,
+): PiContext {
   assertSupportedImageRoles(options.messages)
   const split = splitSystemPrompt(options)
   const toolNames = new Map<ToolCallId, string>()
@@ -201,10 +219,19 @@ function textOnlyContext(options: GenerateOptions, onReplayDegrade?: (reason: st
     const results = message.content.filter(block => block.type === 'tool-result')
     if (text.length > 0 || results.length === 0) messages.push({ role: 'user', content: text, timestamp: 0 })
     for (const result of results) {
+      const toolName = toolNames.get(result.toolCallId)
+      if (toolName === undefined && safety?.rejectOrphanToolResults === true) {
+        messages.push({
+          role: 'user',
+          content: orphanToolResultText(result.toolCallId, toolResultText(result.content)),
+          timestamp: 0,
+        })
+        continue
+      }
       messages.push({
         role: 'toolResult',
         toolCallId: result.toolCallId,
-        toolName: toolNames.get(result.toolCallId) ?? 'unknown',
+        toolName: toolName ?? 'unknown',
         content: [{
           type: 'text',
           text: toolResultText(result.content) || '(no output)',
@@ -255,6 +282,7 @@ export function toPiContext(
   options: GenerateOptions,
   images?: undefined,
   onReplayDegrade?: (reason: string) => void,
+  safety?: PiContextSafetyOptions,
 ): PiContext
 /**
  * Convert harness history to a pi-ai Context while resolving durable images.
@@ -272,21 +300,24 @@ export function toPiContext(
   options: GenerateOptions,
   images: PiImageRequestContext,
   onReplayDegrade?: (reason: string) => void,
+  safety?: PiContextSafetyOptions,
 ): Promise<PiContext>
 export function toPiContext(
   options: GenerateOptions,
   images?: PiImageRequestContext,
   onReplayDegrade?: (reason: string) => void,
+  safety?: PiContextSafetyOptions,
 ): PiContext | Promise<PiContext> {
   return images === undefined
-    ? textOnlyContext(options, onReplayDegrade)
-    : toPiContextWithImages(options, images, onReplayDegrade)
+    ? textOnlyContext(options, onReplayDegrade, safety)
+    : toPiContextWithImages(options, images, onReplayDegrade, safety)
 }
 
 async function toPiContextWithImages(
   options: GenerateOptions,
   images: PiImageRequestContext,
   onReplayDegrade?: (reason: string) => void,
+  safety?: PiContextSafetyOptions,
 ): Promise<PiContext> {
   const { attachments, resolveImageAccess, maxRequestImageBytes } = images
   const requestImagePolicy = images.requestImagePolicy ?? {
@@ -339,10 +370,19 @@ async function toPiContextWithImages(
     }
     for (const result of results) {
       const resultContent = await userContent(result.content, requestImages, resolveImageAccess)
+      const toolName = toolNames.get(result.toolCallId)
+      if (toolName === undefined && safety?.rejectOrphanToolResults === true) {
+        const prefix = orphanToolResultLabel(result.toolCallId)
+        const fallback = typeof resultContent === 'string'
+          ? orphanToolResultText(result.toolCallId, resultContent)
+          : [{ type: 'text' as const, text: prefix }, ...resultContent]
+        messages.push({ role: 'user', content: fallback, timestamp: 0 })
+        continue
+      }
       messages.push({
         role: 'toolResult',
         toolCallId: result.toolCallId,
-        toolName: toolNames.get(result.toolCallId) ?? 'unknown',
+        toolName: toolName ?? 'unknown',
         content: typeof resultContent === 'string'
           ? [{ type: 'text', text: resultContent || '(no output)' }]
           : resultContent,

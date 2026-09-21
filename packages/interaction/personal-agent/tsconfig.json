@@ -1,0 +1,20 @@
+{
+  "extends": "../../../tsconfig.base.json",
+  "compilerOptions": { "rootDir": "src", "outDir": "lib/types" },
+  "include": ["src"],
+  "references": [
+    { "path": "../../../vendor/cordis" },
+    { "path": "../../../vendor/schemastery" },
+    { "path": "../../core/agent" },
+    { "path": "../commands" },
+    { "path": "../../core/session" },
+    { "path": "../../session/session-projection" },
+    { "path": "../../settings/settings" },
+    { "path": "../../sandbox/sandbox" },
+    { "path": "../../sandbox/sandbox-policy" },
+    { "path": "../../core/system-prompt" },
+    { "path": "../user-approval" },
+    { "path": "../../core/tools" },
+    { "path": "../../typert/protocol" }
+  ]
+}

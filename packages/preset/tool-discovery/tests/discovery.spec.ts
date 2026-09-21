@@ -94,7 +94,8 @@ describe('bounded tool discovery', () => {
     expect(await h.names()).not.toContain('generate_speech')
     const result = await search(h.ctx, h.agent, 'image')
     expect(result.isError).toBe(false)
-    expect(result.meta).toEqual({ toolDiscovery: ['generate_image', 'list_image_models'] })
+    expect(result.meta).toMatchObject({ toolDiscovery: ['generate_image', 'list_image_models'] })
+    expect(result.meta?.toolDiscoveryReasons).toEqual(expect.arrayContaining([{ name: 'generate_image', reason: 'lexical-match' }]))
     expect(await h.names()).toEqual(['bash', 'edit', 'generate_image', 'list_image_models', 'read', 'tool_search'])
     expect((await h.assemble()).tools.find(tool => tool.name === 'generate_image'))
       .toEqual(h.ctx.tools.schemas(h.agent).find(tool => tool.name === 'generate_image'))
@@ -109,7 +110,7 @@ describe('bounded tool discovery', () => {
     appendCall(history, 'list_image_models', 'old')
     await h.assemble()
     const result = await search(h.ctx, h.agent, 'generate_image')
-    expect(result.meta).toEqual({ toolDiscovery: ['generate_image'] })
+    expect(result.meta).toMatchObject({ toolDiscovery: ['generate_image'], toolDiscoveryReasons: [{ name: 'generate_image', reason: 'exact-name' }] })
     expect(await h.names()).toHaveLength(4)
     expect(await h.names()).toContain('read')
     await search(h.ctx, h.agent, 'speech')
@@ -123,7 +124,7 @@ describe('bounded tool discovery', () => {
     await h.assemble()
     h.agent.ctx.tools.restrict({ deny: ['generate_image', 'list_image_models'] })
     const result = await search(h.ctx, h.agent, 'image')
-    expect(result.meta).toEqual({ toolDiscovery: [] })
+    expect(result.meta).toMatchObject({ toolDiscovery: [], toolDiscoveryReasons: [] })
     const denied = await h.ctx.tools.execute({ name: 'generate_image', callId: ToolCallId('denied'), arguments: {}, agent: h.agent, signal: new AbortController().signal })
     expect(denied.isError).toBe(true)
     expect(await h.names()).not.toContain('generate_image')
@@ -151,7 +152,7 @@ describe('bounded tool discovery', () => {
     expect(result.isError).toBe(false)
     expect(Buffer.byteLength(JSON.stringify(JSON.parse(result.content[0]!.type === 'text' ? result.content[0]!.text : '{}')))).toBeLessThanOrEqual(256)
     for (const query of ['', '*', 'x'.repeat(161)]) expect((await search(h.ctx, h.agent, query)).isError).toBe(true)
-    expect((await search(h.ctx, h.agent, 'nonexistent')).meta).toEqual({ toolDiscovery: [] })
+    expect((await search(h.ctx, h.agent, 'nonexistent')).meta).toMatchObject({ toolDiscovery: [], toolDiscoveryReasons: [] })
   })
 
   it('retries after cancellation without retaining a rejected initialization', async () => {
@@ -164,5 +165,20 @@ describe('bounded tool discovery', () => {
 
   it('rejects impossible catalog budgets at mount', async () => {
     await expect(harness({ initialTools: 8 })).rejects.toThrow('initialTools')
+  })
+
+  it('restores a bounded safe set when a search misses', async () => {
+    const h = await harness({ recoveryTools: ['web_search', 'generate_speech'] })
+    await h.assemble()
+    const result = await search(h.ctx, h.agent, 'no_such_capability')
+    expect(result.meta).toMatchObject({
+      toolDiscovery: ['generate_speech', 'web_search'],
+      toolDiscoveryReasons: [
+        { name: 'generate_speech', reason: 'safe-recovery' },
+        { name: 'web_search', reason: 'safe-recovery' },
+      ],
+    })
+    expect(await h.names()).toContain('web_search')
+    expect(await h.names()).toContain('generate_speech')
   })
 })

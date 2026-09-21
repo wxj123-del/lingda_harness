@@ -375,11 +375,11 @@ async function main(): Promise<void> {
     }
   })
   ipcMain.handle(DESKTOP_IPC.updatesCheck, async (event) => {
-    assertDesktopSender(event, ['shell'])
+    assertDesktopSender(event, ['shell', 'app'])
     return updates.check()
   })
   ipcMain.handle(DESKTOP_IPC.updatesInstall, async (event) => {
-    assertDesktopSender(event, ['shell'])
+    assertDesktopSender(event, ['shell', 'app'])
     await updates.install()
   })
 

@@ -29,7 +29,7 @@ kind: "package-reference"
 
 随附 Web 的 `standard`、`diaosi`、`ptc` 与 `cordis` preset 包含[显式文件交付](../../client/ui-deliverables/README.zh.md#explicit-deliveries)。`minimal` preset 仅提供持久 shell，并以包含会话所配置模型和提供方的完整人设作为系统提示词。它会抑制其他提示词段落和运行时上下文。
 
-`diaosi` 使用[按需工具发现](../tool-discovery/README.zh.md)：初始提供四个工具，其中包括 `read` 和 `skill`，另加 `tool_search`；其他初始名额优先分配给历史实际调用较多的工具。每次搜索最多加载两个相关工具，后续请求最多保留八个工具和搜索入口。继承的媒体与 MCP schema 也参与同一筛选，不再无条件出现。更新后的预设适用于新建对话，已加载的代次保留原配置。
+`diaosi` 使用[按需工具发现](../tool-discovery/README.zh.md)：初始提供四个工具，其中固定保留 `read`、`skill` 和 `present`，另加 `tool_search`；剩余的一个初始名额优先分配给历史实际调用较多的工具。每次搜索最多加载两个相关工具，后续请求最多保留八个工具和搜索入口。继承的媒体与 MCP schema 也参与同一筛选，不再无条件出现。更新后的预设适用于新建对话，已加载的代次保留原配置。
 
 需要精简日常工具集时，可选择 `diaosi`（屌丝模式，Budget mode），使用文件编辑、Shell、搜索、Skills、任务跟踪和提问。它保留所选模型与项目指令，不加载委派、工作流、目标和计划模式工具，并要求定向搜索、分段读取和简洁回复。每次读取最多返回 120 行、8,000 字节的所选文本；搜索内联保留 40 个路径或匹配。作用域 spill 策略将过大的 Shell、搜索、网页及任务输出文本变为 8,000 字节以内的预览并附全文位置；其他工具沿用既有策略。精简 Skill 目录保留名称、描述和完整指令加载。其私有压缩器在达到所选模型上下文窗口的 65% 时触发。这些是输出与压力限制，并非总 Token 预算或经过测量的节省保证。[组装文件](presets/diaosi/agent.cordis.yml)定义会话专属配置；[决策记录](../../../.agents/notes/implemented/feature/2026-09-16-diaosi-agent-preset.zh.md)说明取舍。
 
@@ -47,6 +47,7 @@ kind: "package-reference"
 - name: '@deepseek-ai/dsh-agent-presets'
   config:
     default: standard
+    modeSelectionEnabled: true
     roots:
       - path: ~/company-presets
         trust: system
@@ -55,6 +56,7 @@ kind: "package-reference"
 | 字段 | 默认值 | 含义 |
 |---|---|---|
 | `default` | 必填 | 部署 fallback preset id；模式选择关闭或没有用户默认值覆盖时使用 |
+| `modeSelectionEnabled` | `true` | 是否显示新建会话的 preset 选择器；关闭后未显式指定的会话统一使用 `default` |
 | `roots` | `[]` | 按优先级排列的扫描目录；每项提供 `path`（开头的 `~` 会展开）与 `trust`（默认为 `user`） |
 | `includeShippedRoot` | `true` | 在全部已配置根目录之前，前置本包随附的 preset 作为 `system` 根目录 |
 | `includeUserRoot` | `true` | 在全部已配置根目录之后追加 `<dshHome>/.agent-presets` 作为 `user` 根目录 |
@@ -65,7 +67,7 @@ kind: "package-reference"
 
 ### 显示选择器并选择默认 preset
 
-必填的 `default` 配置设定部署默认值。当组装中存在 settings 提供方时，本插件会注册 `agent-presets` 命名空间，并以 `{ default: config.default, modeSelectionEnabled: true }` 作为 base，因此既有的新建会话选择器会保持显示，除非用户主动关闭。Host 每次解析默认值都会读取这两个字段：`modeSelectionEnabled` 为 `false` 时，未显式指定 preset 的会话解析为 `config.default`，即使用户文档还保留其他 `default` 也会忽略它；该字段为 `true` 时，用户默认值才可覆盖部署值：
+必填的 `default` 配置设定部署默认值。`modeSelectionEnabled` 控制是否显示新建会话选择器，默认值为 `true` 以保持兼容。当组装中存在 settings 提供方时，本插件会注册 `agent-presets` 命名空间，并将配置的默认值和选择器可见性作为 base。Host 每次解析默认值都会读取这两个字段：`modeSelectionEnabled` 为 `false` 时，未显式指定 preset 的会话解析为 `config.default`，即使用户文档还保留其他 `default` 也会忽略它；该字段为 `true` 时，用户默认值才可覆盖部署值：
 
 ```yaml
 agent-presets:

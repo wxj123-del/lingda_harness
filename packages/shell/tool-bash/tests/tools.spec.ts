@@ -559,6 +559,18 @@ describe('background execution through the job runtime', () => {
     expect((ctx.shell as CountingStartExecutor).starts).toBe(0)
   })
 
+  it('publishes an optional outer timeout for foreground calls', async () => {
+    const ctx = new Context()
+    await ctx.plugin(SystemPrompt)
+    await ctx.plugin(ToolRuntime)
+    await ctx.plugin(LocalSubprocessRuntime)
+    await ctx.plugin(BashEnvPlugin)
+    await ctx.plugin(LocalBashExecutor, {})
+    await ctx.plugin(ToolBash, { toolTimeoutMs: 30_000 })
+
+    expect(ctx.tools.get('bash')?.timeoutMs).toBe(30_000)
+  })
+
   it('enableRunInBackground: false removes the parameter and flips the description', async () => {
     const ctx = new Context()
     await ctx.plugin(SystemPrompt)

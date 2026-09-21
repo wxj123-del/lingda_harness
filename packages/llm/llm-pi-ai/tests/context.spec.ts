@@ -118,6 +118,20 @@ describe('pi-ai request context conversion', () => {
     }])]))).toThrow(/durable attachment service/)
   })
 
+  it('recovers orphaned tool outputs as user text when the provider requires paired calls', () => {
+    const callId = ToolCallId('orphan-call')
+    const context = toPiContext(request([user([{
+      type: 'tool-result',
+      toolCallId: callId,
+      content: [{ type: 'text', text: 'result from a truncated history' }],
+    }])]), undefined, undefined, { rejectOrphanToolResults: true })
+    expect(context.messages).toEqual([{
+      role: 'user',
+      content: expect.stringContaining('已按普通文本恢复') as string,
+      timestamp: 0,
+    }])
+  })
+
   it('resolves user and tool-result images while preserving explicit fallbacks', async () => {
     const callId = ToolCallId('missing-call')
     const knownCallId = ToolCallId('known-call')

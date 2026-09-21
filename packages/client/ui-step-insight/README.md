@@ -9,7 +9,7 @@ English | [中文](README.zh.md)
 
 ## Summary
 
-An opt-in browser plugin replaces the Trajectory tab with a live Token ledger. Every loaded assistant attempt and compaction has a separate row, with input, output, cache reads, cache writes, reasoning, timing, tool calls, and source event references. Its higher-priority `trajectory` slot registration restores the original view when unloaded. The original trajectory package remains mounted as the conversation target owner.
+An opt-in browser plugin replaces the Trajectory tab with a live Token ledger and adds a separate Repository tab. Every loaded assistant attempt and compaction has a separate row, with input, output, cache reads, cache writes, reasoning, timing, tool calls, and source event references. The Repository tab renders the read-only Git checkpoints emitted by `dsh-git-workspace`, with branch, status, change statistics, and bounded diffs. Its higher-priority `trajectory` slot registration restores the original view when unloaded. The original trajectory package remains mounted as the conversation target owner.
 
 ## Table of Contents
 
@@ -32,7 +32,7 @@ pnpm dsh --profile web --patch ./packages/client/ui-step-insight/cordis.source.p
 
 For persistent installation, install the built checkout with `dsh plugin --profile web add ./packages/client/ui-step-insight`, restart that profile, and open a Session's Token trace tab. Remove the package with `dsh plugin --profile web remove @deepseek-ai/dsh-client-ui-step-insight` and restart to restore the original view. The package declares `dsh.bundle`; its patch mounts the plugin, and the host discovers the built browser export through `dsh.client`.
 
-The ledger updates from the existing Session event feed. Search finds steps, models, providers and tool names; filters select missing usage or interrupted attempts; sorting ranks reported totals or their known subtotals. Selecting a row opens accounting, input sources, output blocks, tools and raw events. Export writes the loaded ledger and its durable source events to JSON. Loading older history extends both the ledger and its accounting scope.
+The ledger updates from the existing Session event feed. Search finds steps, models, providers and tool names; filters select missing usage or interrupted attempts; sorting ranks reported totals or their known subtotals. Selecting a row opens accounting, input sources, output blocks, tools and raw events. The Repository tab is independent from row selection and loads older Session events from the same feed. It also accepts browser-local repository targets, matches local `origin` metadata for GitCode and other non-GitHub remotes, polls public GitHub URLs, and renders a four-stage repository-to-change flow plus a bounded commit timeline. Export writes the loaded ledger and its durable source events to JSON. Loading older history extends both the ledger and its accounting scope.
 
 ### Accounting
 

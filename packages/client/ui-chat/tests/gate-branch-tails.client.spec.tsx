@@ -19,7 +19,7 @@ afterEach(() => {
 
 
 describe('render branch tails', () => {
-  it('AssistantMarkdown reasoning row is ok-state when not the streaming tail', () => {
+  it('AssistantMarkdown paints no Think row once a later block owns the tail', () => {
     const view = render(
       <AssistantMarkdown
         t={t}
@@ -28,8 +28,10 @@ describe('render branch tails', () => {
         renderMessageImages={renderMessageImages}
       />,
     )
-    // reasoning at index 0 with a later block: running is false → ok state.
-    expect(view.container.querySelector('[data-state="ok"]')).not.toBeNull()
+    // reasoning at index 0 with a later block: not the live tail → no row at all.
+    expect(view.container.querySelector('[data-variant="think"]')).toBeNull()
+    expect(view.queryByText(/done thinking/)).toBeNull()
+    expect(view.getByText('answer')).toBeTruthy()
   })
 
   it('StatsPills falls back to window-node counts and drops the usage pill without projections', () => {

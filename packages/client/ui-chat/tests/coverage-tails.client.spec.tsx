@@ -13,7 +13,7 @@ const renderMessageImages: AssistantMarkdownProps['renderMessageImages'] = () =>
 afterEach(cleanup)
 
 describe('tails', () => {
-  it('AssistantMarkdown renders reasoning as a Think row and unknown blocks as JSON fallback', () => {
+  it('AssistantMarkdown keeps reasoning out of the flow and renders unknown blocks as JSON fallback', () => {
     const view = render(
       <AssistantMarkdown
         t={t}
@@ -26,8 +26,9 @@ describe('tails', () => {
         renderMessageImages={renderMessageImages}
       />,
     )
-    expect(view.getByText('思考')).toBeTruthy()
-    expect(view.getByText('thinking hard')).toBeTruthy()
+    // The reasoning block is not the streaming tail here, so no live row either.
+    expect(view.queryByText('思考')).toBeNull()
+    expect(view.queryByText(/thinking hard/)).toBeNull()
     expect(view.getByText(/未知内容块/)).toBeTruthy()
     const stopped = render(
       <AssistantMarkdown

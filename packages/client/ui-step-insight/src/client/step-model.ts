@@ -5,8 +5,11 @@ import {
 } from '@deepseek-ai/dsh-llm/assistant-stream'
 import type { TokenUsage } from '@deepseek-ai/dsh-llm/types'
 import type {} from '@deepseek-ai/dsh-compaction/types'
+import type {} from '@deepseek-ai/dsh-host-knowledge'
+import type {} from '@deepseek-ai/dsh-personal-agent'
+import type {} from '@deepseek-ai/dsh-git-workspace'
 import type {} from '@deepseek-ai/dsh-tools/types'
-import type { StepRow, ToolRow } from './types.ts'
+import type { GitCheckpointAudit, KnowledgeRetrievalAudit, StepRow, ToolDeniedAudit, ToolRow, ToolSelectionReason } from './types.ts'
 import { readUsage } from './usage.ts'
 
 function account(row: StepRow, value: TokenUsage | undefined): void {
@@ -58,6 +61,9 @@ function createAccumulator() {
   const steps = new Map<string, StepRow>()
   const tools = new Map<string, { row: StepRow; tool: ToolRow }>()
   const compactions = new Map<string, StepRow>()
+  const checkpoints = new Map<number, GitCheckpointAudit[]>()
+  const retrievals = new Map<number, KnowledgeRetrievalAudit[]>()
+  const denials = new Map<number, ToolDeniedAudit[]>()
   const streams = new Map<string, ReturnType<typeof assembleAssistantStream>>()
   let route: { provider?: string; model?: string } = {}
   const keyOf = (turn: number | null, step: number) => `${turn}:${step}`
@@ -68,6 +74,11 @@ function createAccumulator() {
       attempt: kind === 'assistant' ? (previous?.attempt ?? 0) + 1 : 1,
       startTime: time, endTime: null, firstTokenTime: null,
       status: 'waiting', usage: readUsage(), output: [], tools: [], evidence: [seq], ...route,
+    }
+    if (turn !== null) row.gitCheckpoints = checkpoints.get(turn)
+    if (turn !== null) {
+      row.knowledgeRetrieval = retrievals.get(turn)
+      row.blockedTools = denials.get(turn)
     }
     rows.push(row)
     if (kind === 'assistant') steps.set(keyOf(turn, step), row)
@@ -89,12 +100,51 @@ function createAccumulator() {
   return (entries: readonly SessionEventLikeEntry[]): StepRow[] => {
     for (const { event } of entries) {
       switch (event.type) {
+        case 'agent/git-checkpoint': {
+          const audit: GitCheckpointAudit = event.data
+          const list = checkpoints.get(audit.turn) ?? []
+          list.push(audit)
+          checkpoints.set(audit.turn, list)
+          for (const row of rows) {
+            if (row.turn === audit.turn) row.gitCheckpoints = [...list]
+          }
+          break
+        }
         case 'request/header':
           route = event.data.header.config
           for (const row of rows) {
             if (row.status === 'waiting') Object.assign(row, route)
           }
           break
+        case 'agent/request-context': {
+          const row = active(event.data.turn, event.data.step, event.seq)
+          row.context = event.data
+          row.evidence.push(event.seq)
+          break
+        }
+        case 'agent/tool-denied': {
+          const list = denials.get(event.data.turn) ?? []
+          list.push(event.data)
+          denials.set(event.data.turn, list)
+          for (const row of rows) if (row.turn === event.data.turn) row.blockedTools = [...list]
+          break
+        }
+        case 'task/created':
+        case 'task/planned':
+        case 'task/running':
+        case 'task/waiting-human':
+        case 'task/succeeded':
+        case 'task/failed':
+        case 'task/cancelled':
+          break
+        case 'knowledge/retrieval': {
+          const audit = (event as unknown as { data: KnowledgeRetrievalAudit & { turn: number } }).data
+          const list = retrievals.get(audit.turn) ?? []
+          list.push(audit)
+          retrievals.set(audit.turn, list)
+          for (const row of rows) if (row.turn === audit.turn) row.knowledgeRetrieval = [...list]
+          break
+        }
         case 'step/start':
           create(event.data.turn, event.data.step, event.seq, event.time)
           break
@@ -161,6 +211,23 @@ function createAccumulator() {
             }
             Object.assign(owner.tool, { result: block.content, isError: block.isError === true, endSeq: event.seq, endTime: event.time })
             owner.row.evidence.push(event.seq)
+          }
+          const meta = event.data.meta
+          if (meta !== null && typeof meta === 'object' && !Array.isArray(meta)) {
+            const reasons = meta['toolDiscoveryReasons']
+            if (Array.isArray(reasons)) {
+              const parsed: ToolSelectionReason[] = reasons.flatMap((value) => {
+                if (typeof value !== 'object' || value === null || Array.isArray(value)) return []
+                const item = value as { name?: unknown; reason?: unknown }
+                return typeof item.name === 'string' && typeof item.reason === 'string'
+                  ? [{ name: item.name, reason: item.reason }]
+                  : []
+              })
+              if (parsed.length > 0) {
+                const row = toolOwner(turn, step, event.seq)
+                row.toolSelectionReasons = [...(row.toolSelectionReasons ?? []), ...parsed]
+              }
+            }
           }
           break
         }

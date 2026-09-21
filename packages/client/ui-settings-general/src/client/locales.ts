@@ -13,6 +13,17 @@ export const zh = {
   'connection.connected': '连接成功',
   'connection.reconnect': '连接异常，点击立即重连',
   'connection.restart': '连接中断，正在重试，点击立即重连',
+  'update.title': '软件更新',
+  'update.check': '检查更新',
+  'update.install': '安装并重启',
+  'update.current': '当前已是最新版本',
+  'update.available': '发现新版本',
+  'update.checking': '正在检查更新…',
+  'update.installing': '正在安装更新…',
+  'update.ready': '更新完成，正在重启…',
+  'update.sourceReady': '更新完成，请重启应用',
+  'update.error': '更新检查失败',
+  'update.source': '源码仓库：检查 GitCode 提交',
 } satisfies Record<string, string>
 
 /** The settings namespace key union. */
@@ -31,4 +42,15 @@ export const en = {
   'connection.connected': 'Connected',
   'connection.reconnect': 'Disconnected, reconnect now',
   'connection.restart': 'Reconnecting, reconnect now',
+  'update.title': 'Software updates',
+  'update.check': 'Check for updates',
+  'update.install': 'Install and restart',
+  'update.current': 'You are up to date',
+  'update.available': 'Update available',
+  'update.checking': 'Checking for updates…',
+  'update.installing': 'Installing update…',
+  'update.ready': 'Update installed, restarting…',
+  'update.sourceReady': 'Update complete, restart the application',
+  'update.error': 'Update check failed',
+  'update.source': 'Source checkout: check GitCode commits',
 } satisfies Record<SettingsKey, string>

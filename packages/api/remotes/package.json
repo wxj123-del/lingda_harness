@@ -76,6 +76,7 @@
     "@deepseek-ai/dsh-llm": "workspace:^",
     "@deepseek-ai/dsh-message-feedback": "workspace:^",
     "@deepseek-ai/dsh-permission-presets": "workspace:^",
+    "@deepseek-ai/dsh-personal-agent": "workspace:^",
     "@deepseek-ai/dsh-session-reference": "workspace:^",
     "@deepseek-ai/dsh-settings": "workspace:^",
     "@deepseek-ai/dsh-subagent": "workspace:^",
@@ -89,6 +90,7 @@
     "@deepseek-ai/dsh-api-workspace-files": "workspace:^",
     "zod": "^4.4.3",
     "@deepseek-ai/dsh-command-feedback": "workspace:^",
-    "@deepseek-ai/dsh-api-terminal-controller": "workspace:^"
+    "@deepseek-ai/dsh-api-terminal-controller": "workspace:^",
+    "@deepseek-ai/dsh-git-workspace": "workspace:^"
   }
 }

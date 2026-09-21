@@ -1,4 +1,5 @@
 import type { Branded } from '@deepseek-ai/dsh-brand'
+import type { SessionId } from '@deepseek-ai/dsh-session/types'
 
 export type KnowledgeBaseId = Branded<'KnowledgeBaseId'>
 export type KnowledgeDocumentId = Branded<'KnowledgeDocumentId'>
@@ -66,6 +67,25 @@ export interface KnowledgeHit extends KnowledgeChunk {
 export interface KnowledgeSearch {
   hits: KnowledgeHit[]
   skippedBases: KnowledgeBaseId[]
+  deduplicatedHits: number
+  estimatedTokens: number
+  similarityThreshold?: number
+  maxResultTokens?: number
+}
+
+/** Compact source identity retained in the per-request retrieval audit. */
+export interface KnowledgeRetrievalSource {
+  baseId: KnowledgeBaseId
+  baseTitle: string
+  documentId: KnowledgeDocumentId
+  documentTitle: string
+  ordinal: number
+  score: number
+}
+
+export interface KnowledgeSessionSelection {
+  sessionId: SessionId
+  baseIds: KnowledgeBaseId[]
 }
 export interface LegacyKnowledgeBase {
   id: string

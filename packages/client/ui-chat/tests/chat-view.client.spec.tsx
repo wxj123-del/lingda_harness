@@ -1368,7 +1368,9 @@ describe('ChatView', () => {
     expect(members).toHaveLength(3)
     expect(members.map(member => member.getAttribute('hidden')))
       .toEqual(['until-found', 'until-found', 'until-found'])
-    expect(members[0]?.textContent).toContain('inspect the repository')
+    // Trace-only reasoning: the folded member carries the reply, not the Think prose.
+    expect(members[0]?.textContent).toContain('earlier reply')
+    expect(members[0]?.textContent).not.toContain('inspect the repository')
     expect(members[1]?.textContent).toContain('bash:a')
     expect(members[2]?.textContent).toContain('subagent:b')
     expect(view.getByText('final answer')).toBeTruthy()
@@ -1579,7 +1581,7 @@ describe('ChatView', () => {
     expect(processRow.getAttribute('hidden')).toBe('until-found')
   })
 
-  it('folds final-step reasoning under the fallback title when every summary count is zero', () => {
+  it('keeps final-step reasoning out of the transcript under the fallback title', () => {
     const final = {
       ...assistant(3, 'final answer', 1, 1),
       blocks: [
@@ -1590,12 +1592,13 @@ describe('ChatView', () => {
     const h = makeHarness({ nodes: [user(1, 'question'), final], turnEnds: new Map([[1, 4]]) })
     const view = render(<h.ChatView {...h.props} />)
     const toggle = view.getByRole('button', { name: '已思考' })
-    const reasoning = view.container.querySelector<HTMLElement>('[data-turn-process-inline]')
     expect(toggle.getAttribute('aria-expanded')).toBe('false')
-    expect(reasoning?.getAttribute('hidden')).toBe('until-found')
+    // Trace-only thinking: expanding the process control never paints it either.
+    expect(view.queryByText('private analysis')).toBeNull()
     expect(view.getByText('final answer')).toBeTruthy()
     fireEvent.click(toggle)
-    expect(view.getByText('private analysis')).toBeTruthy()
+    expect(view.queryByText('private analysis')).toBeNull()
+    expect(view.getByText('final answer')).toBeTruthy()
   })
 
   it('folds a completed Turn even while the reader is away from the tail', () => {

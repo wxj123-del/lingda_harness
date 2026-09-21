@@ -126,6 +126,8 @@ function mount(
     composerBlock?: { reason: string }
     /** Mutable view ledger used by registration-order regressions. */
     viewTabs?: ViewTab[]
+    /** Active Conversation View used to verify view-owned composer visibility. */
+    activeView?: string | null
   } = {},
 ) {
   const root = sid('root')
@@ -175,6 +177,7 @@ function mount(
     { id: 'trajectory', label: 'Trajectory' },
   ]
   const useConversationViews: SessionSlotProps['useConversationViews'] = selector => selector(viewTabs)
+  const activeView = createSnapshotStore<string | null>(options.activeView ?? 'chat')
   /** Owner share handed to the two composer tool-row seats, per render. */
   const seatOwners: { key: string; owner: unknown }[] = []
   let pickerOwner: unknown
@@ -308,6 +311,7 @@ function mount(
     useWorkspaces: bindSnapshotSelector(workspaces),
     useProjection: (() => undefined),
     useComposerBlock: select => select(options.composerBlock),
+    useActiveView: bindSnapshotSelector(activeView),
     useInput,
     inputActions,
     renderSlot,
@@ -317,7 +321,7 @@ function mount(
   }
   const view = render(<ConversationRoot {...props} />)
   return {
-    view, store, wiring, sink, retargetWorkspace, session, conversation, slotCalls, lineageOwners, seatOwners, open,
+    view, store, wiring, sink, retargetWorkspace, session, conversation, activeView, slotCalls, lineageOwners, seatOwners, open,
     pickerOwner: () => pickerOwner,
     rerender: () => { view.rerender(<ConversationRoot {...props} />) },
   }
@@ -342,6 +346,16 @@ describe('Hero chrome', () => {
 })
 
 describe('ConversationRoot resident composer', () => {
+  it('only mounts the composer for the Chat view', () => {
+    const b = mount(sessionSnapshotOf(), undefined, undefined, { activeView: 'trajectory' })
+    expect(b.view.container.querySelector('[data-composer-seat]')).toBeNull()
+    expect(b.view.container.querySelector('[data-composer-input]')).toBeNull()
+
+    act(() => { b.activeView.set('chat') })
+    expect(b.view.container.querySelector('[data-composer-seat]')).not.toBeNull()
+    expect(b.view.container.querySelector('[data-composer-input]')).not.toBeNull()
+  })
+
   it('does not redispatch composer child slots for an unrelated Session publication', () => {
     const b = mount(sessionSnapshotOf())
     const childKeys = new Set([

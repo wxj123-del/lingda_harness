@@ -104,6 +104,22 @@ describe('per-attempt provider accounting', () => {
     expect(row).toMatchObject({ kind: 'compaction', model: 'compact-model', usage: { total: 1200 } })
     expect(inspectInput(events, row, false)).toMatchObject({ parts: [], incomplete: true })
   })
+
+  it('attaches workspace checkpoints to the matching request row', () => {
+    const rows = deriveSteps([
+      entry(0, 'agent/git-checkpoint', {
+        turn: 1, phase: 'before', cwd: '/workspace', branch: 'main', status: ' M src/index.ts',
+      }),
+      ...fixture(),
+      entry(13, 'agent/git-checkpoint', {
+        turn: 1, phase: 'after', cwd: '/workspace', branch: 'main', diffStat: '1 file changed',
+      }),
+    ])
+    expect(rows[0]?.gitCheckpoints).toEqual([
+      expect.objectContaining({ phase: 'before', status: ' M src/index.ts' }),
+      expect.objectContaining({ phase: 'after', diffStat: '1 file changed' }),
+    ])
+  })
 })
 
 describe('input source attribution', () => {

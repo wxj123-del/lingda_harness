@@ -33,8 +33,9 @@ kind: "package-reference"
   config:
     initialTools: 4
     maxTools: 8
-    pinnedTools: [read, skill]
+    pinnedTools: [read, skill, present]
     fallbackTools: [bash, pwsh, grep, glob, edit, write]
+    recoveryTools: [read, grep, glob]
     historySessions: 50
     searchLimit: 2
     descriptionChars: 160
@@ -43,7 +44,7 @@ kind: "package-reference"
 
 `initialTools` 与 `maxTools` 包含已注册的固定工具，不含 `tool_search`。初始选择根据最近创建的 `historySessions` 个其他会话及当前会话中的实际直接调用次数排序，不重复计入分支继承的次数。仅展示工具不会提高优先级。同频次与无历史记录时使用 `fallbackTools` 顺序，其次按名称排序。每个智能体初始化只读取一次历史，之后由已提交的本地事件更新状态。无法读取的历史会话会记录并跳过。取消会终止当次装配，之后可以重试。
 
-完整名称搜索只加载对应工具。关键词查询要求每个词都匹配名称或描述，优先按相关性、其次按频次排序，最多加载 `searchLimit` 个结果。描述受 `descriptionChars` 限制，完整渲染后的 JSON 受 `resultMaxBytes` 限制。只有成功提交结果后，工具才会出现在下一次请求中。达到容量上限时，最近最少使用的非固定项退出目录。保留的 schema 维持规范顺序。缺失或被拒绝的固定工具不会被强行开放。
+完整名称搜索只加载对应工具。关键词查询要求每个词都匹配名称或描述，优先按相关性、其次按频次排序，最多加载 `searchLimit` 个结果。查询无命中时可以加载配置的 `recoveryTools` 安全集合，并为每个工具记录 exact-name、lexical-match 或 safe-recovery 选择原因。描述受 `descriptionChars` 限制，完整渲染后的 JSON 受 `resultMaxBytes` 限制。只有成功提交结果后，工具才会出现在下一次请求中。达到容量上限时，最近最少使用的非固定项退出目录。保留的 schema 维持规范顺序。缺失或被拒绝的固定工具不会被强行开放。
 
 -----
 

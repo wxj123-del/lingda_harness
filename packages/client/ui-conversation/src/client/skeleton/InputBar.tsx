@@ -425,7 +425,7 @@ export const InputBar = memo(function InputBar({
             </div>
             {input === undefined || sessionId === undefined
               ? null
-              : renderSlot('conversation.input.left', {})}
+              : renderSlot('conversation.input.left', { draft: input.draft })}
           </div>
           <div className={css.trailing}>
             {input === undefined || sessionId === undefined

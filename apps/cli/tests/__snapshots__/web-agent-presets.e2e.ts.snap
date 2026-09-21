@@ -13,6 +13,9 @@ Answer simple questions directly; use tools only when evidence or actions are ne
 Search relevant paths first; exclude dependencies, builds and caches unless relevant. Read targeted ranges, reusing unchanged content still in context. Broaden only to resolve missing evidence.
 Batch independent searches; revise repeated failing queries. Keep output bounded; retrieve omitted content when needed.
 Finish the task and required checks. Follow project instructions and current permissions.
+Prefer static checks and the existing present tool for HTML/SVG previews. Do not launch headless browsers, GUI apps or pixel screenshots from bash unless the user explicitly asks for that verification. A Crashpad or GUI permission error is terminal for that check; switch to a static check instead of retrying it.
+Put commands expected to run longer than 10 seconds in the background, inspect them with job_output, and stop stalled or irrelevant jobs with job_kill. Do not poll with sleep or repeat a command that already timed out; use a smaller or static check and report partial results when a check is blocked. Set timeoutMs on foreground checks when a bounded result is sufficient.
+After creating or updating a deliverable file, call present before the final response so the user can open the current file.
 Keep replies concise unless detail is requested or necessary. Report results, verification and blockers without repeating logs or plans. Never claim unmeasured savings.",
   },
 ]
@@ -23,7 +26,7 @@ exports[`the shipped Web composition > discovers inherited media tools in diaosi
   "catalogs": [
     [
       "bash",
-      "grep",
+      "present",
       "read",
       "skill",
       "tool_search",
@@ -31,7 +34,7 @@ exports[`the shipped Web composition > discovers inherited media tools in diaosi
     [
       "bash",
       "generate_image",
-      "grep",
+      "present",
       "read",
       "skill",
       "tool_search",
@@ -39,7 +42,7 @@ exports[`the shipped Web composition > discovers inherited media tools in diaosi
     [
       "bash",
       "generate_image",
-      "grep",
+      "present",
       "read",
       "skill",
       "tool_search",
@@ -153,7 +156,7 @@ exports[`the shipped Web composition > retrieves knowledge through the preset to
     {
       "content": [
         {
-          "text": "{"loaded":[{"name":"knowledge_list","description":"列出已启用的知识库及索引状态。检索前可用它查找知识库 ID。"},{"name":"knowledge_search","description":"检索用户启用的知识库，返回相关原文、文档标题、片段编号和余弦相似度。引用资料时注明知识库和文档标题；相似度不是正确率。未建索引的知识库会列在 skippedBases 中。"}],"message":"Loaded tools are available on the next request."}",
+          "text": "{"loaded":[{"name":"knowledge_list","description":"列出可用的知识库及索引状态。对话中勾选的知识库会在用户消息前自动检索。"},{"name":"knowledge_search","description":"检索当前 Session 选择的知识库，返回相关原文、文档标题、片段编号和余弦相似度。引用资料时注明知识库和文档标题；相似度不是正确率。未建索引的知识库会列在 skippedBases 中。"}],"message":"Loaded tools are available on the next request."}",
           "type": "text",
         },
       ],

@@ -60,6 +60,7 @@ export const apply = ctx => globalThis.__webStartupApply(ctx)
     `  name: ${pathToFileURL(join(dir, 'reader.mjs')).href}`,
     `  inject: [${WEB_STARTUP_SERVICE}]`,
     '  config:',
+    '    mobile: !!js ctx.webStartup.mobile',
     "    host: !!js ctx.webStartup.host ?? '127.0.0.1'",
     '    openBrowser: !!js ctx.webStartup.openBrowser',
     '    port: !!js ctx.webStartup.port ?? 3081',
@@ -92,7 +93,26 @@ export const apply = ctx => globalThis.__webStartupApply(ctx)
 }
 
 describe('web command-line provider', () => {
-  it('publishes each flag and releases direct service expressions', async () => {
+  it('enables phone/LAN access only through the explicit mobile flag', async () => {
+    const { values, observed } = await bootProvider([
+      '--mobile',
+      '--no-open',
+      '--port', '8080',
+      '--trusted-host', 'lab.internal', 'lab-2.internal',
+      '--trusted-host', '10.0.0.9',
+    ])
+    expect(values).toEqual({
+      mobile: true,
+      host: '0.0.0.0',
+      openBrowser: false,
+      port: 8080,
+      trustedHosts: ['lab.internal', 'lab-2.internal', '10.0.0.9'],
+    })
+    expect(observed.readerConfig).toEqual(values)
+    expect(observed.exits).toEqual([])
+  })
+
+  it('publishes each explicit flag and releases direct service expressions', async () => {
     const { values, observed } = await bootProvider([
       '--host', '127.0.0.1',
       '--no-open',
@@ -101,6 +121,7 @@ describe('web command-line provider', () => {
       '--trusted-host', '10.0.0.9',
     ])
     expect(values).toEqual({
+      mobile: false,
       host: '127.0.0.1',
       openBrowser: false,
       port: 8080,
@@ -112,8 +133,9 @@ describe('web command-line provider', () => {
 
   it('leaves deployment values to each consumer when flags omit them', async () => {
     const { values, observed } = await bootProvider([])
-    expect(values).toEqual({ openBrowser: true, trustedHosts: [] })
+    expect(values).toEqual({ mobile: false, openBrowser: true, trustedHosts: [] })
     expect(observed.readerConfig).toEqual({
+      mobile: false,
       host: '127.0.0.1',
       openBrowser: true,
       port: 3081,
@@ -124,6 +146,7 @@ describe('web command-line provider', () => {
   it('prints its own help and leaves the consumer pending', async () => {
     const { values, observed } = await bootProvider(['--help'])
     expect(observed.out).toContain('dsh --profile web')
+    expect(observed.out).toContain('--mobile')
     expect(observed.out).toContain('--no-open')
     expect(observed.out).toContain('--trusted-host')
     expect(values).toBeUndefined()
@@ -142,6 +165,14 @@ describe('web command-line provider', () => {
   it('rejects the intentionally unsupported all-interfaces host before the consumer activates', async () => {
     const { values, observed } = await bootProvider(['--host', '0.0.0.0'])
     expect(observed.out).toContain('--host 0.0.0.0 is intentionally not supported yet for safety: it would expose remote code execution to the network; use 127.0.0.1 instead')
+    expect(values).toBeUndefined()
+    expect(observed.readerConfig).toBeUndefined()
+    expect(observed.exits).toEqual([1])
+  })
+
+  it('rejects an ambiguous mobile invocation with an explicit host', async () => {
+    const { values, observed } = await bootProvider(['--mobile', '--host', '127.0.0.1'])
+    expect(observed.out).toContain('--mobile cannot be combined with --host')
     expect(values).toBeUndefined()
     expect(observed.readerConfig).toBeUndefined()
     expect(observed.exits).toEqual([1])

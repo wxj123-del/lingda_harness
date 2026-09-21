@@ -12,6 +12,7 @@ import knowledgeRemote from '@deepseek-ai/dsh-host-knowledge/remote'
 import localSkillImportRemote from '@deepseek-ai/dsh-host-local-skill-import/remote'
 import messageFeedbackRemote from '@deepseek-ai/dsh-message-feedback/remote'
 import permissionPresetsRemote from '@deepseek-ai/dsh-permission-presets/remote'
+import personalAgentRemote from '@deepseek-ai/dsh-personal-agent/remote'
 import sessionFeedbackRemote from '@deepseek-ai/dsh-command-feedback/remote'
 import fileUploadsRemote from '@deepseek-ai/dsh-client-file-upload/remote'
 import sessionReferencesRemote from '@deepseek-ai/dsh-session-reference/remote'
@@ -19,6 +20,7 @@ import subagentsRemote from '@deepseek-ai/dsh-subagent/remote'
 import sessionRemote from '@deepseek-ai/dsh-api-session-controller/remote'
 import workspaceRemote from '@deepseek-ai/dsh-api-workspace-controller/remote'
 import terminalRemote from '@deepseek-ai/dsh-api-terminal-controller/remote'
+import gitWorkspaceRemote from '@deepseek-ai/dsh-git-workspace/remote'
 import workspaceFilesRemote from '@deepseek-ai/dsh-api-workspace-files/remote'
 import type { ClientRemote } from '@deepseek-ai/dsh-api-gateway/client'
 
@@ -36,6 +38,7 @@ export type {} from '@deepseek-ai/dsh-llm/remote'
 export type {} from '@deepseek-ai/dsh-host-plugin-inventory/remote'
 export type {} from '@deepseek-ai/dsh-message-feedback/remote'
 export type {} from '@deepseek-ai/dsh-permission-presets/remote'
+export type {} from '@deepseek-ai/dsh-personal-agent/remote'
 export type {} from '@deepseek-ai/dsh-command-feedback/remote'
 export type {} from '@deepseek-ai/dsh-client-file-upload/remote'
 export type {} from '@deepseek-ai/dsh-session-reference/remote'
@@ -143,6 +146,8 @@ export type {
   RemoteErrorCode, RemoteErrorDetailsMap, RemoteFailure, RemoteResult,
 } from '@deepseek-ai/dsh-typert-protocol'
 export type { RemoteHostFacts } from '@deepseek-ai/dsh-api-gateway/client'
+export type { RepositoryUpdateResult, RepositoryUpdateStatus } from '@deepseek-ai/dsh-git-workspace/types'
+export type {} from '@deepseek-ai/dsh-git-workspace/remote'
 
 declare module '@deepseek-ai/cordis' {
   interface Context {
@@ -166,7 +171,8 @@ export async function apply(ctx: Context): Promise<() => Promise<void>> {
       agentPresetsRemote, commandsRemote, settingsControllerRemote, goalsRemote, llmRemote, dynamicRemote,
       pluginInventoryRemote, knowledgeRemote, localSkillImportRemote, messageFeedbackRemote,
       sessionFeedbackRemote, fileUploadsRemote, sessionReferencesRemote,
-      permissionPresetsRemote, subagentsRemote, sessionRemote, workspaceRemote, workspaceFilesRemote, terminalRemote,
+      permissionPresetsRemote, personalAgentRemote, subagentsRemote, sessionRemote, workspaceRemote, workspaceFilesRemote, terminalRemote,
+      gitWorkspaceRemote,
     ]) {
       disposers.push(await ctx.remote.$mount(contribution))
     }

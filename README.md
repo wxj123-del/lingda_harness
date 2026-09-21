@@ -55,6 +55,18 @@ pnpm dsh web
 
 `pnpm run build` prepares the repository artifacts. `pnpm dsh web` uses those built artifacts without rebuilding. This checkout retains the `dsh` CLI and `@deepseek-ai/*` package names; the npm package `@deepseek-ai/dsh` is the upstream distribution.
 
+### Updating
+
+For a source checkout, the Settings > General > Software updates row checks `https://gitcode.com/XJ-Cyber/lingda-harness` and applies a clean fast-forward update from its default branch. It does not require a manually configured Git remote. The updater installs the frozen dependencies, rebuilds the generated artifacts, and restarts the Host. The command-line workflow remains available:
+
+```sh
+git pull --ff-only
+pnpm install
+pnpm run build
+```
+
+The packaged Desktop application has **Settings > General > Software updates**. That action checks the configured signed Desktop release stream and installs the matching shell and dsh runtime before restarting. A browser launched from a source checkout uses the local Host updater. Dirty, diverged, detached, and local-ahead checkouts are refused and must be handled manually.
+
 ### First conversation
 
 1. Open **Settings > Models** and configure a provider and API credentials using the [model configuration guide](docs/user/guide/providers.md).

@@ -911,6 +911,73 @@ roots(): Agent[]
 
 Source: [`packages/core/agent/src/index.ts`](../../packages/core/agent/src/index.ts)
 
+<a id="ctxpersonalagent--personalagentservice"></a>
+
+### `ctx.personalAgent` — `PersonalAgentService`
+
+Runtime service enforcing personal modes for each Agent session.
+
+```ts cordis-catalog
+/** Return the selectable modes and their tool-step caps.
+ * @returns Mode options.
+ */
+@Remote('modes') modes(): ModeOption[]
+
+/** Return the current Agent's durable mode and policy.
+ * @param agent - Current Agent selected by the Remote context.
+ * @returns Its durable mode and policy.
+ */
+@Remote('current') currentRemote(agent: Agent): ModeView
+
+/** Suggest a mode from draft text without a model call.
+ * @param input - Draft user input.
+ * @returns A local mode suggestion, or null.
+ */
+@Remote('suggest') suggest(input: string): { mode: AgentMode | null }
+
+/** Set the mode for subsequent requests.
+ * @param agent - Current Agent selected by the Remote context.
+ * @param mode - Next-turn mode.
+ * @returns The updated view.
+ */
+@Remote('set') setRemote(agent: Agent, mode: AgentMode): ModeView
+
+/** Read an Agent's durable mode.
+ * @param agent - Agent whose durable mode is read.
+ * @returns The current mode.
+ */
+current(agent: Agent): AgentMode
+
+/** Resolve the policy selected by a session's mode.
+ * @param session - Session whose durable mode selects a policy.
+ * @returns The effective policy.
+ */
+policy(session: Session): ModePolicy
+
+/**
+ * Answer the capability question used by late tool-discovery adapters.
+ *
+ * Schema filtering happens in this service too, but discovery is allowed to
+ * run after another prompt listener and could otherwise re-add a hidden
+ * schema. Keeping this small public predicate lets those adapters apply the
+ * same mode ceiling without depending on the concrete service class.
+ * @param session - Session whose active mode is checked.
+ * @param name - Tool name to authorize.
+ * @returns Whether the tool is visible and executable in that mode.
+ */
+allowsTool(session: Session, name: string): boolean
+
+/** Record a durable mode switch and apply its permissions.
+ * @param agent - Agent whose session records the switch.
+ * @param mode - Mode applied to future requests.
+ */
+set(agent: Agent, mode: AgentMode): void
+```
+
+Types: [Session](session.zh.md)
+
+Source: [`packages/interaction/personal-agent/src/index.ts`](../../packages/interaction/personal-agent/src/index.ts)
+
 <a id="agent-events"></a>
 
 ### `agent/*` events
@@ -1129,6 +1196,31 @@ Replace the frozen call configuration. `await next()` yields the config the mach
 ```
 
 Types: [LlmCallConfig](llm-streaming.zh.md) · [Scoped](scope.zh.md)
+
+Source: [`packages/core/agent/src/runtime-types.ts`](../../packages/core/agent/src/runtime-types.ts)
+
+<a id="agentrequest-context--waterfall"></a>
+
+#### `agent/request-context` — waterfall
+
+Bound the model-visible message context immediately before a request is constructed. Durable session history is never deleted; listeners only choose the request snapshot and may clip oversized tool results.
+
+```ts cordis-catalog
+/**
+ * Bound the model-visible message context immediately before a request is
+ * constructed. Durable session history is never deleted; listeners only
+ * choose the request snapshot and may clip oversized tool results.
+ * @param payload.agent - the agent making the model call.
+ * @param payload.turn - the open turn number.
+ * @param payload.step - the step whose request is being built.
+ * @param payload.messages - the durable message snapshot before bounding.
+ * @param payload.signal - the current turn's cancellation signal.
+ * @mode waterfall
+ */
+'agent/request-context'(this: Scoped<Agent>, payload: { agent: Agent; turn: number; step: number; messages: Message[]; signal: AbortSignal }, next: () => Promise<Message[]>): Promise<Message[]>
+```
+
+Types: [Message](llm-streaming.zh.md) · [Scoped](scope.zh.md)
 
 Source: [`packages/core/agent/src/runtime-types.ts`](../../packages/core/agent/src/runtime-types.ts)
 

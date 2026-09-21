@@ -18,6 +18,8 @@ The shorter persona encourages direct answers to simple questions and concise re
 
 The scoped [tool-discovery plugin](../../../../packages/preset/tool-discovery/README.md) starts with four tools plus search, ranks historical actual calls, and loads at most two relevant tools per search. This also filters inherited Host media schemas. Selection is bounded to eight tools plus search and restored from existing request headers and committed result metadata; the loop and execution permissions are unchanged. Exact names load one tool, and unmatched queries never dump the catalog.
 
+The preset pins `present` so files created by shell commands can be delivered without another discovery round. It gives foreground `bash` calls a 30-second outer deadline through `timeout-policy`; longer work must use background jobs. HTML/SVG checks prefer static inspection and `present`, and a Crashpad or GUI permission failure is not retried.
+
 ## Alternatives considered
 
 **A prompt-only preset.** Guidance cannot enforce output limits, so tool-owned caps accompany it.

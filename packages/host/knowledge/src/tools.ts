@@ -13,7 +13,7 @@ export function knowledgeTools(service: KnowledgeGateway): ToolDefinition[] {
   return [
     {
       name: 'knowledge_list',
-      description: '列出已启用的知识库及索引状态。检索前可用它查找知识库 ID。',
+      description: '列出可用的知识库及索引状态。对话中勾选的知识库会在用户消息前自动检索。',
       parameters: { type: 'object', properties: {}, additionalProperties: false },
       output,
       execute: async (_args, exec) => {
@@ -33,7 +33,7 @@ export function knowledgeTools(service: KnowledgeGateway): ToolDefinition[] {
     {
       name: 'knowledge_search',
       description:
-        '检索用户启用的知识库，返回相关原文、文档标题、片段编号和余弦相似度。引用资料时注明知识库和文档标题；相似度不是正确率。未建索引的知识库会列在 skippedBases 中。',
+        '检索当前 Session 选择的知识库，返回经过相似度阈值、去重和 Token 预算裁剪的原文、文档标题、片段编号和余弦相似度。引用资料时注明知识库和文档标题；相似度不是正确率。未建索引的知识库会列在 skippedBases 中。',
       parameters: {
         type: 'object',
         properties: {
@@ -46,7 +46,12 @@ export function knowledgeTools(service: KnowledgeGateway): ToolDefinition[] {
       output,
       execute: async (args, exec) => {
         const input = z.object({ query: z.string(), baseId: z.string().optional() }).parse(args)
-        return service.search(input.query, input.baseId ?? '', exec.signal)
+        return service.searchForSession(
+          input.query,
+          exec.agent?.session,
+          input.baseId ?? '',
+          exec.signal,
+        )
       },
     },
   ]

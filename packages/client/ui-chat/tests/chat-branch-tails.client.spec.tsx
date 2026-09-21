@@ -1042,7 +1042,7 @@ describe('useCalendarDay boundary refresh', () => {
 })
 
 describe('small branch tails', () => {
-  it('AssistantMarkdown single-line reasoning summary skips the newline cut', () => {
+  it('AssistantMarkdown never paints a settled single-line reasoning block', () => {
     const view = render(
       <AssistantMarkdown
         t={t}
@@ -1051,7 +1051,8 @@ describe('small branch tails', () => {
         renderMessageImages={renderMessageImages}
       />,
     )
-    expect(view.getByText('one-liner')).toBeTruthy()
+    expect(view.queryByText('one-liner')).toBeNull()
+    expect(view.queryByText('思考')).toBeNull()
   })
 
   it('StatsPills omits the cache-hit segment when no input accounting exists at all', () => {

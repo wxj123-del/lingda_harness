@@ -5,8 +5,10 @@ import type {} from '@deepseek-ai/dsh-client-locale/client'
 import type {} from '@deepseek-ai/dsh-client-ui-conversation/client'
 import type {} from '@deepseek-ai/dsh-client-ui-renderer/client'
 import type {} from '@deepseek-ai/dsh-client-ui-session/client'
+import type { SessionId } from '@deepseek-ai/dsh-session/types'
 import { NS, zh, en } from './locales.ts'
 import { TokenLedger } from './TokenLedger.tsx'
+import { RepositoryView } from './RepositoryView.tsx'
 import type { StepInsightInjected } from './types.ts'
 
 /** The source feed and localization are resolved through ordinary Cordis injection. */
@@ -19,13 +21,19 @@ export const inject = ['slots', 'sessions', 'locale']
 export function apply(ctx: Context): void {
   ctx.effect(() => ctx.locale.register(NS, { zh, en }), 'step-insight: dictionaries')
   const t = ctx.locale.bind(NS)
+  const injectLedger = (sessionId: SessionId): StepInsightInjected => {
+    const binding = ctx.sessions.binding(sessionId)
+    if (binding === undefined) throw new Error(`step-insight: Session ${sessionId} is unavailable`)
+    return { hooks: { ledgerEvents: binding.eventSource }, loadOlder: () => binding.session.loadOlder() }
+  }
   ctx.slots.inject('conversation.view', () => ctx.slots.register({
     name: 'conversation.view', id: 'trajectory', priority: -10, order: 10,
     label: () => t('title'), locale: NS,
-    inject: (sessionId): StepInsightInjected => {
-      const binding = ctx.sessions.binding(sessionId)
-      if (binding === undefined) throw new Error(`step-insight: Session ${sessionId} is unavailable`)
-      return { hooks: { ledgerEvents: binding.eventSource }, loadOlder: () => binding.session.loadOlder() }
-    },
+    inject: injectLedger,
   }, TokenLedger))
+  ctx.slots.inject('conversation.view', () => ctx.slots.register({
+    name: 'conversation.view', id: 'git-workspace', order: 20,
+    label: () => t('repositoryView'), locale: NS,
+    inject: injectLedger,
+  }, RepositoryView))
 }

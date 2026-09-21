@@ -24,6 +24,8 @@ export interface Config {
   pinnedTools: string[]
   /** Ordered cold-start preferences for tools without recorded calls. */
   fallbackTools: string[]
+  /** Small safe set restored when a capability search has no match. */
+  recoveryTools?: string[]
   /** Maximum recent other Sessions read once when initializing this agent. */
   historySessions: number
   /** Maximum matching tools loaded by one search. */
@@ -40,6 +42,7 @@ export const Config: z<Config> = z.object({
   maxTools: z.number().step(1).min(1).required(),
   pinnedTools: z.array(z.string()).required(),
   fallbackTools: z.array(z.string()).required(),
+  recoveryTools: z.array(z.string()).default([]),
   historySessions: z.number().step(1).min(0).required(),
   searchLimit: z.number().step(1).min(1).required(),
   descriptionChars: z.number().step(1).min(0).required(),
@@ -199,11 +202,15 @@ export function apply(ctx: Context, config: Config): void {
       schema: { type: 'object', additionalProperties: false, properties: {
         loaded: { type: 'array', required: true, items: { type: 'object', additionalProperties: false, properties: {
           name: { type: 'string', required: true }, description: { type: 'string', required: true },
+          reason: { type: 'string', required: true },
         } } },
         message: { type: 'string', required: true },
       } },
       render: (_args, value) => [{ type: 'text', text: JSON.stringify(value) }],
-      presentationMeta: (_args, value) => ({ toolDiscovery: value.loaded.map(tool => tool.name) }),
+      presentationMeta: (_args, value) => ({
+        toolDiscovery: value.loaded.map(tool => tool.name),
+        toolDiscoveryReasons: value.loaded.map(tool => ({ name: tool.name, reason: tool.reason })),
+      }),
     },
     async execute(args, exec) {
       const query = args.query.trim().toLowerCase()
@@ -211,7 +218,13 @@ export function apply(ctx: Context, config: Config): void {
       if (!terms.length || query.length > 160) throw new Error('Use a specific tool name or capability query of 1 to 160 characters.')
       if (exec.agent === undefined) throw new Error('tool_search requires a calling agent')
       const selection = await prepare(exec.agent, exec.signal)
-      const allowed = new Set(ctx.tools.schemas(exec.agent).map(tool => tool.name))
+      const personalAgent = (ctx.get('personalAgent') as {
+        allowsTool?: (session: Session, name: string) => boolean
+      } | undefined)
+      const allowed = new Set(selection.catalog
+        .filter(tool => ctx.tools.get(tool.name, exec.agent) !== undefined)
+        .filter(tool => personalAgent?.allowsTool?.(exec.agent!.session, tool.name) ?? true)
+        .map(tool => tool.name))
       const candidates = selection.catalog.filter(tool => tool.name !== SEARCH && allowed.has(tool.name))
       const exact = candidates.find(tool => tool.name.toLowerCase() === query)
       const matches = (exact === undefined ? candidates : [exact])
@@ -219,11 +232,22 @@ export function apply(ctx: Context, config: Config): void {
         .filter(match => match.score > 0)
         .sort((a, b) => b.score - a.score || byFrequency(selection, a.tool, b.tool))
         .slice(0, config.searchLimit)
+      const selected = matches.length > 0 ? matches.map(({ tool }) => ({
+        tool,
+        reason: exact?.name === tool.name ? 'exact-name' : 'lexical-match',
+      })) : selection.catalog
+        .filter(tool => config.recoveryTools?.includes(tool.name) && allowed.has(tool.name))
+        .slice(0, config.searchLimit)
+        .map(tool => ({ tool, reason: 'safe-recovery' }))
       const result = {
-        loaded: matches.map(({ tool }) => ({ name: tool.name, description: Array.from(
+        loaded: selected.map(({ tool, reason }) => ({ name: tool.name, description: Array.from(
           new Intl.Segmenter('en', { granularity: 'grapheme' }).segment(tool.description), part => part.segment,
-        ).slice(0, config.descriptionChars).join('') })),
-        message: matches.length ? 'Loaded tools are available on the next request.' : 'No matching tools. Try a more specific English keyword or exact tool name.',
+        ).slice(0, config.descriptionChars).join(''), reason })),
+        message: matches.length
+          ? 'Loaded tools are available on the next request.'
+          : selected.length
+            ? 'No matching tool was found; a small safe recovery set is available on the next request.'
+            : 'No matching tools. Try a more specific English keyword or exact tool name.',
       }
       while (Buffer.byteLength(JSON.stringify(result)) > config.resultMaxBytes && result.loaded.length) result.loaded.pop()
       if (matches.length && result.loaded.length === 0) throw new Error('Matching tool names exceed the configured search result byte budget.')
@@ -235,9 +259,18 @@ export function apply(ctx: Context, config: Config): void {
   ctx.on('system-prompt/assemble', async (_assembly, context, next) => {
     const assembly = await next()
     if (context.agent === undefined) return assembly
-    if (!assembly.tools.some(tool => tool.name === SEARCH)) throw new Error('tool-discovery requires native tool presentation with tool_search visible')
+    // A mode policy may intentionally expose zero tools (for example the
+    // personal Agent's default Q&A mode). Discovery is optional in that
+    // request, so do not turn an otherwise valid no-tool assembly into an
+    // error merely because tool_search was filtered out upstream.
+    if (!assembly.tools.some(tool => tool.name === SEARCH)) return assembly
     const selection = await prepare(context.agent, context.signal)
     selection.catalog = assembly.tools
+    const personalAgent = (ctx.get('personalAgent') as {
+      allowsTool?: (session: Session, name: string) => boolean
+    } | undefined)
+    const modeAllows = (name: string): boolean => personalAgent?.allowsTool?.(context.agent!.session, name) ?? true
+    if (!modeAllows(SEARCH)) return assembly
     const available = new Set(assembly.tools.map(tool => tool.name))
     for (const tool of selection.loaded) if (!available.has(tool)) selection.loaded.delete(tool)
     for (const tool of pinned) if (available.has(tool)) selection.loaded.add(tool)
@@ -249,7 +282,7 @@ export function apply(ctx: Context, config: Config): void {
       selection.initialized = true
     }
     trim(selection, pinned, config.maxTools)
-    const visible = new Set([...selection.loaded, SEARCH])
+    const visible = new Set([...selection.loaded, SEARCH].filter(modeAllows))
     return {
       ...assembly,
       tools: assembly.tools.filter(tool => visible.has(tool.name)),

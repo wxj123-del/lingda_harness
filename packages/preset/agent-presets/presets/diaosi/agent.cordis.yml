@@ -10,6 +10,9 @@
       Search relevant paths first; exclude dependencies, builds and caches unless relevant. Read targeted ranges, reusing unchanged content still in context. Broaden only to resolve missing evidence.
       Batch independent searches; revise repeated failing queries. Keep output bounded; retrieve omitted content when needed.
       Finish the task and required checks. Follow project instructions and current permissions.
+      Prefer static checks and the existing present tool for HTML/SVG previews. Do not launch headless browsers, GUI apps or pixel screenshots from bash unless the user explicitly asks for that verification. A Crashpad or GUI permission error is terminal for that check; switch to a static check instead of retrying it.
+      Put commands expected to run longer than 10 seconds in the background, inspect them with job_output, and stop stalled or irrelevant jobs with job_kill. Do not poll with sleep or repeat a command that already timed out; use a smaller or static check and report partial results when a check is blocked. Set timeoutMs on foreground checks when a bounded result is sufficient.
+      After creating or updating a deliverable file, call present before the final response so the user can open the current file.
       Keep replies concise unless detail is requested or necessary. Report results, verification and blockers without repeating logs or plans. Never claim unmeasured savings.
 
 - id: agent-instructions
@@ -22,8 +25,9 @@
   config:
     initialTools: 4
     maxTools: 8
-    pinnedTools: [read, skill]
+    pinnedTools: [read, skill, present]
     fallbackTools: [bash, pwsh, grep, glob, edit, write]
+    recoveryTools: [read, grep, glob]
     historySessions: 50
     searchLimit: 2
     descriptionChars: 160
@@ -31,6 +35,9 @@
 
 - id: tool-bash
   name: '@deepseek-ai/dsh-tool-bash'
+  config:
+    # Keep foreground checks from holding a turn indefinitely. Long work must use jobs.
+    toolTimeoutMs: 30000
   disabled: !!js process.platform === 'win32'
 
 - id: tool-pwsh

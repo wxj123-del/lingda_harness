@@ -240,6 +240,31 @@
             sandbox: danger-full-access
             approval: never
 
+    # Personal local-first Agent policy. The default is deliberately direct
+    # Q&A: coding, research, execution and media capabilities are opt-in per
+    # session through /mode, while the service also enforces the boundary at
+    # tool execution time.
+    - id: personal-agent
+      name: '@deepseek-ai/dsh-personal-agent'
+      config:
+        defaultMode: qa
+        # Step caps bound model rounds per turn: one round per model step,
+        # however many parallel calls that step dispatches. Research stays a
+        # small read-only budget; coding and media work legitimately need long
+        # tool chains before a turn can answer.
+        modes:
+          research:
+            maxSteps: 20
+          coding:
+            maxSteps: 60
+          execution:
+            maxSteps: 40
+
+    # Read-only workspace evidence is a base capability, independent from
+    # personal Agent modes and legacy presets.
+    - id: git-workspace
+      name: '@deepseek-ai/dsh-git-workspace'
+
     - id: shell-env
       name: '@deepseek-ai/dsh-shell-env'
 

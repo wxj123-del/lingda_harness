@@ -29,7 +29,7 @@ Mount this package in a composition that should give each agent session its own 
 
 The shipped Web `standard`, `diaosi`, `ptc`, and `cordis` presets include [explicit file delivery](../../client/ui-deliverables/README.md#explicit-deliveries). The `minimal` preset exposes only a persistent shell and a complete persona containing the session's configured model and provider. It suppresses additional prompt sections and runtime context.
 
-`diaosi` uses [on-demand tool discovery](../tool-discovery/README.md): initially four tools, including `read` and `skill`, plus `tool_search`; other initial slots favor actual historical calls. Search loads at most two relevant tools per call; subsequent requests retain at most eight tools plus search. Inherited media and MCP schemas participate in the same selection instead of appearing unconditionally. The updated preset applies to newly created conversations; already loaded generations keep their configuration.
+`diaosi` uses [on-demand tool discovery](../tool-discovery/README.md): initially four tools, including the pinned `read`, `skill` and `present` tools, plus `tool_search`; the remaining initial slot favors actual historical calls. Search loads at most two relevant tools per call; subsequent requests retain at most eight tools plus search. Inherited media and MCP schemas participate in the same selection instead of appearing unconditionally. The updated preset applies to newly created conversations; already loaded generations keep their configuration.
 
 Choose `diaosi` (Budget mode, 屌丝模式) for a smaller everyday tool set with file editing, shell, search, Skills, task tracking and questions. It keeps the selected model and project instructions, omits delegation, workflow, goal and plan-mode tools, and requests targeted searches, incremental reads and concise replies. Each read returns at most 120 lines and 8,000 bytes of selected text; searches retain 40 paths or matches. A scoped spill policy previews oversized shell, search, web and job-output text within 8,000 bytes, with a full-result locator; other tools keep their existing policies. Compact Skill catalogs preserve names, descriptions and full instruction loading. Its private compactor triggers at 65% of the selected model's context window. These are output and pressure limits, not a total token budget or a measured savings guarantee. [The composition](presets/diaosi/agent.cordis.yml) owns the session-specific settings; [the decision](../../../.agents/notes/implemented/feature/2026-09-16-diaosi-agent-preset.md) records the trade-offs.
 
@@ -47,6 +47,7 @@ The plugin needs a `default` preset id and scans `roots` for presets:
 - name: '@deepseek-ai/dsh-agent-presets'
   config:
     default: standard
+    modeSelectionEnabled: true
     roots:
       - path: ~/company-presets
         trust: system
@@ -55,6 +56,7 @@ The plugin needs a `default` preset id and scans `roots` for presets:
 | Field | Default | Meaning |
 |---|---|---|
 | `default` | required | Deployment fallback preset id, used while mode selection is disabled or no user default overrides it |
+| `modeSelectionEnabled` | `true` | Whether the new-session preset picker is exposed; disabling it makes `default` the effective preset for unnamed sessions |
 | `roots` | `[]` | Scanned directories in precedence order; each supplies `path` (a leading `~` expands) and `trust` (defaults to `user`) |
 | `includeShippedRoot` | `true` | Prepend the package's bundled presets as a `system` root before every configured root |
 | `includeUserRoot` | `true` | Append `<dshHome>/.agent-presets` as a `user` root, after every configured root |
@@ -65,7 +67,7 @@ The shipped root is prepended before every configured root, so the built-in set 
 
 ### Showing the picker and choosing its default
 
-The required `default` config sets the deployment default. When a settings provider is composed, this plugin registers the `agent-presets` namespace with `{ default: config.default, modeSelectionEnabled: true }` as its base, so the existing new-session picker remains visible unless a user turns it off. The Host reads both fields on every default resolution: while `modeSelectionEnabled` is false, an omitted preset resolves to `config.default` even if the user document retains another `default`; while it is true, a user default may override the deployment value:
+The required `default` config sets the deployment default. `modeSelectionEnabled` controls whether the new-session picker is exposed; it defaults to `true` for compatibility. When a settings provider is composed, this plugin registers the `agent-presets` namespace with the configured default and picker visibility as its base. The Host reads both fields on every default resolution: while `modeSelectionEnabled` is false, an omitted preset resolves to `config.default` even if the user document retains another `default`; while it is true, a user default may override the deployment value:
 
 ```yaml
 agent-presets:

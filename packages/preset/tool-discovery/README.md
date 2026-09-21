@@ -33,8 +33,9 @@ Mount inside a native-tool preset with `tools`, `systemPrompt`, and `sessionQuer
   config:
     initialTools: 4
     maxTools: 8
-    pinnedTools: [read, skill]
+    pinnedTools: [read, skill, present]
     fallbackTools: [bash, pwsh, grep, glob, edit, write]
+    recoveryTools: [read, grep, glob]
     historySessions: 50
     searchLimit: 2
     descriptionChars: 160
@@ -43,7 +44,7 @@ Mount inside a native-tool preset with `tools`, `systemPrompt`, and `sessionQuer
 
 `initialTools` and `maxTools` include registered pinned tools but exclude `tool_search`. Initial selection ranks actual direct calls in the most recently created `historySessions` other sessions plus the current session, excluding inherited fork counts. Merely exposing a tool does not increase priority. Ties and cold starts use `fallbackTools`, then name. History is read once per agent initialization; committed local events update subsequent state. Unreadable historical sessions are logged and skipped. Cancellation fails that assembly and allows a later retry.
 
-Exact-name searches load only that tool. Keyword queries require every term to match a name or description, rank relevance before frequency, and load at most `searchLimit` results. Descriptions obey `descriptionChars`; the complete rendered JSON obeys `resultMaxBytes`. Tools become visible on the next request only after a successful result is committed. At capacity, least recently used unpinned entries leave the catalog. Retained schemas keep their canonical order. Missing or denied pinned tools are never made available.
+Exact-name searches load only that tool. Keyword queries require every term to match a name or description, rank relevance before frequency, and load at most `searchLimit` results. A miss can load the configured `recoveryTools`; each result records whether it was an exact-name, lexical-match, or safe-recovery selection. Descriptions obey `descriptionChars`; the complete rendered JSON obeys `resultMaxBytes`. Tools become visible on the next request only after a successful result is committed. At capacity, least recently used unpinned entries leave the catalog. Retained schemas keep their canonical order. Missing or denied pinned tools are never made available.
 
 -----
 

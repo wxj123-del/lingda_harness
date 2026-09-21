@@ -14,7 +14,7 @@ import {
 } from '@deepseek-ai/dsh-app-boot'
 import { provideCmdline } from '@deepseek-ai/dsh-cmdline'
 import { SessionId, SessionLogOffset } from '@deepseek-ai/dsh-session'
-import { assembleContextFor, type Agent } from '@deepseek-ai/dsh-agent'
+import { agentEvents, assembleContextFor, type Agent } from '@deepseek-ai/dsh-agent'
 import { renderPrompt } from '@deepseek-ai/dsh-system-prompt'
 import type { PatchOptions } from '@deepseek-ai/cordis-plugin-include'
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest'
@@ -216,7 +216,10 @@ describe('the shipped Web composition', () => {
         revision: 0, split: { mode: 'recursive', size: 400, overlap: 60 },
         documents: [{ id: 'travel' as never, title: '报销规则', content: '住宿每晚最多报销四百元，需要电子发票和出差审批单。', updatedAt: 1 }],
       })
-      await vi.waitFor(async () => expect((await knowledgeCtx.knowledge.overview()).bases[0]?.index.status).toBe('ready'))
+      await vi.waitFor(async () => {
+        expect((await knowledgeCtx.knowledge.overview()).bases[0]?.index.status).toBe('ready')
+      })
+      const sessionId = SessionId('knowledge-retrieval')
       const adapter = new MockAdapter([
         toolCallResponse('find-knowledge', 'tool_search', { query: 'knowledge' }),
         toolCallResponse('list-knowledge', 'knowledge_list', {}),
@@ -225,15 +228,20 @@ describe('the shipped Web composition', () => {
       ])
       const removeAdapter = knowledgeCtx.llm.registerAdapter(['knowledge-fixture'], adapter)
       const handle = await knowledgeCtx.agents.create({
-        sessionId: SessionId('knowledge-retrieval'), meta: { cwd: root },
+        sessionId, meta: { cwd: root },
         agentOptions: { provider: 'knowledge-fixture', model: 'fixture' },
         setup: agentCtx => knowledgeCtx.agentPresets.mount(agentCtx, 'diaosi').then(() => undefined),
       })
       try {
+        await knowledgeCtx.knowledge.setSelected(handle.agent, ['knowledge-fixture' as never])
+        expect(await knowledgeCtx.knowledge.selected(handle.agent)).toEqual(['knowledge-fixture'])
         expect(toolNames(knowledgeCtx, handle.agent)).toEqual(expect.arrayContaining(['knowledge_list', 'knowledge_search']))
         handle.agent.followup(createUserMessage({ source: { kind: 'user' }, content: [{ type: 'text', text: '查询知识库：出差酒店费用和凭证。' }] }))
         await handle.agent.whenIdle()
         expect(adapter.requests).toHaveLength(4)
+        expect(adapter.requests[0]?.messages.some(message =>
+          JSON.stringify(message).includes('住宿每晚最多报销四百元'),
+        )).toBe(true)
         const observation = await knowledgeCtx.sessionQuery.observeSession(handle.agent.session.id, { projectionMode: 'none' })
         try {
           const results = observation.events.filter(event => event.type === 'tool/result').map(event => event.data.message.content)
@@ -244,6 +252,47 @@ describe('the shipped Web composition', () => {
       } finally { await handle.dispose(); removeAdapter() }
       await knowledgeCtx.knowledge.deleteBase('knowledge-fixture' as never, 1)
       expect(toolNames(knowledgeCtx)).not.toContain('knowledge_search')
+    } finally {
+      embed.mockRestore()
+      await knowledgeCtx.fiber.dispose()
+      await rm(root, { recursive: true, force: true })
+    }
+  })
+
+  it('records a failed automatic knowledge lookup and continues with a direct-answer notice', async () => {
+    const root = await mkdtemp(join(tmpdir(), 'dsh-knowledge-failure-'))
+    const knowledgeCtx = await bootWeb(join(root, 'settings.yaml'), [{ id: 'session-title-llm', disabled: true }])
+    const inference = (knowledgeCtx.knowledge as unknown as { embedding: LocalEmbedding }).embedding
+    const embed = vi.spyOn(inference, 'embed').mockImplementation(async texts => texts.map(() => [1, 0, 0]))
+    try {
+      await knowledgeCtx.knowledge.save({
+        id: 'knowledge-failure' as never, title: '失败测试库', description: '', enabled: true,
+        revision: 0, split: { mode: 'recursive', size: 400, overlap: 60 },
+        documents: [{ id: 'doc' as never, title: '文档', content: '测试内容', updatedAt: 1 }],
+      })
+      await vi.waitFor(async () => {
+        expect((await knowledgeCtx.knowledge.overview()).bases[0]?.index.status).toBe('ready')
+      })
+      embed.mockRejectedValue(new Error('embedding model unavailable'))
+      const handle = await knowledgeCtx.agents.create({
+        sessionId: SessionId('knowledge-failure-session'), meta: { cwd: root },
+        agentOptions: { provider: 'knowledge-failure', model: 'fixture' },
+        setup: agentCtx => knowledgeCtx.agentPresets.mount(agentCtx, 'diaosi').then(() => undefined),
+      })
+      try {
+        await knowledgeCtx.knowledge.setSelected(handle.agent, ['knowledge-failure' as never])
+        const message = createUserMessage({ source: { kind: 'user' }, content: [{ type: 'text', text: '查询失败测试库' }] })
+        const decision = await agentEvents(knowledgeCtx, handle.agent).waterfall('agent/pre-step', {
+          turn: 1, step: 1, messages: [message], signal: new AbortController().signal,
+        }, () => Promise.resolve({ kind: 'enter' as const, messages: [message] }))
+        expect(decision.kind).toBe('enter')
+        if (decision.kind !== 'enter') throw new Error('expected an admitted request')
+        expect(decision.messages.at(-1)?.content[0]).toMatchObject({ type: 'text' })
+        expect(JSON.stringify(decision.messages.at(-1)?.content)).toContain('知识库自动检索不可用')
+        expect(handle.agent.session.snapshotEvents().find(event => event.type === 'knowledge/retrieval')?.data).toMatchObject({
+          status: 'failed', query: '查询失败测试库',
+        })
+      } finally { await handle.dispose() }
     } finally {
       embed.mockRestore()
       await knowledgeCtx.fiber.dispose()

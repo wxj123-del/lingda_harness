@@ -41,11 +41,12 @@ The common path is an executor provider, the environment registry, and this tool
 - name: '@deepseek-ai/dsh-tool-jobs'
 ```
 
-The single config field toggles background support.
+Configuration can toggle background support and optionally set an outer deadline for foreground calls.
 
 | Field | Default | Meaning |
 |---|---|---|
 | `enableRunInBackground` | `true` | Expose `run_in_background`; when `false`, forced background calls are rejected |
+| `toolTimeoutMs` | unset | Adds an outer cooperative deadline for foreground `bash` calls when `timeout-policy` is mounted; the background job's execution is not covered by this deadline |
 
 The generated [configuration catalog](../../../docs/config-catalog.md#deepseek-aidsh-tool-bash) is the exhaustive source for every accepted field and its JSDoc; the generated [tool catalog](../../../docs/tool-catalog.md#deepseek-aidsh-tool-bash) carries the full argument schema.
 
