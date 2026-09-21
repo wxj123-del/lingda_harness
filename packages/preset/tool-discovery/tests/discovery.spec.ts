@@ -95,7 +95,9 @@ describe('bounded tool discovery', () => {
     const result = await search(h.ctx, h.agent, 'image')
     expect(result.isError).toBe(false)
     expect(result.meta).toMatchObject({ toolDiscovery: ['generate_image', 'list_image_models'] })
-    expect(result.meta?.toolDiscoveryReasons).toEqual(expect.arrayContaining([{ name: 'generate_image', reason: 'lexical-match' }]))
+    expect(result.meta).toMatchObject({
+      toolDiscoveryReasons: expect.arrayContaining([{ name: 'generate_image', reason: 'lexical-match' }]),
+    })
     expect(await h.names()).toEqual(['bash', 'edit', 'generate_image', 'list_image_models', 'read', 'tool_search'])
     expect((await h.assemble()).tools.find(tool => tool.name === 'generate_image'))
       .toEqual(h.ctx.tools.schemas(h.agent).find(tool => tool.name === 'generate_image'))

@@ -25,7 +25,13 @@ vi.mock('node:child_process', async importOriginal => ({
   spawn: vi.fn(),
 }))
 
-let mockNetworkInterfaces: NodeJS.Dict<NodeJS.NetworkInterfaceInfo[]> = {
+interface MockNetworkInterface {
+  readonly family: 'IPv4'
+  readonly internal: boolean
+  readonly address: string
+}
+
+let mockNetworkInterfaces: NodeJS.Dict<MockNetworkInterface[]> = {
   lo0: [{ family: 'IPv4', internal: true, address: '127.0.0.1' }],
   en0: [{ family: 'IPv4', internal: false, address: '192.168.1.5' }],
 }
