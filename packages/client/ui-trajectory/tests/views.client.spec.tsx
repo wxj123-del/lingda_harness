@@ -536,6 +536,33 @@ describe('tab switching in ConversationRoot', () => {
     expect(screen.getByRole('tab', { name: 'Workflow' }).getAttribute('aria-selected')).toBe('true')
   })
 
+  it('expands a model node into its tool branch before inspecting the tool', async () => {
+    const snapshot = historySnapshot([
+      { kind: 'user', seq: 1, time: 1_000, content: [], source: null },
+      {
+        kind: 'assistant', seq: 2, time: 2_000, turn: 1, step: 1,
+        blocks: [{ kind: 'tool-call', callId: 'tool-1', name: 'bash', argsRaw: '{"command":"pwd"}' }],
+      },
+      {
+        kind: 'tool-result', seq: 3, time: 3_000, callId: 'tool-1', callTime: 2_100,
+        call: { name: 'bash', argsRaw: '{"command":"pwd"}' }, content: [], isError: false, subCalls: [],
+      },
+    ])
+    const b = await bench(snapshot)
+    mount(b)
+    fireEvent.click(screen.getByRole('tab', { name: 'Workflow' }))
+
+    const model = screen.getByRole('button', { name: /模型.*1 个工具调用.*bash/ })
+    expect(model.getAttribute('aria-expanded')).toBe('false')
+    expect(screen.queryByRole('button', { name: /^bash/ })).toBeNull()
+
+    fireEvent.click(model)
+    expect(model.getAttribute('aria-expanded')).toBe('true')
+    const tool = screen.getByRole('button', { name: /^bash/ })
+    fireEvent.click(tool)
+    expect(screen.getByRole('complementary', { name: '工作流节点详情' }).textContent).toContain('bash')
+  })
+
   it('collapses the workflow canvas and keeps the inspector synced to the clicked tool', async () => {
     const b = await bench()
     mount(b)

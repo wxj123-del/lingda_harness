@@ -1,9 +1,9 @@
-/** Compact flow view showing how each turn moves through the model and tools. */
+/** Mind-map view showing each model step and its expandable tool branches. */
 
 import { useEffect, useMemo, useState, type CSSProperties } from 'react'
 import type { ConvViewProps, AssistantBlock, ConversationNode, ToolCallBlock, ToolResultNode } from '@deepseek-ai/dsh-client-ui-conversation/client'
 import {
-  IconCheckOutline16, IconChevronLeftOutline14, IconChevronRightOutline14, IconCloseOutline16,
+  IconCheckOutline16, IconChevronDownOutline14, IconChevronLeftOutline14, IconChevronRightOutline14, IconCloseOutline16,
   IconCodeOutline16, IconSparkle16, IconUserOutline16,
 } from '@deepseek-ai/dsh-client-ui-primitives'
 import type { PropsLocale } from '@deepseek-ai/dsh-client-ui-slots'
@@ -29,6 +29,7 @@ interface WorkflowStep {
   readonly status?: TrajectoryKey
   readonly callId?: string
   readonly error?: boolean
+  readonly children?: readonly WorkflowStep[]
 }
 
 interface WorkflowLane {
@@ -130,16 +131,9 @@ function collectCalls(snapshot: TrajectorySnapshot): ReadonlyMap<string, Workflo
 
 function toolSteps(call: WorkflowCall, t: WorkflowViewProps['t'], output: WorkflowStep[]): void {
   const result = call.result
-  output.push({
-    id: `tool:${call.callId}`,
-    kind: 'tool',
-    title: call.name,
-    detail: call.args === '' ? t('workflow.noArguments') : shorten(call.args),
-    status: result === undefined ? 'workflow.running' : 'workflow.called',
-    callId: call.callId,
-  })
+  const children: WorkflowStep[] = []
   if (result !== undefined) {
-    output.push({
+    children.push({
       id: `result:${call.callId}`,
       kind: 'result',
       title: result.isError ? t('workflow.error') : t('workflow.result'),
@@ -149,7 +143,28 @@ function toolSteps(call: WorkflowCall, t: WorkflowViewProps['t'], output: Workfl
       error: result.isError,
     })
   }
-  for (const child of call.children) toolSteps(child, t, output)
+  for (const child of call.children) toolSteps(child, t, children)
+  output.push({
+    id: `tool:${call.callId}`,
+    kind: 'tool',
+    title: call.name,
+    detail: call.args === '' ? t('workflow.noArguments') : shorten(call.args),
+    status: result === undefined ? 'workflow.running' : 'workflow.called',
+    callId: call.callId,
+    ...(result?.isError === true ? { error: true } : {}),
+    children,
+  })
+}
+
+function toolStepsForCall(call: WorkflowCall, t: WorkflowViewProps['t']): WorkflowStep[] {
+  const steps: WorkflowStep[] = []
+  toolSteps(call, t, steps)
+  return steps
+}
+
+function toolNames(calls: readonly WorkflowCall[], t: WorkflowViewProps['t']): string {
+  if (calls.length === 0) return t('workflow.noTools')
+  return calls.map(call => call.name).join(' · ')
 }
 
 function inputPreview(node: Extract<ConversationNode, { kind: 'user' | 'steering' | 'context' }>): string {
@@ -175,32 +190,35 @@ function buildLanes(snapshot: TrajectorySnapshot, t: WorkflowViewProps['t']): re
       continue
     }
     if (node.kind === 'assistant') {
+      const calls = node.blocks
+        .filter((block): block is Extract<AssistantBlock, { kind: 'tool-call' }> => block.kind === 'tool-call')
+        .map(block => callFromBlock(block, results))
       const steps: WorkflowStep[] = [{
         id: `assistant:${node.seq}`,
         kind: 'model',
         title: t('workflow.model'),
-        detail: blockText(node.blocks, 'text') || blockText(node.blocks, 'reasoning') || t('workflow.waiting'),
+        detail: calls.length > 0
+          ? `${t('workflow.toolsCount', { count: calls.length })} · ${toolNames(calls, t)}`
+          : blockText(node.blocks, 'text') || blockText(node.blocks, 'reasoning') || t('workflow.waiting'),
         status: node.interrupted === true ? 'workflow.interrupted' : 'workflow.completed',
+        children: calls.flatMap(call => toolStepsForCall(call, t)),
       }]
       for (const block of node.blocks) {
         if (block.kind !== 'tool-call') continue
         shownCalls.add(block.callId)
-        toolSteps(callFromBlock(block, results), t, steps)
       }
       lanes.push({ key: `turn:${node.turn}:step:${node.step}:${node.seq}`, label: t('workflow.step', { turn: node.turn, step: node.step }), steps })
       continue
     }
     if (node.kind === 'tool-result' && !shownCalls.has(node.callId)) {
       shownCalls.add(node.callId)
-      const steps: WorkflowStep[] = []
-      toolSteps(callFromResult(node, results), t, steps)
+      const steps = toolStepsForCall(callFromResult(node, results), t)
       lanes.push({ key: `tool:${node.seq}`, label: t('workflow.tool'), steps })
     }
   }
   const pendingCalls = snapshot.runningCalls.filter(call => !shownCalls.has(call.callId))
   if (pendingCalls.length > 0) {
-    const steps: WorkflowStep[] = []
-    for (const call of pendingCalls) toolSteps(callFromBlock(call, results), t, steps)
+    const steps = pendingCalls.flatMap(call => toolStepsForCall(callFromBlock(call, results), t))
     lanes.push({ key: 'running', label: t('workflow.tool'), steps })
   }
   return lanes
@@ -208,6 +226,10 @@ function buildLanes(snapshot: TrajectorySnapshot, t: WorkflowViewProps['t']): re
 
 function buildWorkflowData(snapshot: TrajectorySnapshot, t: WorkflowViewProps['t']): WorkflowData {
   return { lanes: buildLanes(snapshot, t), calls: collectCalls(snapshot) }
+}
+
+function countTools(steps: readonly WorkflowStep[]): number {
+  return steps.reduce((count, step) => count + (step.kind === 'tool' ? 1 : 0) + countTools(step.children ?? []), 0)
 }
 
 function stepIcon(kind: WorkflowKind) {
@@ -219,13 +241,18 @@ function stepIcon(kind: WorkflowKind) {
   }
 }
 
-function WorkflowNode({ step, onInspect, t, selected }: {
+function WorkflowNode({ step, onInspect, onToggle, expanded, selectedCallId, t }: {
   readonly step: WorkflowStep
   readonly onInspect: (callId: string) => void
+  readonly onToggle: (id: string) => void
+  readonly expanded: boolean
+  readonly selectedCallId: string | null
   readonly t: WorkflowViewProps['t']
-  readonly selected?: boolean
 }) {
   const clickable = step.callId !== undefined
+  const expandable = !clickable && (step.children?.length ?? 0) > 0
+  const showChildren = (expanded || clickable) && step.children !== undefined && step.children.length > 0
+  const selected = step.callId !== undefined && step.callId === selectedCallId
   const content = <>
     <span className={css.nodeIcon} aria-hidden="true">{stepIcon(step.kind)}</span>
     <span className={css.nodeContent}>
@@ -233,20 +260,48 @@ function WorkflowNode({ step, onInspect, t, selected }: {
       {step.detail !== undefined && <span className={css.nodeMeta}>{step.detail}</span>}
     </span>
     {step.status !== undefined && <span className={css.nodeStatus}>{t(step.status)}</span>}
+    {expandable && <span className={css.nodeChevron} aria-hidden="true"><IconChevronDownOutline14 size={14} /></span>}
   </>
-  if (!clickable) {
-    return <div className={css.node} data-kind={step.kind}>{content}</div>
-  }
-  return <button
-    type="button"
-    className={css.node}
-    data-kind={step.kind}
-    data-error={step.error || undefined}
-    data-selected={selected || undefined}
-    aria-pressed={selected || undefined}
-    title={t('workflow.inspect')}
-    onClick={() => { onInspect(step.callId as string) }}
-  >{content}</button>
+  const node = !clickable && !expandable
+    ? <div className={css.node} data-kind={step.kind}>{content}</div>
+    : !clickable
+    ? <button
+      type="button"
+      className={css.node}
+      data-kind={step.kind}
+      data-expanded={expanded || undefined}
+      aria-expanded={expandable ? expanded : undefined}
+      title={expandable ? t('workflow.toggleTools') : undefined}
+      onClick={() => { if (expandable) onToggle(step.id) }}
+    >{content}</button>
+    : <button
+      type="button"
+      className={css.node}
+      data-kind={step.kind}
+      data-error={step.error || undefined}
+      data-selected={selected || undefined}
+      aria-pressed={selected || undefined}
+      title={t('workflow.inspect')}
+      onClick={() => { onInspect(step.callId as string) }}
+    >{content}</button>
+  return <div className={css.nodeGroup} data-has-children={expandable || undefined}>
+    {node}
+    {showChildren && (
+      <div className={css.childNodes}>
+        {step.children.map(child => (
+          <WorkflowNode
+            key={child.id}
+            step={child}
+            selectedCallId={selectedCallId}
+            onInspect={onInspect}
+            onToggle={onToggle}
+            expanded={false}
+            t={t}
+          />
+        ))}
+      </div>
+    )}
+  </div>
 }
 
 function serialized(value: unknown, fallback: string): string {
@@ -346,18 +401,19 @@ function WorkflowInspector({ call, onClose, onInspect, t }: {
   )
 }
 
-/** Render a compact, clickable chain of model and tool activity for the active Session. */
+/** Render an expandable, clickable map of model and tool activity for the active Session. */
 export function WorkflowView({ useTrajectory, t }: WorkflowViewProps) {
   const snapshot = useTrajectory(value => value)
   const data = useMemo(() => buildWorkflowData(snapshot, t), [snapshot, t])
   const { lanes, calls } = data
   const [selectedCallId, setSelectedCallId] = useState<string | null>(null)
   const [canvasCollapsed, setCanvasCollapsed] = useState(false)
+  const [expandedIds, setExpandedIds] = useState<ReadonlySet<string>>(new Set())
   useEffect(() => {
     if (selectedCallId !== null && !calls.has(selectedCallId)) setSelectedCallId(null)
   }, [calls, selectedCallId])
   const selectedCall = selectedCallId === null ? undefined : calls.get(selectedCallId)
-  const toolCount = lanes.reduce((count, lane) => count + lane.steps.filter(step => step.kind === 'tool').length, 0)
+  const toolCount = lanes.reduce((count, lane) => count + countTools(lane.steps), 0)
   return (
     <section className={css.root} aria-label={t('workflow.aria')}>
       <header className={css.header}>
@@ -409,8 +465,17 @@ export function WorkflowView({ useTrajectory, t }: WorkflowViewProps) {
                         {index > 0 && <span className={css.connector} aria-hidden="true" />}
                         <WorkflowNode
                           step={step}
-                          selected={step.callId === selectedCallId}
+                          selectedCallId={selectedCallId}
                           onInspect={(callId) => { setSelectedCallId(callId) }}
+                          onToggle={(id) => {
+                            setExpandedIds(current => {
+                              const next = new Set(current)
+                              if (next.has(id)) next.delete(id)
+                              else next.add(id)
+                              return next
+                            })
+                          }}
+                          expanded={expandedIds.has(step.id)}
                           t={t}
                         />
                       </div>

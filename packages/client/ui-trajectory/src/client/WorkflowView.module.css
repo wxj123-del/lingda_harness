@@ -212,6 +212,39 @@
   max-width: 100%;
 }
 
+.nodeGroup {
+  position: relative;
+  min-width: 0;
+}
+
+.childNodes {
+  position: relative;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 8px 0 0 22px;
+  padding-left: 18px;
+}
+
+.childNodes::before {
+  position: absolute;
+  top: -8px;
+  bottom: 12px;
+  left: 7px;
+  width: 1px;
+  background: color-mix(in srgb, var(--dsw-alias-brand-primary) 18%, var(--dsw-alias-border-l3));
+  content: '';
+}
+
+.childNodes > .nodeGroup::before {
+  position: absolute;
+  top: 23px;
+  left: -18px;
+  width: 18px;
+  border-top: 1px solid color-mix(in srgb, var(--dsw-alias-brand-primary) 18%, var(--dsw-alias-border-l3));
+  content: '';
+}
+
 .step + .step {
   margin-top: 0;
 }
@@ -228,7 +261,7 @@
 .node {
   --workflow-accent: var(--dsw-alias-label-tertiary);
   display: grid;
-  grid-template-columns: 24px minmax(140px, 300px) minmax(48px, auto);
+  grid-template-columns: 24px minmax(140px, 300px) minmax(48px, auto) 18px;
   align-items: start;
   gap: 8px;
   width: fit-content;
@@ -273,6 +306,18 @@ button.node:hover {
 .node[data-kind='tool'] { --workflow-accent: #c27a32; }
 .node[data-kind='result'] { --workflow-accent: #4b9a72; }
 .node[data-kind='result'][data-error='true'] { --workflow-accent: #c65757; }
+
+.node[data-kind='model'] {
+  min-width: min(100%, 420px);
+  min-height: 62px;
+  padding-top: 12px;
+  padding-bottom: 12px;
+}
+
+.node[data-kind='model'] .nodeIcon {
+  width: 28px;
+  height: 28px;
+}
 
 .nodeIcon {
   display: grid;
@@ -325,6 +370,18 @@ button.node:hover {
   padding: 3px 6px;
   border-radius: 999px;
   background: color-mix(in srgb, var(--workflow-accent) 10%, transparent);
+}
+
+.nodeChevron {
+  display: grid;
+  align-self: center;
+  place-items: center;
+  color: var(--dsw-alias-label-tertiary);
+  transition: transform 120ms ease;
+}
+
+.node[data-expanded='true'] .nodeChevron {
+  transform: rotate(180deg);
 }
 
 .empty {
@@ -540,7 +597,7 @@ button.node:hover {
   }
 
   .node {
-    grid-template-columns: 28px minmax(0, 1fr);
+    grid-template-columns: 28px minmax(0, 1fr) 18px;
     width: 100%;
   }
 
@@ -564,6 +621,15 @@ button.node:hover {
 
   .nodeContent {
     width: auto;
+  }
+
+  .childNodes {
+    display: block;
+    margin-left: 12px;
+  }
+
+  .childNodes > .nodeGroup + .nodeGroup {
+    margin-top: 8px;
   }
 
   .nodeStatus {
