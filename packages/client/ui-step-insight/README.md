@@ -27,7 +27,7 @@ Build from the repository root, then start a Web profile with the source overlay
 
 ```sh
 pnpm run build
-pnpm dsh --profile web --patch ./packages/client/ui-step-insight/cordis.source.patch.yml --port 3082 --no-open
+pnpm run dsh --profile web --patch ./packages/client/ui-step-insight/cordis.source.patch.yml --port 3082 --no-open
 ```
 
 For persistent installation, install the built checkout with `dsh plugin --profile web add ./packages/client/ui-step-insight`, restart that profile, and open a Session's Token trace tab. Remove the package with `dsh plugin --profile web remove @deepseek-ai/dsh-client-ui-step-insight` and restart to restore the original view. The package declares `dsh.bundle`; its patch mounts the plugin, and the host discovers the built browser export through `dsh.client`.

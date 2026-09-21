@@ -13,10 +13,10 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/wxj123-del/lingda_harness.git"
+    "url": "git+https://atomgit.com/XJ-Cyber/lingda-harness.git"
   },
-  "homepage": "https://github.com/wxj123-del/lingda_harness#readme",
-  "bugs": "https://github.com/wxj123-del/lingda_harness/issues",
+  "homepage": "https://atomgit.com/XJ-Cyber/lingda-harness#readme",
+  "bugs": "https://atomgit.com/XJ-Cyber/lingda-harness/issues",
   "publishConfig": {
     "access": "public",
     "registry": "https://registry.npmjs.org/"

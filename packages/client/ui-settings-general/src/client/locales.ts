@@ -23,7 +23,7 @@ export const zh = {
   'update.ready': '更新完成，正在重启…',
   'update.sourceReady': '更新完成，请重启应用',
   'update.error': '更新检查失败',
-  'update.source': '源码仓库：检查 GitCode 提交',
+  'update.source': '源码仓库：检查 AtomGit 提交',
 } satisfies Record<string, string>
 
 /** The settings namespace key union. */
@@ -52,5 +52,5 @@ export const en = {
   'update.ready': 'Update installed, restarting…',
   'update.sourceReady': 'Update complete, restart the application',
   'update.error': 'Update check failed',
-  'update.source': 'Source checkout: check GitCode commits',
+  'update.source': 'Source checkout: check AtomGit commits',
 } satisfies Record<SettingsKey, string>

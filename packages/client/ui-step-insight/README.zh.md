@@ -27,7 +27,7 @@ kind: "package-bundle"
 
 ```sh
 pnpm run build
-pnpm dsh --profile web --patch ./packages/client/ui-step-insight/cordis.source.patch.yml --port 3082 --no-open
+pnpm run dsh --profile web --patch ./packages/client/ui-step-insight/cordis.source.patch.yml --port 3082 --no-open
 ```
 
 持久安装使用 `dsh plugin --profile web add ./packages/client/ui-step-insight` 安装已构建的目录，重启该 profile 后打开会话的 Token 轨迹标签页。执行 `dsh plugin --profile web remove @deepseek-ai/dsh-client-ui-step-insight` 并重启可恢复原视图。包通过 `dsh.bundle` 声明配置层，配置层挂载插件，宿主通过 `dsh.client` 发现已构建的浏览器入口。

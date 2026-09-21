@@ -2,11 +2,11 @@
 
 English | [中文](README.zh.md)
 
-Lingda Harness is an open-source personal AI workspace maintained by [wxj123-del](https://github.com/wxj123-del). It brings conversations, reusable Skills, workflows, and extensible tools into one Web UI.
+Lingda Harness is an open-source personal AI workspace maintained by [XJ-Cyber](https://atomgit.com/XJ-Cyber). It brings conversations, reusable Skills, workflows, and extensible tools into one Web UI.
 
 The project builds on [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness) and its [Cordis](https://github.com/cordiverse/cordis) plugin architecture, with custom authoring pages, plugin organization, and optional media and token-inspection tools.
 
-[Repository](https://github.com/wxj123-del/lingda_harness) | [User guide](docs/user/index.md) | [Report an issue](https://github.com/wxj123-del/lingda_harness/issues)
+[Repository](https://atomgit.com/XJ-Cyber/lingda-harness) | [User guide](docs/user/index.md) | [Report an issue](https://atomgit.com/XJ-Cyber/lingda-harness/issues)
 
 ## Features
 
@@ -46,18 +46,18 @@ The default address is `http://127.0.0.1:3081`, leaving the upstream DSH default
 To develop from a repository checkout, also install pnpm 11.7.0 as specified in [package.json](package.json):
 
 ```sh
-git clone https://github.com/wxj123-del/lingda_harness.git
-cd lingda_harness
+git clone https://atomgit.com/XJ-Cyber/lingda-harness.git
+cd lingda-harness
 pnpm install
 pnpm run build
-pnpm dsh web
+pnpm run dsh web
 ```
 
-`pnpm run build` prepares the repository artifacts. `pnpm dsh web` uses those built artifacts without rebuilding. This checkout retains the `dsh` CLI and `@deepseek-ai/*` package names; the npm package `@deepseek-ai/dsh` is the upstream distribution.
+`pnpm run build` prepares the repository artifacts. `pnpm run dsh web` uses those built artifacts without rebuilding. This checkout retains the `dsh` CLI and `@deepseek-ai/*` package names; the npm package `@deepseek-ai/dsh` is the upstream distribution.
 
 ### Updating
 
-For a source checkout, the Settings > General > Software updates row checks `https://gitcode.com/XJ-Cyber/lingda-harness` and applies a clean fast-forward update from its default branch. It does not require a manually configured Git remote. The updater installs the frozen dependencies, rebuilds the generated artifacts, and restarts the Host. The command-line workflow remains available:
+For a source checkout, the Settings > General > Software updates row checks `https://atomgit.com/XJ-Cyber/lingda-harness` and applies a clean fast-forward update from its default branch. It does not require a manually configured Git remote. The updater installs the frozen dependencies, rebuilds the generated artifacts, and restarts the Host. The command-line workflow remains available:
 
 ```sh
 git pull --ff-only
@@ -81,7 +81,7 @@ The packaged Desktop application has **Settings > General > Software updates**. 
 
 ## Feedback and contributions
 
-Report bugs and suggestions in [this repository's Issues](https://github.com/wxj123-del/lingda_harness/issues). Contributions can be submitted through [Pull requests](https://github.com/wxj123-del/lingda_harness/pulls); include the problem, your changes, and relevant validation.
+Report bugs and suggestions in [this repository's Issues](https://atomgit.com/XJ-Cyber/lingda-harness/issues). Contributions can be submitted through [Pull requests](https://atomgit.com/XJ-Cyber/lingda-harness/pulls); include the problem, your changes, and relevant validation.
 
 For agents, follow [AGENTS.md](AGENTS.md).
 

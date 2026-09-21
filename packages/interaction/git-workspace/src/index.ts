@@ -37,9 +37,9 @@ export interface GitCommitAudit {
 export type GitSyncState = 'synced' | 'remote-ahead' | 'local-ahead' | 'diverged' | 'different' | 'unknown'
 
 /** Canonical source used by the in-app source checkout updater. */
-export const UPDATE_REPOSITORY_URL = 'https://gitcode.com/XJ-Cyber/lingda-harness.git'
+export const UPDATE_REPOSITORY_URL = 'https://atomgit.com/XJ-Cyber/lingda-harness.git'
 const UPDATE_DEFAULT_BRANCH = 'main'
-const UPDATE_REMOTE_NAME = 'gitcode'
+const UPDATE_REMOTE_NAME = 'atomgit'
 
 /** Repository state exposed to the Settings update row. */
 export interface RepositoryUpdateStatus {
@@ -164,14 +164,14 @@ async function remoteBranch(root: string, remote: string): Promise<string> {
   } catch {
     // Fall through to the local branch when the remote does not advertise HEAD.
   }
-  // GitCode's repository currently uses `main`; keep checks usable when a
+  // AtomGit's repository currently uses `main`; keep checks usable when a
   // transient ls-remote failure prevents reading its advertised HEAD.
   return UPDATE_DEFAULT_BRANCH
 }
 
 async function fetchUpdateRemote(root: string, branch: string): Promise<void> {
   // Fetch the canonical source into a stable tracking ref even when the
-  // checkout was cloned without a `gitcode` remote. This keeps update checks
+  // checkout was cloned without an `atomgit` remote. This keeps update checks
   // read-only with respect to tracked files while making the later fast-forward
   // merge deterministic.
   await execFileAsync('git', [
@@ -258,7 +258,13 @@ function parseTrackingCounts(branch: string | undefined): { ahead?: number; behi
   return result
 }
 
-function syncState(localHead: string | undefined, upstreamHead: string | undefined, remoteHead: string | undefined, ahead: number | undefined, behind: number | undefined): GitSyncState | undefined {
+function syncState(
+  localHead: string | undefined,
+  upstreamHead: string | undefined,
+  remoteHead: string | undefined,
+  ahead: number | undefined,
+  behind: number | undefined,
+): GitSyncState | undefined {
   if (localHead !== undefined && remoteHead !== undefined) {
     if (localHead === remoteHead) return 'synced'
     if (upstreamHead !== undefined && upstreamHead !== remoteHead) {
@@ -282,7 +288,9 @@ function syncState(localHead: string | undefined, upstreamHead: string | undefin
 function parseCommitLog(output: string, maxCommits: number): GitCommitAudit[] {
   return output.split('\x1e').flatMap((record) => {
     const header = record.trim().split(/\r?\n/u)[0]?.split('\x1f')
-    if (header === undefined || header.length < 4 || header[0] === undefined || header[1] === undefined || header[2] === undefined || header[3] === undefined) return []
+    if (header === undefined || header.length < 4
+      || header[0] === undefined || header[1] === undefined
+      || header[2] === undefined || header[3] === undefined) return []
     return [{
       sha: header[0], author: header[1], date: header[2] || null, message: header[3],
       files: [],
@@ -362,7 +370,7 @@ export class GitWorkspaceService extends TypertRemoteService {
     })
   }
 
-  /** Check the canonical GitCode source without changing tracked files. */
+  /** Check the canonical AtomGit source without changing tracked files. */
   @Remote('check')
   async check(): Promise<RepositoryUpdateStatus> {
     const root = await resolveRepositoryRoot(process.cwd())

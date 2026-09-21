@@ -6,7 +6,7 @@ This directory supplies the `lingda-harness` npm package. The release archive in
 
 ## Build and verify
 
-Run from the repository root with Node.js 24 and pnpm 11.7.0:
+Run from an AtomGit checkout with Node.js 24 and pnpm 11.7.0:
 
 ```sh
 pnpm install --frozen-lockfile

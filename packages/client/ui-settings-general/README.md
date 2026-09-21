@@ -29,9 +29,9 @@ Users reach the shell through the sidebar's bottom Settings control; feature plu
 
 ### The General section
 
-The General section holds rows registered into `settings.general.item` by feature packages. Feature plugins own the row copy and behavior; the shell only provides the section and its slot. The Appearance row, for example, lives in ui-theme. This package also contributes an update row: Electron checks its signed release stream, while a browser source checkout checks the GitCode source commit.
+The General section holds rows registered into `settings.general.item` by feature packages. Feature plugins own the row copy and behavior; the shell only provides the section and its slot. The Appearance row, for example, lives in ui-theme. This package also contributes an update row: Electron checks its signed release stream, while a browser source checkout checks the AtomGit source commit.
 
-The update row checks the signed release stream configured by Electron, then offers installation and restart for a verified release. In a browser source checkout it checks `https://gitcode.com/XJ-Cyber/lingda-harness`, reports whether a newer commit exists, and offers a fast-forward-only update that installs the frozen dependencies, rebuilds, and restarts the Host. It works even when the checkout has no `gitcode` remote configured. Dirty, diverged, detached, and local-ahead checkouts are refused.
+The update row checks the signed release stream configured by Electron, then offers installation and restart for a verified release. In a browser source checkout it checks `https://atomgit.com/XJ-Cyber/lingda-harness`, reports whether a newer commit exists, and offers a fast-forward-only update that installs the frozen dependencies, rebuilds, and restarts the Host. It works even when the checkout has no `atomgit` remote configured. Dirty, diverged, detached, and local-ahead checkouts are refused.
 
 ### Opening the configuration file
 

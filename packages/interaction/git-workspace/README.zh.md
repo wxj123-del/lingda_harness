@@ -11,7 +11,7 @@ kind: "package-reference"
 
 `dsh-git-workspace` 是本地会话默认启用的只读 Git 证据插件。它在每轮开始和结束时记录有大小上限的工作区快照，包括仓库根目录（可用时记录 origin URL）、当前分支、简短状态、差异统计和统一差异。如果会话 cwd 本身不是仓库但直接包含一个子仓库，快照会解析该子仓库。恢复已有 Git 检查点的会话时，会立即安排一次新的结束检查点，因此仓库目录变化后无需发送新消息，界面也能更新。事件可忽略，轨迹客户端可以直接展示，不依赖某一种 Agent 模式或 preset。
 
-插件在记录检查点时不会修改工作区。Remote 更新操作会直接检查 `https://gitcode.com/XJ-Cyber/lingda-harness`，即使 checkout 没有配置 `gitcode` 远程也可以工作；它只接受干净且可以快进的工作区，然后安装锁定依赖、重新构建项目并安排 Host 重启。存在未提交修改、分叉、detached HEAD 或本地领先时会拒绝更新。
+插件在记录检查点时不会修改工作区。Remote 更新操作会直接检查 `https://atomgit.com/XJ-Cyber/lingda-harness`，即使 checkout 没有配置 `atomgit` 远程也可以工作；它只接受干净且可以快进的工作区，然后安装锁定依赖、重新构建项目并安排 Host 重启。存在未提交修改、分叉、detached HEAD 或本地领先时会拒绝更新。
 
 ## 使用
 

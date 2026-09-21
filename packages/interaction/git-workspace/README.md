@@ -11,7 +11,7 @@ English | [中文](README.zh.md)
 
 `dsh-git-workspace` is the default read-only Git evidence plugin for local sessions. It records a bounded workspace snapshot before and after each turn with the repository root, origin URL when available, current branch, short status, diff statistics, and a unified diff. When the session cwd is not itself a repository but contains one direct child repository, that child is resolved for the snapshot. Resuming a session that already has Git checkpoints schedules one fresh after-checkpoint immediately, so the UI can reflect repository layout changes without requiring a new user turn. The event is ignorable and can be rendered by trajectory clients without coupling Git behavior to a particular Agent mode or preset.
 
-The plugin does not mutate the worktree while recording checkpoints. Its Remote update action checks `https://gitcode.com/XJ-Cyber/lingda-harness` directly, even when the checkout has no `gitcode` remote configured. It requires a clean checkout and a fast-forward-only update, installs the frozen lockfile, rebuilds the project, and schedules a Host restart. Dirty, diverged, detached, and local-ahead checkouts are refused.
+The plugin does not mutate the worktree while recording checkpoints. Its Remote update action checks `https://atomgit.com/XJ-Cyber/lingda-harness` directly, even when the checkout has no `atomgit` remote configured. It requires a clean checkout and a fast-forward-only update, installs the frozen lockfile, rebuilds the project, and schedules a Host restart. Dirty, diverged, detached, and local-ahead checkouts are refused.
 
 ## Use
 

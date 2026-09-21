@@ -151,7 +151,7 @@ pnpm run build
 单次运行的 Headless coding agent 需要环境变量或仓库根目录 `.env` 中的 `DEEPSEEK_API_KEY`：
 
 ```sh
-pnpm dsh --profile headless "summarize this workspace"
+pnpm run dsh --profile headless "summarize this workspace"
 ```
 
 PTC mode 演示启用代码式工具展示，并运行同一个 headless profile：

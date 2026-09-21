@@ -147,7 +147,7 @@ pnpm run build
 The one-shot Headless coding agent needs `DEEPSEEK_API_KEY` in the environment or repo-root `.env`:
 
 ```sh
-pnpm dsh --profile headless "summarize this workspace"
+pnpm run dsh --profile headless "summarize this workspace"
 ```
 
 The PTC mode demo runs the same headless profile with code presentation enabled:

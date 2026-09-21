@@ -47,7 +47,7 @@ function desktopUpdates(): DesktopUpdatesApi | undefined {
 const SOURCE_REPOSITORY = 'XJ-Cyber/lingda-harness'
 const SOURCE_BRANCH = 'main'
 
-interface GitCodeCommitResponse {
+interface AtomGitCommitResponse {
   readonly sha?: unknown
 }
 
@@ -56,16 +56,16 @@ function currentBuildCommit(): string | undefined {
   return typeof value === 'string' && /^[0-9a-f]{7,40}$/iu.test(value) ? value.toLowerCase() : undefined
 }
 
-/** Check the canonical GitCode source when no local Host updater is available. */
+/** Check the canonical AtomGit source when no local Host updater is available. */
 async function checkSourceUpdate(): Promise<UpdateState> {
   const response = await fetch(
-    `https://api.gitcode.com/api/v5/repos/${SOURCE_REPOSITORY}/commits/${SOURCE_BRANCH}`,
+    `https://api.atomgit.com/api/v5/repos/${SOURCE_REPOSITORY}/commits/${SOURCE_BRANCH}`,
     { headers: { Accept: 'application/json' } },
   )
   if (!response.ok) throw new Error(`HTTP ${response.status}`)
-  const payload = await response.json() as GitCodeCommitResponse
+  const payload = await response.json() as AtomGitCommitResponse
   if (typeof payload.sha !== 'string' || !/^[0-9a-f]{7,40}$/iu.test(payload.sha)) {
-    throw new Error('GitCode 仓库返回了无效的提交信息')
+    throw new Error('AtomGit 仓库返回了无效的提交信息')
   }
   const current = currentBuildCommit()
   if (current === undefined) return { phase: 'error', message: '当前构建缺少提交信息，无法比较源码版本' }

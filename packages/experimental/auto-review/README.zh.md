@@ -30,7 +30,7 @@ kind: "package-bundle"
 从源码 checkout 通过既有 CLI 将包安装到 Web profile：
 
 ```sh
-pnpm dsh plugin --profile web add ./packages/experimental/auto-review
+pnpm run dsh plugin --profile web add ./packages/experimental/auto-review
 ```
 
 CLI 会在需要时初始化 profile，并将本包声明的 patch 追加到 base 与 Web 层之后。Reconciliation 将 patch 激活为 profile 层；没有 `dsh.bundle.patch` 的包只是已安装依赖。在 composer 或 `/permission` 选择器中选择带右上标 `EXP` 的 `Auto review`，并确认当前会话风险对话框。显式 `/permission auto` 命令直接切换。通用设置与未来会话默认值不提供 Auto。
@@ -38,7 +38,7 @@ CLI 会在需要时初始化 profile，并将本包声明的 patch 追加到 bas
 通过同一 CLI 移除此层：
 
 ```sh
-pnpm dsh plugin --profile web remove @deepseek-ai/dsh-experimental-auto-review
+pnpm run dsh plugin --profile web remove @deepseek-ai/dsh-experimental-auto-review
 ```
 
 ### 获得的能力

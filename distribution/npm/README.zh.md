@@ -6,7 +6,7 @@
 
 ## 构建与验证
 
-在仓库根目录使用 Node.js 24 和 pnpm 11.7.0 执行：
+在 AtomGit checkout 的仓库根目录使用 Node.js 24 和 pnpm 11.7.0 执行：
 
 ```sh
 pnpm install --frozen-lockfile

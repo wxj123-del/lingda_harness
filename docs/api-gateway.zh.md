@@ -141,7 +141,7 @@ SRC 只解决 Host 源码进程的分发问题。Client 不会从运行中的 Ho
 Web 开发先使用 `pnpm run build` 准备当前 Host、Client 与 Web 产物，然后在两个终端中分别运行源码 Host 和 Client plugin watcher：
 
 ```sh
-pnpm dsh web
+pnpm run dsh web
 pnpm run dev:web
 ```
 
