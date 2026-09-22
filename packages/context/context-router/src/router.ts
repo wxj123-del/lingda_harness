@@ -99,10 +99,9 @@ function toolCallIds(message: Message): string[] {
   return message.content.flatMap(block => block.type === 'tool-call' ? [String(block.id)] : [])
 }
 
-function toolResultId(message: Message): string | undefined {
-  return isToolResult(message) && message.content[0]?.type === 'tool-result'
-    ? String(message.content[0].toolCallId)
-    : undefined
+function toolResultIds(message: Message): string[] {
+  if (!isToolResult(message)) return []
+  return message.content.flatMap(block => block.type === 'tool-result' ? [String(block.toolCallId)] : [])
 }
 
 function closeToolPairs(messages: readonly Message[], selected: Set<number>): Set<number> {
@@ -110,26 +109,26 @@ function closeToolPairs(messages: readonly Message[], selected: Set<number>): Se
   const results = new Map<string, number>()
   messages.forEach((message, index) => {
     for (const id of toolCallIds(message)) owners.set(id, index)
-    const resultId = toolResultId(message)
-    if (resultId !== undefined) results.set(resultId, index)
+    for (const resultId of toolResultIds(message)) results.set(resultId, index)
   })
   const closed = new Set<number>(selected)
-  for (const index of [...selected]) {
-    const message = messages[index]
-    if (message === undefined) {
-      closed.delete(index)
-      continue
-    }
-    const resultId = toolResultId(message)
-    if (resultId !== undefined) {
-      const owner = owners.get(resultId)
-      if (owner === undefined || !selected.has(owner)) closed.delete(index)
-      else closed.add(owner)
-    }
-    for (const callId of toolCallIds(message)) {
-      const result = results.get(callId)
-      if (result === undefined || !selected.has(result)) closed.delete(index)
-      else closed.add(result)
+  let changed = true
+  while (changed) {
+    changed = false
+    for (const index of [...closed]) {
+      const message = messages[index]
+      if (message === undefined) {
+        closed.delete(index)
+        changed = true
+        continue
+      }
+      const resultOwners = toolResultIds(message).map(resultId => owners.get(resultId))
+      const callResults = toolCallIds(message).map(callId => results.get(callId))
+      if (resultOwners.some(owner => owner === undefined || !closed.has(owner))
+        || callResults.some(result => result === undefined || !closed.has(result))) {
+        closed.delete(index)
+        changed = true
+      }
     }
   }
   return closed
@@ -151,8 +150,7 @@ function trimToBudget(
   const resultByCall = new Map<string, number>()
   messages.forEach((message, index) => {
     for (const id of toolCallIds(message)) ownerByCall.set(id, index)
-    const resultId = toolResultId(message)
-    if (resultId !== undefined) resultByCall.set(resultId, index)
+    for (const resultId of toolResultIds(message)) resultByCall.set(resultId, index)
   })
   const visited = new Set<number>()
   for (let index = messages.length - 1; index >= 0; index -= 1) {
@@ -160,8 +158,7 @@ function trimToBudget(
     const message = messages[index]
     if (message === undefined) continue
     const unit = new Set([index])
-    const resultId = toolResultId(message)
-    if (resultId !== undefined) {
+    for (const resultId of toolResultIds(message)) {
       const owner = ownerByCall.get(resultId)
       if (owner !== undefined && candidates.has(owner)) unit.add(owner)
     }

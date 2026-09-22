@@ -44,6 +44,30 @@ describe('context router', () => {
     expect(retained.messages).toEqual(messages)
   })
 
+  it('keeps every block in a multi-result tool message tied to its calls', () => {
+    const first = ToolCallId('multi-result-first')
+    const second = ToolCallId('multi-result-second')
+    const assistant = createAssistantMessage({
+      source: { provider: 'test', model: 'test' },
+      content: [
+        { type: 'tool-call', id: first, name: 'lookup', arguments: '{}' },
+        { type: 'tool-call', id: second, name: 'lookup', arguments: '{}' },
+      ],
+    })
+    const result = createUserMessage({
+      source: { kind: 'tool' },
+      content: [
+        { type: 'tool-result', toolCallId: first, isError: false, content: [{ type: 'text', text: 'one' }] },
+        { type: 'tool-result', toolCallId: second, isError: false, content: [{ type: 'text', text: 'two' }] },
+      ],
+    })
+    const messages = [user('old'), assistant, result, user('current')]
+    const retained = selectContextMessages(messages, { scope: 'full', reason: 'test' })
+    expect(retained.messages).toEqual(messages)
+    const trimmed = selectContextMessages(messages, { scope: 'recent', reason: 'test' }, { recentMessages: 2 })
+    expect(trimmed.messages).toEqual([messages[3]])
+  })
+
   it('keeps the open turn working set when routing a later model step', () => {
     const id = ToolCallId('open-turn-call')
     const assistant = createAssistantMessage({
