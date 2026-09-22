@@ -186,10 +186,7 @@
 
 .laneBody {
   position: relative;
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 8px 16px;
+  display: block;
   min-width: 0;
   padding-left: 20px;
 }
@@ -208,8 +205,12 @@
 .step {
   position: relative;
   min-width: 0;
-  width: fit-content;
+  width: 100%;
   max-width: 100%;
+}
+
+.step + .step {
+  margin-top: 18px;
 }
 
 .nodeGroup {
@@ -217,20 +218,31 @@
   min-width: 0;
 }
 
+.nodeGroup[data-kind='model'] {
+  width: 100%;
+}
+
+.nodeGroup[data-kind='model'] > .node {
+  width: min(100%, 560px);
+  margin-inline: auto;
+}
+
 .childNodes {
   position: relative;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin: 8px 0 0 22px;
-  padding-left: 18px;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr));
+  gap: 12px;
+  width: 100%;
+  box-sizing: border-box;
+  margin: 16px 0 0;
+  padding: 16px 0 0 28px;
 }
 
 .childNodes::before {
   position: absolute;
-  top: -8px;
-  bottom: 12px;
-  left: 7px;
+  top: 0;
+  bottom: 14px;
+  left: 14px;
   width: 1px;
   background: color-mix(in srgb, var(--dsw-alias-brand-primary) 18%, var(--dsw-alias-border-l3));
   content: '';
@@ -238,15 +250,32 @@
 
 .childNodes > .nodeGroup::before {
   position: absolute;
-  top: 23px;
-  left: -18px;
-  width: 18px;
+  top: 30px;
+  left: -28px;
+  width: 28px;
   border-top: 1px solid color-mix(in srgb, var(--dsw-alias-brand-primary) 18%, var(--dsw-alias-border-l3));
   content: '';
 }
 
-.step + .step {
-  margin-top: 0;
+.nodeGroup[data-kind='tool'] > .childNodes {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: auto;
+  margin: 8px 0 0 18px;
+  padding: 0 0 0 14px;
+}
+
+.nodeGroup[data-kind='tool'] > .childNodes::before {
+  top: 0;
+  bottom: 12px;
+  left: 0;
+}
+
+.nodeGroup[data-kind='tool'] > .childNodes > .nodeGroup::before {
+  top: 22px;
+  left: -14px;
+  width: 14px;
 }
 
 .connector {
@@ -308,7 +337,7 @@ button.node:hover {
 .node[data-kind='result'][data-error='true'] { --workflow-accent: #c65757; }
 
 .node[data-kind='model'] {
-  min-width: min(100%, 420px);
+  min-width: min(100%, 360px);
   min-height: 62px;
   padding-top: 12px;
   padding-bottom: 12px;
@@ -625,11 +654,26 @@ button.node:hover {
 
   .childNodes {
     display: block;
-    margin-left: 12px;
+    width: auto;
+    margin: 12px 0 0;
+    padding: 12px 0 0 18px;
   }
 
   .childNodes > .nodeGroup + .nodeGroup {
     margin-top: 8px;
+  }
+
+  .nodeGroup[data-kind='model'] > .node {
+    width: 100%;
+  }
+
+  .nodeGroup[data-kind='tool'] > .childNodes {
+    margin-left: 12px;
+    padding-left: 12px;
+  }
+
+  .nodeGroup[data-kind='tool'] > .childNodes::before {
+    left: 0;
   }
 
   .nodeStatus {

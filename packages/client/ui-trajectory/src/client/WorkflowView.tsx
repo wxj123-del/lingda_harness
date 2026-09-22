@@ -284,7 +284,7 @@ function WorkflowNode({ step, onInspect, onToggle, expanded, selectedCallId, t }
       title={t('workflow.inspect')}
       onClick={() => { onInspect(step.callId as string) }}
     >{content}</button>
-  return <div className={css.nodeGroup} data-has-children={expandable || undefined}>
+  return <div className={css.nodeGroup} data-kind={step.kind} data-has-children={expandable || undefined}>
     {node}
     {showChildren && (
       <div className={css.childNodes}>
