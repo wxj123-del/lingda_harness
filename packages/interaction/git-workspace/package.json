@@ -1,6 +1,6 @@
 {
   "name": "@deepseek-ai/dsh-git-workspace",
-  "description": "Read-only Git workspace checkpoints for local Agent sessions",
+  "description": "Git workspace checkpoints plus guarded clone and sync operations",
   "version": "0.1.6-alpha.1",
   "publishConfig": { "access": "public" },
   "repository": {

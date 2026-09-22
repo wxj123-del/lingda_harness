@@ -95,6 +95,7 @@
     "@deepseek-ai/dsh-web-app": "workspace:^",
     "@deepseek-ai/dsh-webhook": "workspace:^",
     "@deepseek-ai/dsh-webhook-github": "workspace:^",
+    "@deepseek-ai/dsh-webhook-feishu": "workspace:^",
     "@deepseek-ai/dsh-workflow-ptc": "workspace:^",
     "@deepseek-ai/schemastery": "workspace:^",
     "commander": "^15.0.0",

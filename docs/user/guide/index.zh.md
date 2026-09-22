@@ -25,6 +25,8 @@ Agent（智能体）可以读取和编辑工作区文件、运行命令、委派
 ## 继续使用
 
 - [配置模型](./providers.zh.md)
+- [飞书机器人快速配置](./feishu-bot.zh.md)
+- [飞书机器人全链路文章](./feishu-bot-end-to-end.md)
 - [使用 Python SDK](./python-sdk.zh.md)
 - [使用其他 CLI 模式](../../../apps/cli/README.zh.md)
 - [开发插件](../develop/basic/index.zh.md)

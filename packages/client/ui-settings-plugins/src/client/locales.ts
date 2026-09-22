@@ -3,6 +3,7 @@
 /** Locale keys these surfaces render. */
 export type PluginsSettingsLocaleKey =
   | 'nav' | 'title' | 'intro' | 'tabs' | 'configurableTab' | 'empty'
+  | 'connectionsNav' | 'connectionsTitle' | 'connectionsIntro'
   | 'overridden' | 'reset' | 'readOnly' | 'expand' | 'collapse'
   | 'save' | 'saving' | 'discard' | 'unsaved' | 'saveFailed' | 'invalidNumber'
   | 'bashTitle' | 'bashDescription' | 'bashTimeoutMs' | 'bashTimeoutMsHint'
@@ -11,6 +12,10 @@ export type PluginsSettingsLocaleKey =
   | 'webSearchTitle' | 'webSearchDescription'
   | 'webSearchApiKey' | 'webSearchApiKeyHint' | 'webSearchApiKeySet' | 'webSearchApiKeyUnset'
   | 'webSearchBaseUrl' | 'webSearchBaseUrlHint' | 'webSearchMaxUses' | 'webSearchMaxUsesHint'
+  | 'feishuTitle' | 'feishuDescription' | 'feishuAppId' | 'feishuAppIdHint'
+  | 'feishuAppSecret' | 'feishuAppSecretHint' | 'feishuCredentialSet' | 'feishuCredentialUnset'
+  | 'feishuWorkspacePath' | 'feishuWorkspacePathHint' | 'feishuAgentPreset' | 'feishuAgentPresetHint'
+  | 'feishuPermissionPreset' | 'feishuPermissionPresetHint' | 'feishuRequireMention' | 'feishuRequireMentionHint'
   | 'subagentModelSelectionTitle' | 'subagentModelSelectionDescription'
   | 'subagentModelSelectionToggle' | 'subagentModelSelectionChoose' | 'subagentModelSelectionAllowed'
   | 'subagentModelSelectionLoading' | 'subagentModelSelectionLoadFailed' | 'subagentModelSelectionRetry'
@@ -26,6 +31,9 @@ export const en: Record<PluginsSettingsLocaleKey, string> = {
   tabs: 'Plugin views',
   configurableTab: 'Plugin configuration',
   empty: 'This deployment exposes no plugin settings.',
+  connectionsNav: 'Connections',
+  connectionsTitle: 'Connections',
+  connectionsIntro: 'Connect external software to DSH. Add the credentials for a connector, save, and restart DSH when prompted.',
   overridden: 'Overridden',
   reset: 'Reset to default',
   readOnly: 'This deployment stores settings read-only.',
@@ -57,6 +65,22 @@ export const en: Record<PluginsSettingsLocaleKey, string> = {
   webSearchBaseUrlHint: 'Leave blank to use the provider default.',
   webSearchMaxUses: 'Max searches per request',
   webSearchMaxUsesHint: 'How many times one request may search before it must answer.',
+  feishuTitle: 'Feishu bot',
+  feishuDescription: 'Chat with a DSH agent from Feishu on your phone.',
+  feishuAppId: 'App ID',
+  feishuAppIdHint: 'Create an enterprise app in Feishu Open Platform and paste its App ID here.',
+  feishuAppSecret: 'App Secret',
+  feishuAppSecretHint: 'Stored outside the settings file. The bot uses an outbound WebSocket connection by default.',
+  feishuCredentialSet: 'Configured',
+  feishuCredentialUnset: 'Not configured',
+  feishuWorkspacePath: 'Workspace path',
+  feishuWorkspacePathHint: 'Directory the Feishu agent can work in. Save these settings, then restart DSH.',
+  feishuAgentPreset: 'Agent preset',
+  feishuAgentPresetHint: 'Preset mounted for each Feishu conversation, for example standard.',
+  feishuPermissionPreset: 'Permission preset',
+  feishuPermissionPresetHint: 'Start with read-only. This controls what the remote agent may do.',
+  feishuRequireMention: 'Require @mention in group chats',
+  feishuRequireMentionHint: 'Private chats always work; group messages are ignored unless the bot is mentioned when enabled.',
   subagentModelSelectionTitle: 'Subagent',
   subagentModelSelectionDescription: 'Control which models agents may choose for subagents.',
   subagentModelSelectionToggle: 'Allow agents to choose models for subagents',
@@ -82,6 +106,9 @@ export const zh: Record<PluginsSettingsLocaleKey, string> = {
   tabs: '插件视图',
   configurableTab: '插件配置',
   empty: '本部署没有开放任何插件设置。',
+  connectionsNav: '连接服务',
+  connectionsTitle: '连接服务',
+  connectionsIntro: '连接飞书等外部软件。填写对应应用参数，保存后按提示重启 DSH 即可。',
   overridden: '已覆盖',
   reset: '恢复默认',
   readOnly: '本部署的设置为只读。',
@@ -113,6 +140,22 @@ export const zh: Record<PluginsSettingsLocaleKey, string> = {
   webSearchBaseUrlHint: '留空则使用提供方默认地址。',
   webSearchMaxUses: '单次请求最多搜索次数',
   webSearchMaxUsesHint: '一次请求在必须作答前最多可以搜索多少次。',
+  feishuTitle: '飞书机器人',
+  feishuDescription: '在手机飞书中与 DSH Agent 对话。',
+  feishuAppId: 'App ID',
+  feishuAppIdHint: '在飞书开放平台创建企业自建应用后，把 App ID 填到这里。',
+  feishuAppSecret: 'App Secret',
+  feishuAppSecretHint: '密钥不会写入设置文件；默认通过出站 WebSocket 连接飞书。',
+  feishuCredentialSet: '已配置',
+  feishuCredentialUnset: '未配置',
+  feishuWorkspacePath: '工作区路径',
+  feishuWorkspacePathHint: '飞书 Agent 使用的目录。保存设置后请重启 DSH。',
+  feishuAgentPreset: 'Agent 预设',
+  feishuAgentPresetHint: '每个飞书会话使用的预设，例如 standard。',
+  feishuPermissionPreset: '权限预设',
+  feishuPermissionPresetHint: '建议先使用 read-only，控制远程 Agent 可以执行的操作。',
+  feishuRequireMention: '群聊需要 @机器人',
+  feishuRequireMentionHint: '私聊始终有效；开启后，群聊消息必须 @机器人 才会处理。',
   subagentModelSelectionTitle: 'Subagent',
   subagentModelSelectionDescription: '控制 Agent 为 Subagent 选择模型的权限。',
   subagentModelSelectionToggle: '允许 Agent 为 Subagent 选择模型',

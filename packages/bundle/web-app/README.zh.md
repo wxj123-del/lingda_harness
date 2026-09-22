@@ -9,7 +9,7 @@ kind: "package-bundle"
 
 ## 概述
 
-运行 `dsh --profile web`，打开提供聊天、模型与设置管理以及会话历史的交互式浏览器 GUI。它使用与其他 dsh 表层相同的模型访问、工具与安全默认值。启动时会打印带认证信息的 URL，通常还会在默认浏览器中打开；SSH 会话和 `--no-open` 会保留该 URL，供你手动打开。使用 `--mobile` 可显式开启局域网绑定；终端会同时打印二维码和 LAN URL，手机在同一可信网络时直接扫码即可登录，不需要手动输入带 token 的 URL。需要在浏览器中交互式工作时选择本包；一次性的命令行任务应使用 `dsh-headless`。
+运行 `dsh --profile web`，打开提供聊天、模型与设置管理以及会话历史的交互式浏览器 GUI。它使用与其他 dsh 表层相同的模型访问、工具与安全默认值。启动时会打印带认证信息的 URL，通常还会在默认浏览器中打开；SSH 会话和 `--no-open` 会保留该 URL，供你手动打开。使用 `--mobile` 可显式开启局域网绑定；终端会打印 LAN URL，手机在同一可信网络时手动打开即可。需要在浏览器中交互式工作时选择本包；一次性的命令行任务应使用 `dsh-headless`。
 
 ## 目录
 
@@ -39,6 +39,8 @@ dsh --profile web --mobile --no-open
 
 **设置 → 模型**显示 **DeepSeek**，使用 `DEEPSEEK_API_KEY`。默认模型为 `deepseek-official` / `deepseek-flash`（DeepSeek-V41-Flash）。[DeepSeek 插件](../../llm/llm-deepseek/README.zh.md#choose-a-protocol)默认使用 Messages；在 Cordis YAML 中设置 `protocol: chat-completions` 可选择 Chat Completions。Web 不提供协议选择器。
 
+飞书机器人也随 Web 版一起提供。打开 **设置 → 连接服务 → 飞书机器人**，填写飞书应用的 App ID、App Secret 和工作区路径，保存并重启 DSH 后即可从手机飞书与 Agent 对话。默认使用出站 WebSocket，不要求手机和电脑处于同一网络；连接服务页面也为其他软件连接器预留了扩展入口。
+
 已保存的模型选择优先于组合默认值。两种协议共用 `deepseek-official` 与 `llm-deepseek` 设置，因此切换协议不改变模型选择或复制凭据。端点覆盖保持原值；设置卡片允许用户填写兼容的 API 地址。
 
 ### 配置
@@ -56,7 +58,7 @@ dsh --profile web --mobile --no-open
 
 ### 手机与局域网访问
 
-默认情况下 GUI 只接受本机的连接。`--mobile` 是显式选择：它绑定 `0.0.0.0`，读取本机非 loopback IPv4 地址，并打印终端二维码及带本次进程 token 的 `LAN:` URL。在同一可信 Wi-Fi 或有线网络的手机上扫码即可登录，也可以手动打开 URL。首次加载页面会用 token 换取签名 cookie；之后的 API 与 WebSocket 请求还必须通过 cookie 认证及 Host/Origin 信任检查。不要把二维码或 URL 分享到可信网络之外；如果误暴露，请重启进程。LAN 地址只在启动时采样一次，因此之后的网络变化不会被感知——重启 GUI 以重新公告。
+默认情况下 GUI 只接受本机的连接。`--mobile` 是显式选择：它绑定 `0.0.0.0`，读取本机非 loopback IPv4 地址，并打印带本次进程 token 的 `LAN:` URL。在同一可信 Wi-Fi 或有线网络的手机上手动打开 URL 即可登录。首次加载页面会用 token 换取签名 cookie；之后的 API 与 WebSocket 请求还必须通过 cookie 认证及 Host/Origin 信任检查。不要把 URL 分享到可信网络之外；如果误暴露，请重启进程。LAN 地址只在启动时采样一次，因此之后的网络变化不会被感知——重启 GUI 以重新公告。
 
 ### 通过 SSH 运行
 
@@ -92,7 +94,7 @@ URL 行与浏览器交接都是就绪信号：监督方一观察到该行就发�
 
 | 文件 | 职责 |
 |---|---|
-| [`src/index.ts`](src/index.ts) | `web-app` 粘合插件：dist 解析、LAN 信任采样、提示词段落、bash 变量、URL/二维码登录输出、浏览器交接 |
+| [`src/index.ts`](src/index.ts) | `web-app` 粘合插件：dist 解析、LAN 信任采样、提示词段落、bash 变量、URL 输出、浏览器交接 |
 | [`src/startup.ts`](src/startup.ts) | `web-startup` 提供方：`--mobile`、`--host`、`--port`、`--trusted-host`、`--no-open`、`--help` |
 | [`cordis.patch.yml`](cordis.patch.yml) | Web patch：重述的基础值、Web 宿主行、浏览器名录、由 preset 承载的 agent 层 |
 | — | 不发布运行时不变式伴生入口；每项贡献（frontend-static 子插件、提示词段落、bashEnv 注册）都会随 fiber 由注册表释放，且每个所属注册表的包负责该关系的不变式；本包不持有需要审计的可变状态。 |

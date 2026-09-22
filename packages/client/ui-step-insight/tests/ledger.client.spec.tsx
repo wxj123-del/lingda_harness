@@ -60,4 +60,18 @@ describe('Token trajectory interactions', () => {
     expect(screen.getByRole('tab', { name: '工具调用 (1)' }).getAttribute('aria-selected')).toBe('true')
     expect(input.completeViewRequest).toHaveBeenCalledOnce()
   })
+
+  it('renders a live context map from the latest model-visible request', () => {
+    render(<TokenLedger {...props(fixture())} />)
+    const preview = screen.getByRole('region', { name: zh.contextPreview })
+    expect(preview.textContent).toContain(zh.contextPreviewLive)
+    expect(preview.textContent).toContain(zh.system)
+    expect(preview.textContent).toContain(zh.user)
+    expect(preview.textContent).toContain(zh.tool)
+    expect(preview.textContent).toContain(zh.schema)
+    expect(preview.querySelector('[role="img"]')).not.toBeNull()
+    expect(preview.querySelectorAll('[data-kind]').length).toBeGreaterThan(3)
+    expect(preview.textContent).toContain('You audit requests.')
+    expect(preview.textContent).toContain('Inspect the source')
+  })
 })

@@ -51,6 +51,21 @@ describe('Skill marketplace', () => {
     await waitFor(() => { expect(invoke).toHaveBeenCalledWith('make-workflow') })
   })
 
+  it('imports a built-in Skill into my Skills with one click', async () => {
+    const { save } = setup()
+    const card = screen.getAllByRole('article')[0]
+    fireEvent.click(within(card).getByRole('button', { name: '一键导入' }))
+    await waitFor(() => { expect(save).toHaveBeenCalledWith(expect.objectContaining({ id: 'builtin-skill-make-skill', title: '创建 Skill', enabled: true })) })
+  })
+
+  it('shows an imported built-in Skill as a user Skill and preserves edits', () => {
+    setup([{ id: 'builtin-skill-make-skill', title: '我的 Skill', description: '自定义说明', enabled: false, body: '自定义指令', steps: [], category: 'creation', updatedAt: 1 }])
+    fireEvent.click(screen.getByRole('button', { name: '我的 Skill', pressed: false }))
+    expect(screen.getByRole('heading', { name: '我的 Skill' })).toBeTruthy()
+    expect(screen.getByText('自定义说明')).toBeTruthy()
+    expect(screen.getByRole<HTMLButtonElement>('button', { name: '用于对话' }).disabled).toBe(true)
+  })
+
   it('keeps disabled skills editable but prevents using them in chat', () => {
     setup([custom])
     fireEvent.click(screen.getByRole('button', { name: '我的 Skill' }))

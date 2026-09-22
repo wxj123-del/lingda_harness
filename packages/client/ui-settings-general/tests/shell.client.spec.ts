@@ -39,7 +39,7 @@ const CHILD_NAMES = Object.keys(CHILD_SPECS) as Array<keyof typeof CHILD_SPECS>
  * ui-settings-models, ui-agent-preset, and
  * ui-settings-unarchive-sessions. A plugin adding a section changes this list.
  */
-const PRODUCT_SECTIONS: readonly string[] = ['general', 'models', 'agent-presets', 'archived-sessions']
+const PRODUCT_SECTIONS: readonly string[] = ['general', 'models', 'connections', 'agent-presets', 'archived-sessions']
 /** Onboarding steps the web-app roster registers, in coordinator order; both come from ui-settings-models. */
 const PRODUCT_ONBOARDING: readonly { id: string; order: number }[] = [
   { id: 'welcome-notice', order: -100 },

@@ -1,7 +1,7 @@
 /** Browser-local ledger values derived from the loaded Session event window. */
 import type { SessionEventSource } from '@deepseek-ai/dsh-api-session-controller/client'
 import type { ContentBlock, TokenUsage } from '@deepseek-ai/dsh-llm/types'
-import type { GitCheckpoint, GitCommitAudit, GitSyncState } from '@deepseek-ai/dsh-git-workspace'
+import type { GitCheckpoint, GitCommitAudit, GitSyncState, RepositoryBranchesResult, RepositoryChangeSnapshot, RepositoryCloneRequest, RepositoryCloneResult, RepositoryPushRequest, RepositoryPushResult } from '@deepseek-ai/dsh-git-workspace'
 
 export type { GitCheckpoint, GitCommitAudit, GitSyncState }
 
@@ -155,4 +155,9 @@ export interface ToolSimilarity {
 export interface StepInsightInjected {
   hooks: { ledgerEvents: SessionEventSource }
   loadOlder(): Promise<void>
+  workspacePath?: string
+  cloneRepository(request: RepositoryCloneRequest): Promise<RepositoryCloneResult>
+  listRepositoryBranches(url: string): Promise<RepositoryBranchesResult>
+  inspectRepository(repositoryRoot: string): Promise<RepositoryChangeSnapshot>
+  pushRepository(request: RepositoryPushRequest): Promise<RepositoryPushResult>
 }

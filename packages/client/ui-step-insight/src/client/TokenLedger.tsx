@@ -11,13 +11,22 @@ import { createStepReader } from './step-model.ts'
 import { contentText, estimateText } from './usage.ts'
 import { accounted, number, rowLabel } from './format.ts'
 import { RequestDetail } from './RequestDetail.tsx'
+import { ContextPreview } from './ContextPreview.tsx'
 import css from './ledger.module.css'
 
 /** Props assembled by the conversation slot, locale and private event hook. */
 export type TokenLedgerProps = ConvViewProps & InjectFace<StepInsightInjected> & PropsLocale<'stepInsight'>
 
 /** @param props - renderer-bound Session data. @returns The live accounting view. */
-export function TokenLedger({ useLedgerEvents, useSession, useProjection, loadOlder, viewRequest, completeViewRequest, t }: TokenLedgerProps) {
+export function TokenLedger({
+  useLedgerEvents,
+  useSession,
+  useProjection,
+  loadOlder,
+  viewRequest,
+  completeViewRequest,
+  t,
+}: TokenLedgerProps) {
   const window = useLedgerEvents(value => value)
   const loading = useSession(value => value.loadingOlder)
   const readSteps = useMemo(createStepReader, [])
@@ -71,7 +80,9 @@ export function TokenLedger({ useLedgerEvents, useSession, useProjection, loadOl
   const latestTurn = rows.at(-1)?.turn
   const usedSteps = latestTurn === null || latestTurn === undefined
     ? 0
-    : rows.filter(row => row.turn === latestTurn).reduce((count, row) => count + row.tools.filter(tool => tool.parentId === undefined).length, 0)
+    : rows
+      .filter(row => row.turn === latestTurn)
+      .reduce((count, row) => count + row.tools.filter(tool => tool.parentId === undefined).length, 0)
   const download = () => {
     try {
       const blob = new Blob([JSON.stringify({ format: 'dsh-token-ledger-v1', scope: 'loaded-history',
@@ -113,6 +124,7 @@ export function TokenLedger({ useLedgerEvents, useSession, useProjection, loadOl
       {mode !== undefined && <span><b>{t('mode')}</b> {modeNames[mode]} · {t('toolBudget')} {usedSteps}/{maxSteps}</span>}
       {breakdown !== undefined && <span>{t('system')} ~{number(breakdown.systemTokens)} · {t('schema')} ~{number(breakdown.toolsTokens)} · {t('content')} ~{number(breakdown.messageTokens)}</span>}
     </div>}
+    <ContextPreview row={rows.at(-1)} window={window} t={t} />
     {task !== undefined && task !== null && <div className={css.ledgerContext} data-task-status={task.status} aria-label={t('task')}>
       <span><b>{t('task')}</b> · {t('taskStatus')}：{t(task.status === 'created' ? 'taskCreated' : task.status === 'planned' ? 'taskPlanned' : task.status === 'running' ? 'taskRunning' : task.status === 'waiting-human' ? 'taskWaitingHuman' : task.status === 'succeeded' ? 'taskSucceeded' : task.status === 'failed' ? 'taskFailed' : 'taskCancelled')}</span>
       <span>{t('taskGoal')}：{task.goal}</span>

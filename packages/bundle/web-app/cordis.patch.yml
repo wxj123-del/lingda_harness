@@ -152,6 +152,24 @@
         compressionLevel: 1
         compressionThresholdBytes: 1024
 
+    # Feishu bot integration. It remains idle until App ID and App Secret are
+    # configured from Settings -> Connections; the default transport is outbound
+    # WebSocket, so remote phones do not need to share the LAN with this host.
+    - id: feishu-bot
+      name: '@deepseek-ai/dsh-webhook-feishu'
+      config:
+        transport: websocket
+        path: /feishu
+        appIdEnv: DSH_FEISHU_APP_ID
+        appSecretEnv: DSH_FEISHU_APP_SECRET
+        workspacePath: !!js process.cwd()
+        agentPreset: standard
+        permissionPreset: read-only
+        source: primary-feishu
+        maxBodyBytes: 1048576
+        requireMention: true
+        allowedOpenIds: []
+
     # Web glue owned by this bundle: resolves the built frontend dist (an
     # assembly fact of dsh-web-app, never user config), mounts the
     # frontend-static fallback owner, registers the web-surface prompt

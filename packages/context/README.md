@@ -24,6 +24,7 @@ The context group provides plugins that add model-visible context to each reques
 
 | Package | Role | ctx key |
 |---|---|---|
+| [`context-router/`](context-router/README.md) | Selects a bounded request snapshot from the durable Session log | — |
 | [`agent-instructions/`](agent-instructions/README.md) | Loads `AGENTS.md`/`CLAUDE.md` workspace instructions into context and refreshes them after file edits | — |
 | [`session-reference/`](session-reference/README.md) | References other sessions: mention one and its bounded read-only snapshot becomes context | `ctx.sessionReferenceResolver` |
 | [`file-reference/`](file-reference/README.md) | `@file` mention discovery and the shared mention grammar for host-backed UIs | `ctx.fileReferences` |

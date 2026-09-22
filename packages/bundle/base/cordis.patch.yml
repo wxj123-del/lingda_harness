@@ -260,6 +260,11 @@
           execution:
             maxSteps: 40
 
+    # Selects a bounded request snapshot from the durable session log based on
+    # the current request. The log remains complete and replayable.
+    - id: context-router
+      name: '@deepseek-ai/dsh-context-router'
+
     # Read-only workspace evidence is a base capability, independent from
     # personal Agent modes and legacy presets.
     - id: git-workspace

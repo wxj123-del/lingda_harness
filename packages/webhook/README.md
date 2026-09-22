@@ -26,6 +26,7 @@ The Webhook family receives authenticated provider events and runs trusted progr
 |---|---|---|
 | [`webhook/`](webhook/README.md) | Rule registry, callback lifecycle, and Workspace-backed Session creation | `ctx.webhookRuntime` |
 | [`webhook-github/`](webhook-github/README.md) | Signed GitHub HTTP adapter | consumes `ctx.webhookRuntime` and `ctx.webServer` |
+| [`webhook-feishu/`](webhook-feishu/README.md) | Feishu bot callback adapter with per-chat Agent Sessions | consumes `ctx.webServer`, `ctx.credentials`, and Agent services |
 
 <a id="related-documentation"></a>
 ## Related documentation

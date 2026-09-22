@@ -150,6 +150,35 @@ A user may also invoke a skill directly; its <skill_content> block then appears 
 ]
 `;
 
+exports[`the shipped Web composition > records the long-session baseline for unrelated and continuing questions > 50K context request baseline 1`] = `
+{
+  "continuing": {
+    "compactionTriggered": false,
+    "estimatedInputTokens": 23618,
+    "historyMessages": 19,
+    "legacyMessages": 16,
+    "messageCount": 20,
+    "requestJsonChars": 98158,
+    "routerDroppedMessages": 24,
+    "routerScope": "task",
+    "systemMessages": 1,
+    "toolResultMessages": 0,
+  },
+  "unrelated": {
+    "compactionTriggered": false,
+    "estimatedInputTokens": 2279,
+    "historyMessages": 2,
+    "legacyMessages": 0,
+    "messageCount": 3,
+    "requestJsonChars": 10179,
+    "routerDroppedMessages": 41,
+    "routerScope": "fresh",
+    "systemMessages": 1,
+    "toolResultMessages": 0,
+  },
+}
+`;
+
 exports[`the shipped Web composition > retrieves knowledge through the preset tool catalog and persists source excerpts in the session > knowledge retrieval source excerpts 1`] = `
 [
   [

@@ -1,5 +1,5 @@
 ---
-description: "dsh Web 客户端的独立「插件」页面：功能自有的标签页、可配置宿主平面插件卡片，以及 settings.plugin.item 扩展点。"
+description: "dsh Web 客户端的独立「插件」与「连接服务」页面：功能自有的标签页、连接器卡片、可配置宿主平面插件卡片及其扩展点。"
 kind: "package-reference"
 ---
 
@@ -25,7 +25,7 @@ kind: "package-reference"
 <a id="use-this-package"></a>
 ## 使用本包
 
-从产品导航打开「插件」并选择**插件配置**标签页，即可编辑本部署所组装的宿主平面插件。卡片依次为 shell 执行器（`bash`）、agent loop（智能体循环）的工具调用并行度（`agent-loop`）、subagent 模型选择（`subagent-model-selection`）以及 DeepSeek 搜索提供方（`web-search-deepseek`）。
+从产品导航打开「插件」并选择**插件配置**标签页，即可编辑本部署所组装的宿主平面插件。打开「连接服务」可以配置外部软件连接器。Web 组合当前在这里提供飞书机器人卡片；其他连接器可以注册自己的卡片，不需要修改设置外壳。
 
 ### 这里会出现什么
 
@@ -53,7 +53,7 @@ subagent 卡会同时暂存其权限开关与精确模型复选框。启用时�
 
 ### 标签页扩展点
 
-本包在设置弹窗之外注册 key 为 `plugins` 的 `main` 页面，并声明根级列表 slot `settings.plugins.tab`，其标签会成为有序标签页；某个标签页首次被选择后会保持挂载，因此本地草稿与只读快照在切换标签页时不会丢失。本包注册自己的 `configurable` 贡献，由它声明嵌套的 `settings.plugin.item` slot——以卡片所编辑的 settings 命名空间为键。带浏览器半侧的插件把自己的卡片注册在自己的命名空间上，并拥有它的全部：外观、控件与文案。标签页遵循贡献的 `order`；卡片遵循注册顺序。
+本包在设置弹窗之外注册 key 为 `plugins` 的 `main` 页面，并声明根级列表 slot `settings.plugins.tab`，其标签会成为有序标签页；某个标签页首次被选择后会保持挂载，因此本地草稿与只读快照在切换标签页时不会丢失。本包还注册设置中的 `connections` 分区，并声明根级列表 slot `settings.integration.item`。带浏览器半侧的插件把自己的连接卡片注册在该 slot 上，并拥有它的全部：外观、控件与文案。标签页和分区遵循贡献的顺序；卡片遵循注册顺序。
 
 ### 写入路径
 

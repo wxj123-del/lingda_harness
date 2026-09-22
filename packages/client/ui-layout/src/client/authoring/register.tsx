@@ -12,6 +12,7 @@ import { en, zh } from '../locales.ts'
 import css from './AuthoringPanel.module.css'
 import { StepsEditor } from './StepsEditor.tsx'
 import { SkillsPanel } from './SkillsPanel.tsx'
+import { WorkflowPanel } from './WorkflowPanel.tsx'
 import { ToolsPanel, type ToolsPanelProps } from './ToolsPanel.tsx'
 import { KnowledgePanel, type KnowledgePanelProps } from './KnowledgePanel.tsx'
 import {
@@ -22,6 +23,8 @@ import {
   PersonalModeConversationControl,
   type PersonalModeConversationControlInjected,
 } from './PersonalModeConversationControl.tsx'
+import { runtimeToolName } from '../../runtime-tool-name.ts'
+import type { SubscribeWorkflowDebug } from './workflow-debug.ts'
 
 declare module '@deepseek-ai/dsh-client-ui-slots' {
   interface SlotMap {
@@ -47,6 +50,20 @@ const fields: Record<AuthoringKind, AuthoringField> = {
 
 function blankItem(): AuthoringItem {
   return { id: `item-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`, title: '', description: '', enabled: true, body: '', steps: [], documents: [], updatedAt: 0 }
+}
+
+function createWorkflowDebugSubscription(ctx: Context): SubscribeWorkflowDebug {
+  return (listener) => {
+    const disposers = [
+      ctx.on('workflow/start', (info) => { listener({ kind: 'start', runId: String(info.id), workflowName: info.meta.name, at: Date.now() }) }),
+      ctx.on('workflow/phase', (info, title) => { listener({ kind: 'phase', runId: String(info.id), workflowName: info.meta.name, title, at: Date.now() }) }),
+      ctx.on('workflow/log', (info, message) => { listener({ kind: 'log', runId: String(info.id), workflowName: info.meta.name, message, at: Date.now() }) }),
+      ctx.on('workflow/agent-start', (info, agent) => { listener({ kind: 'agent-start', runId: String(info.id), workflowName: info.meta.name, seq: agent.seq, label: agent.label, ...(agent.phase === undefined ? {} : { phase: agent.phase }), at: Date.now() }) }),
+      ctx.on('workflow/agent-end', (info, agent) => { listener({ kind: 'agent-end', runId: String(info.id), workflowName: info.meta.name, seq: agent.seq, label: agent.label, outcome: agent.outcome, at: Date.now() }) }),
+      ctx.on('workflow/end', (info, result) => { listener({ kind: 'end', runId: String(info.id), workflowName: info.meta.name, stopReason: result.stopReason, ...(result.error === undefined ? {} : { error: result.error }), agentsStarted: result.agentsStarted, at: Date.now() }) }),
+    ]
+    return () => { for (const dispose of disposers) dispose() }
+  }
 }
 
 function iconFor(kind: AuthoringKind, size = 16) {
@@ -310,7 +327,7 @@ export function registerAuthoringSurface(
       ? items.map(candidate => candidate.id === item.id ? item : candidate)
       : [...items, item])
   }
-  const invokeSkill = async (name: string): Promise<void> => {
+  const openConversationDraft = async (prefix: string): Promise<void> => {
     // Resolve the existing input service without a cyclic UI package import.
     const conversation = ctx.get('conversation') as {
       input: { for(scope: Context): { setDraft(text: string): void; state: { getSnapshot(): { draft: string } } } }
@@ -329,10 +346,28 @@ export function registerAuthoringSurface(
     const sessionScope = sessions.scope(id as SessionId)
     if (sessionScope === undefined) throw new Error('Session unavailable')
     const input = conversation.input.for(sessionScope)
-    const token = `/${name} `
     const draft = input.state.getSnapshot().draft
-    if (!draft.startsWith(token)) input.setDraft(`${token}${draft}`)
+    if (!draft.startsWith(prefix)) input.setDraft(`${prefix}${draft}`)
     uiWorkspace.openSession(id)
+  }
+  const invokeSkill = async (name: string): Promise<void> => { await openConversationDraft(`/${name} `) }
+  const invokeWorkflow = async (id: string, title: string): Promise<void> => {
+    const item = scope.getSnapshot().value?.workflows.find(candidate => candidate.id === id)
+    if (item === undefined) throw new Error('Workflow unavailable')
+    await openConversationDraft(`请调用工作流工具 ${runtimeToolName('workflow', item)} 执行“${title}”。\n\n`)
+  }
+  const saveWorkflow = async (item: AuthoringItem): Promise<void> => {
+    const snapshot = scope.getSnapshot()
+    if (!snapshot.writable || snapshot.value === undefined) throw new Error('Workflow storage unavailable')
+    const items = snapshot.value.workflows
+    await scope.set('workflows', items.some(candidate => candidate.id === item.id)
+      ? items.map(candidate => candidate.id === item.id ? item : candidate)
+      : [...items, item])
+  }
+  const removeWorkflow = async (id: string): Promise<void> => {
+    const snapshot = scope.getSnapshot()
+    if (!snapshot.writable || snapshot.value === undefined) throw new Error('Workflow storage unavailable')
+    await scope.set('workflows', snapshot.value.workflows.filter(item => item.id !== id))
   }
   ctx.slots.inject('sidebar.navigation', () => ctx.slots.register({ name: 'sidebar.navigation', locale: 'layout' }, () => {
     const active = useSyncExternalStore(
@@ -380,6 +415,19 @@ export function registerAuthoringSurface(
             loadUsage={props.loadUsage} save={props.saveTool} t={t} />
         }))
       })
+      continue
+    }
+    if (kind === 'workflow') {
+      ctx.slots.inject('main', () => ctx.slots.register({
+        name: 'main', key, locale: 'layout',
+        inject: () => ({ hooks: { authoring: scope }, saveWorkflow, removeWorkflow, invokeWorkflow,
+          subscribeWorkflowDebug: createWorkflowDebugSubscription(ctx) }),
+      }, (props) => {
+        const snapshot = props.useAuthoring(value => value)
+        return <WorkflowPanel items={snapshot.value?.workflows ?? []} writable={snapshot.writable}
+          save={props.saveWorkflow} remove={props.removeWorkflow} invoke={props.invokeWorkflow}
+          {...props.subscribeWorkflowDebug === undefined ? {} : { subscribeDebug: props.subscribeWorkflowDebug }} t={t} />
+      }))
       continue
     }
     if (kind === 'skill') {

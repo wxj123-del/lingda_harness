@@ -16,7 +16,6 @@ import { createRequire } from 'node:module'
 import { dirname, join } from 'node:path'
 import { networkInterfaces } from 'node:os'
 import { fileURLToPath } from 'node:url'
-import QRCode from 'qrcode'
 import type { Context } from '@deepseek-ai/cordis'
 import z from '@deepseek-ai/schemastery'
 import { addHarnessSourceSection, auditStartupEntries } from '@deepseek-ai/dsh-app-boot'
@@ -153,17 +152,6 @@ function localWebUrl(ctx: Context): string {
   return `http://${LOOPBACK_HOST}:${String(port)}`
 }
 
-/** Render a scanable terminal QR code for the authenticated LAN URL. */
-async function renderMobileQr(url: string): Promise<string> {
-  return await new Promise<string>((resolve, reject) => {
-    QRCode.toString(url, { type: 'terminal', small: true }, (error, output) => {
-      /* v8 ignore next -- the authenticated LAN URL is always a non-empty URL string. */
-      if (error !== null) reject(error)
-      else resolve(output)
-    })
-  })
-}
-
 /**
  * Dist location is workspace knowledge of this bundle: anchored on the
  * frontend package manifest, not configured. Existence is a request-time
@@ -226,8 +214,7 @@ async function openBrowser(url: string): Promise<void> {
 export const internals: {
   resolveDistIndex: () => string
   openBrowser: (url: string) => Promise<void>
-  renderMobileQr: (url: string) => Promise<string>
-} = { resolveDistIndex, openBrowser, renderMobileQr }
+} = { resolveDistIndex, openBrowser }
 
 /**
  * Mount the Web runtime: dist serving, surface prompt, the bash runtime
@@ -286,14 +273,6 @@ export function apply(ctx: Context, config: Config): void {
             console.log(lanUrl === undefined
               ? 'dsh web: phone/LAN access is enabled, but no active LAN IPv4 address was found'
               : 'dsh web: phone/LAN access is enabled; share the LAN URL only on a trusted network')
-            if (lanUrl !== undefined) {
-              void internals.renderMobileQr(lanUrl).then((qr) => {
-                console.log(`dsh web: scan this QR code on your phone to sign in:\n${qr}`)
-              }).catch((error: unknown) => {
-                const reason = error instanceof Error ? error.message : String(error)
-                console.error(`web-app: could not render the phone sign-in QR code: ${reason}; use the LAN URL printed above`)
-              })
-            }
           }
         }
         if (handoffBrowser) {

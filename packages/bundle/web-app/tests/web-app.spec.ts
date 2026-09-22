@@ -54,7 +54,6 @@ afterEach(() => {
   vi.unstubAllEnvs()
   internals.resolveDistIndex = originalResolve
   internals.openBrowser = originalOpenBrowser
-  internals.renderMobileQr = originalRenderMobileQr
   if (dist !== undefined) rmSync(dist, { recursive: true, force: true })
   dist = undefined
   mockNetworkInterfaces = {
@@ -65,7 +64,6 @@ afterEach(() => {
 
 const originalResolve = internals.resolveDistIndex
 const originalOpenBrowser = internals.openBrowser
-const originalRenderMobileQr = internals.renderMobileQr
 
 type BrowserLauncher = ChildProcess & { stderr: PassThrough }
 
@@ -149,7 +147,6 @@ describe('web-app runtime glue', () => {
     const log = vi.spyOn(console, 'log').mockImplementation((message) => { lifecycle.push(String(message)) })
     const openBrowser = vi.fn(async (url: string) => { lifecycle.push(`open:${url}`) })
     internals.openBrowser = openBrowser
-    internals.renderMobileQr = vi.fn(async () => '[QR]')
     apply(ctx, new Config({ openBrowser: true, printUrl: true, surfaceContext: true, trustedHosts: ['lab.internal'] }))
     await ctx.plugin(SystemPrompt, { personaPrefix: '' })
     // Settle the injected registrations.
@@ -169,11 +166,7 @@ describe('web-app runtime glue', () => {
       'dsh web: phone/LAN access is enabled; share the LAN URL only on a trusted network',
       'dsh web: opening the default browser; pass --no-open to disable',
       'open:http://127.0.0.1:4567/?token=test-token',
-      'dsh web: scan this QR code on your phone to sign in:\n[QR]',
     ])
-    await new Promise(resolve => setTimeout(resolve, 0))
-    expect(log).toHaveBeenCalledWith('dsh web: scan this QR code on your phone to sign in:\n[QR]')
-    expect(internals.renderMobileQr).toHaveBeenCalledWith('http://192.168.1.5:4567/?token=test-token')
     const assembly = await ctx.systemPrompt.assemble()
     expect(assembly.sections.find(entry => entry.name === 'harness:source')?.text).toContain('DeepSeek Harness implementation checkout')
     const section = assembly.sections.find(entry => entry.name === 'app:web-surface')
@@ -214,25 +207,22 @@ describe('web-app runtime glue', () => {
     ctx.provide('webServer', fakeHttpServer('0.0.0.0').server)
     provideConnection(ctx)
     const log = vi.spyOn(console, 'log').mockImplementation(() => {})
-    internals.renderMobileQr = vi.fn(async () => '[QR]')
     apply(ctx, new Config({ openBrowser: false, printUrl: true, surfaceContext: false, trustedHosts: [] }))
     await new Promise(resolve => setTimeout(resolve, 0))
     expect(log).toHaveBeenCalledWith('dsh web: http://127.0.0.1:4567/?token=test-token')
     expect(log).toHaveBeenCalledWith('dsh web: phone/LAN access is enabled, but no active LAN IPv4 address was found')
-    expect(internals.renderMobileQr).not.toHaveBeenCalled()
     await ctx.fiber.dispose()
   })
 
-  it('keeps the LAN URL usable when terminal QR rendering fails', async () => {
+  it('prints the LAN URL without extra sign-in output', async () => {
     stageDist()
     const ctx = new Context()
     ctx.provide('webServer', fakeHttpServer('0.0.0.0').server)
     provideConnection(ctx)
-    const errorLog = vi.spyOn(console, 'error').mockImplementation(() => {})
-    internals.renderMobileQr = vi.fn(async () => { throw new Error('terminal unavailable') })
+    const log = vi.spyOn(console, 'log').mockImplementation(() => {})
     apply(ctx, new Config({ openBrowser: false, printUrl: true, surfaceContext: false, trustedHosts: [] }))
     await new Promise(resolve => setTimeout(resolve, 0))
-    expect(errorLog).toHaveBeenCalledWith('web-app: could not render the phone sign-in QR code: terminal unavailable; use the LAN URL printed above')
+    expect(log).toHaveBeenCalledWith('dsh web: phone/LAN access is enabled; share the LAN URL only on a trusted network')
     await ctx.fiber.dispose()
   })
 

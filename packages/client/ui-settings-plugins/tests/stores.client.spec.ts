@@ -6,7 +6,7 @@
 import { describe, expect, it, vi } from 'vitest'
 import type { SettingsPathOpView } from '@deepseek-ai/dsh-api-remotes/client'
 import { RemoteError, stubSettingsScope, type StubSettingsScope } from '@deepseek-ai/dsh-client-test-runtime'
-import { CardForm, numberField, textField } from '../src/client/card-form.ts'
+import { CardForm, booleanField, numberField, textField } from '../src/client/card-form.ts'
 import { AgentLoopCardController, type AgentLoopSettings } from '../src/client/agent-loop-card-controller.ts'
 import { BashCardController, type BashSettings } from '../src/client/bash-card-controller.ts'
 import {
@@ -88,6 +88,18 @@ function deferred<T>() {
 }
 
 describe('CardForm', () => {
+  it('accepts and formats boolean settings', () => {
+    const host = stubSettingsScope<Record<string, unknown>>()
+    const subject = new CardForm(host.scope, [booleanField('requireMention')])
+    host.publish({ value: { requireMention: true }, user: {} })
+
+    expect(subject.field('requireMention')).toEqual({ text: 'true', overridden: false, invalid: false })
+    subject.actions().edit('requireMention', 'false')
+    expect(subject.field('requireMention')).toEqual({ text: 'false', overridden: true, invalid: false })
+    subject.actions().edit('requireMention', 'maybe')
+    expect(subject.field('requireMention')).toEqual({ text: 'maybe', overridden: false, invalid: true })
+  })
+
   function form() {
     const host = stubSettingsScope<Record<string, unknown>>()
     const subject = new CardForm(host.scope, [numberField('timeoutMs'), textField('baseURL')])

@@ -7,7 +7,7 @@ import {
   IconRefreshOutline16,
 } from '@deepseek-ai/dsh-client-ui-primitives'
 import { SKILL_CATEGORIES, type AuthoringItem, type SkillCategory } from '../../authoring-settings.ts'
-import { BUILTIN_SKILLS, userSkillName } from '../../builtin-skills.ts'
+import { BUILTIN_SKILLS, builtinSkillId, userSkillName } from '../../builtin-skills.ts'
 import type { LayoutKey } from '../locales.ts'
 import { SkillEditor } from './SkillEditor.tsx'
 import css from './SkillsPanel.module.css'
@@ -55,6 +55,7 @@ export function SkillsPanel({ items, writable, loading, save, invoke, scanLocalS
   const [opening, setOpening] = useState<string | null>(null)
   const [error, setError] = useState(false)
   const [importing, setImporting] = useState(false)
+  const [builtinImporting, setBuiltinImporting] = useState<string | null>(null)
   const [importError, setImportError] = useState<LayoutKey | null>(null)
   const [importPreview, setImportPreview] = useState<{ filename: string; files: string[]; replacing: boolean } | null>(null)
   const [localOpen, setLocalOpen] = useState(false)
@@ -64,11 +65,20 @@ export function SkillsPanel({ items, writable, loading, save, invoke, scanLocalS
   const [localQuery, setLocalQuery] = useState('')
   const fileInput = useRef<HTMLInputElement>(null)
   const catalog: CatalogSkill[] = [
-    ...BUILTIN_SKILLS.map(skill => ({
-      name: skill.name, title: t(skill.title), description: t(skill.description),
-      body: t(skill.body), steps: skill.steps.map(t), category: skill.category, enabled: true,
-    })),
-    ...items.map(item => ({
+    ...BUILTIN_SKILLS.map((skill) => {
+      const item = items.find(candidate => candidate.id === builtinSkillId(skill.name))
+      return {
+        name: skill.name,
+        title: item?.title ?? t(skill.title),
+        description: item?.description ?? t(skill.description),
+        body: item?.body ?? t(skill.body),
+        steps: item?.steps ?? skill.steps.map(t),
+        category: item?.category ?? skill.category,
+        enabled: item?.enabled ?? true,
+        ...(item === undefined ? {} : { item }),
+      }
+    }),
+    ...items.filter(item => !BUILTIN_SKILLS.some(skill => item.id === builtinSkillId(skill.name))).map(item => ({
       name: userSkillName(item.id), title: item.title, description: item.description,
       body: item.body, steps: item.steps, category: item.category ?? 'general', enabled: item.enabled, item,
       userInvocable: item.invocation?.userInvocable ?? true,
@@ -79,6 +89,9 @@ export function SkillsPanel({ items, writable, loading, save, invoke, scanLocalS
   const found = inSource.filter(skill => [skill.title, skill.name, skill.description, t(`skill.category.${skill.category}`)].join(' ').toLocaleLowerCase().includes(search))
   const shown = found.filter(skill => category === 'all' || skill.category === category)
   const detail = catalog.find(skill => skill.name === detailName)
+  const importedBuiltin = (skill: CatalogSkill): boolean => (
+    skill.item !== undefined && BUILTIN_SKILLS.some(candidate => builtinSkillId(candidate.name) === skill.item?.id)
+  )
   const localFound = useMemo(() => {
     const search = localQuery.trim().toLocaleLowerCase()
     return (localScan?.candidates ?? []).filter(candidate => [candidate.name, candidate.description, candidate.relativePath]
@@ -137,7 +150,29 @@ export function SkillsPanel({ items, writable, loading, save, invoke, scanLocalS
     if (opening !== null || !skill.enabled || skill.userInvocable === false) return
     setOpening(skill.name)
     setError(false)
-    try { await invoke(skill.name) } catch { setError(true) } finally { setOpening(null) }
+    try {
+      await invoke(skill.item === undefined ? skill.name : userSkillName(skill.item.id))
+    } catch {
+      setError(true)
+    } finally {
+      setOpening(null)
+    }
+  }
+  const importBuiltin = async (skill: CatalogSkill): Promise<void> => {
+    if (skill.item !== undefined || !writable || importing || builtinImporting !== null) return
+    const builtin = BUILTIN_SKILLS.find(candidate => candidate.name === skill.name)
+    if (builtin === undefined) return
+    setBuiltinImporting(skill.name)
+    setImportError(null)
+    try {
+      await save({
+        id: builtinSkillId(builtin.name), title: t(builtin.title), description: t(builtin.description),
+        body: t(builtin.body), steps: builtin.steps.map(t), enabled: true, category: builtin.category, updatedAt: Date.now(),
+      })
+      setSource('mine')
+      setCategory('all')
+      setQuery('')
+    } catch { setImportError('skill.importFailed') } finally { setBuiltinImporting(null) }
   }
   const icon = (skill: CatalogSkill) => skill.category === 'workflow' ? <IconCodeOutline16 size={24} /> : <IconSkillOutline16 size={24} />
   const useButton = (skill: CatalogSkill) => (
@@ -182,11 +217,11 @@ export function SkillsPanel({ items, writable, loading, save, invoke, scanLocalS
             {!writable && !loading && <p role="status" className={css.error}>{t('storageUnavailable')}</p>}
             <div className={css.grid}>
               {shown.map(skill => <article className={css.card} key={skill.name}>
-                <div className={css.cardTop}><span className={css.skillIcon} data-category={skill.category}>{icon(skill)}</span><span className={css.badge}>{t(skill.item ? 'skill.customBadge' : 'skill.builtinBadge')}</span></div>
+                <div className={css.cardTop}><span className={css.skillIcon} data-category={skill.category}>{icon(skill)}</span><span className={css.badge}>{t(importedBuiltin(skill) ? 'skill.imported' : skill.item ? 'skill.customBadge' : 'skill.builtinBadge')}</span></div>
                 <button type="button" className={css.cardTitle} onClick={() => { setDetailName(skill.name) }}><h3>{skill.title}</h3></button>
                 <p className={css.description}>{skill.description || t('skill.category.general')}</p>
                 <div className={css.metadata}><span>{t(`skill.category.${skill.category}`)}</span><span className={css.state} data-enabled={skill.enabled}>{t(skill.enabled ? 'skill.ready' : 'skill.disabled')}</span></div>
-                <div className={css.cardActions}><Button size="sm" onClick={() => { setDetailName(skill.name) }}>{t('skill.details')}</Button>{useButton(skill)}</div>
+                <div className={css.cardActions}><Button size="sm" onClick={() => { setDetailName(skill.name) }}>{t('skill.details')}</Button>{skill.item === undefined && <Button size="sm" variant="primary" disabled={!writable || importing || builtinImporting !== null} onClick={() => { void importBuiltin(skill) }}>{t(builtinImporting === skill.name ? 'skill.importing' : 'skill.importBuiltin')}</Button>}{useButton(skill)}</div>
               </article>)}
             </div>
             {shown.length === 0 && !loading && <div className={css.empty}>
@@ -200,9 +235,10 @@ export function SkillsPanel({ items, writable, loading, save, invoke, scanLocalS
       {detail && <Modal open title={detail.title} closeLabel={t('skill.close')} onClose={() => { setDetailName(null) }} className={cssClass(css.detail)} contentClassName={cssClass(css.detailContent)}
         footer={<div className={css.detailActions}>
           {detail.item && <Button icon={<IconEditOutline16 />} disabled={!writable} onClick={() => { if (detail.item) setDraft(detail.item); setDetailName(null) }}>{t('skill.edit')}</Button>}
+          {!detail.item && <Button variant="primary" disabled={!writable || importing || builtinImporting !== null} onClick={() => { void importBuiltin(detail); setDetailName(null) }}>{t(builtinImporting === detail.name ? 'skill.importing' : 'skill.importBuiltin')}</Button>}
           {useButton(detail)}
         </div>}>
-        <div className={css.detailMeta}><span className={css.badge}>{t(detail.item ? 'skill.customBadge' : 'skill.builtinBadge')}</span><span>{t(`skill.category.${detail.category}`)}</span></div>
+        <div className={css.detailMeta}><span className={css.badge}>{t(importedBuiltin(detail) ? 'skill.imported' : detail.item ? 'skill.customBadge' : 'skill.builtinBadge')}</span><span>{t(`skill.category.${detail.category}`)}</span></div>
         <p>{detail.description}</p><h3>{t('skill.instructions')}</h3><p className={css.instructions}>{detail.body}</p>
         {detail.steps.length > 0 && <><h3>{t('step')}</h3><ol className={css.detailSteps}>{detail.steps.map((step, index) => <li key={index}>{step}</li>)}</ol></>}
         {error && <p role="alert" className={css.error}>{t('skill.useError')}</p>}

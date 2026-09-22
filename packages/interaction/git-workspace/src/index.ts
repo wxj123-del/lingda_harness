@@ -1,10 +1,10 @@
-/** Git workspace evidence and a guarded source updater for local Web sessions. */
+/** Git workspace evidence and guarded checkout operations for local Web sessions. */
 
 import { Context } from '@deepseek-ai/cordis'
 import type { Session } from '@deepseek-ai/dsh-session'
 import { execFile, spawn } from 'node:child_process'
-import { readdir } from 'node:fs/promises'
-import { join } from 'node:path'
+import { lstat, readdir, realpath } from 'node:fs/promises'
+import { dirname, isAbsolute, join, resolve } from 'node:path'
 import { promisify } from 'node:util'
 import schema from '@deepseek-ai/schemastery'
 import { Remote, TypertRemoteService } from '@deepseek-ai/dsh-typert-protocol'
@@ -59,6 +59,60 @@ export interface RepositoryUpdateStatus {
 export interface RepositoryUpdateResult extends RepositoryUpdateStatus {
   updated: boolean
   restartScheduled: boolean
+}
+
+/** A user-requested remote checkout target. Paths are interpreted by the Host. */
+export interface RepositoryCloneRequest {
+  url: string
+  targetDirectory: string
+  branch?: string
+}
+
+/** Result of cloning a new checkout or fast-forwarding an existing checkout. */
+export interface RepositoryCloneResult {
+  repositoryRoot: string
+  remote: string
+  branch: string
+  localHead: string
+  remoteHead?: string
+  action: 'cloned' | 'synced' | 'current'
+  changed: boolean
+}
+
+/** Branch names advertised by a remote repository. */
+export interface RepositoryBranchesResult {
+  url: string
+  branches: string[]
+}
+
+/** A bounded live view of one local checkout. */
+export interface RepositoryChangeSnapshot {
+  repositoryRoot: string
+  remote?: string
+  branch: string
+  localHead: string
+  upstreamBranch?: string
+  upstreamHead?: string
+  ahead: number
+  behind: number
+  syncState: GitSyncState
+  status: string
+  diffStat: string
+  diff: string
+}
+
+/** Explicit publish request from the repository surface. */
+export interface RepositoryPushRequest {
+  repositoryRoot: string
+  message?: string
+  includeUntracked?: boolean
+}
+
+/** Result after committing local changes and pushing the selected branch. */
+export interface RepositoryPushResult extends RepositoryChangeSnapshot {
+  committed: boolean
+  pushed: boolean
+  commitSha?: string
 }
 
 export interface GitCheckpoint {
@@ -117,6 +171,220 @@ async function gitOutput(cwd: string, args: readonly string[]): Promise<string> 
     cwd, maxBuffer: 64 * 1024, encoding: 'utf8',
   })
   return result.stdout.trim()
+}
+
+function normalizedRemote(value: string): string {
+  return value.trim().replace(/\.git$/u, '').replace(/\/+$/u, '').toLowerCase()
+}
+
+function validRepositoryUrl(value: string): boolean {
+  const url = value.trim()
+  if (url === '' || /[\0\r\n]/u.test(url)) return false
+  if (/^https:\/\/[^\s]+$/iu.test(url)) return true
+  if (/^ssh:\/\/[^\s]+$/iu.test(url)) return true
+  return /^git@[^\s:]+:[^\s]+$/u.test(url)
+}
+
+function validBranchName(value: string): boolean {
+  return value === '' || (!/[\0\r\n]/u.test(value) && !value.startsWith('-') && !value.includes('..'))
+}
+
+async function listRemoteBranches(url: string): Promise<RepositoryBranchesResult> {
+  const normalizedUrl = url.trim()
+  if (!validRepositoryUrl(normalizedUrl)) throw new Error('仅支持 HTTPS 或 SSH Git 仓库地址')
+  const output = (await execFileAsync('git', ['ls-remote', '--heads', '--', normalizedUrl], {
+    maxBuffer: 256 * 1024, encoding: 'utf8', timeout: 30_000,
+    env: { ...process.env, GIT_TERMINAL_PROMPT: '0' },
+  })).stdout
+  const branches = output.split(/\r?\n/u).flatMap((line) => {
+    const ref = line.trim().split(/\s+/u)[1]
+    return ref?.startsWith('refs/heads/') ? [ref.slice('refs/heads/'.length)] : []
+  }).filter((branch, index, values) => values.indexOf(branch) === index).sort()
+  return { url: normalizedUrl, branches }
+}
+
+async function directoryState(path: string): Promise<'missing' | 'empty' | 'non-empty' | 'file'> {
+  try {
+    const stat = await lstat(path)
+    if (!stat.isDirectory()) return 'file'
+    const entries = await readdir(path)
+    return entries.length === 0 ? 'empty' : 'non-empty'
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === 'ENOENT') return 'missing'
+    throw error
+  }
+}
+
+async function repositoryRemote(root: string): Promise<string | undefined> {
+  try {
+    const remote = await gitOutput(root, ['remote', 'get-url', 'origin'])
+    return remote === '' ? undefined : remote
+  } catch {
+    return undefined
+  }
+}
+
+/** Include bounded pseudo-diffs for untracked text files, which git diff omits. */
+async function untrackedDiff(root: string): Promise<string> {
+  const names = await gitOutput(root, ['ls-files', '--others', '--exclude-standard', '-z']).catch(() => '')
+  const paths = names.split('\0').filter(path => path !== '' && !path.startsWith('/') && !path.includes('\0'))
+  const chunks: string[] = []
+  for (const path of paths) {
+    try {
+      await execFileAsync('git', ['diff', '--no-index', '--no-ext-diff', '--unified=3', '--', '/dev/null', join(root, path)], {
+        cwd: root, maxBuffer: 64 * 1024, encoding: 'utf8', timeout: 5_000,
+      })
+    } catch (error) {
+      const output = (error as { stdout?: unknown }).stdout
+      if (typeof output === 'string' && output !== '') chunks.push(output)
+    }
+  }
+  return chunks.join('\n')
+}
+
+async function repositorySnapshot(root: string): Promise<RepositoryChangeSnapshot> {
+  const branch = await gitOutput(root, ['branch', '--show-current'])
+  if (branch === '') throw new Error('当前仓库处于 detached HEAD，无法执行推送')
+  const status = await gitOutput(root, ['status', '--short', '--branch'])
+  const statusLines = status.split(/\r?\n/u).filter(Boolean)
+  const branchLine = statusLines.find(line => line.startsWith('## '))
+  const counts = parseTrackingCounts(branchLine?.slice(3))
+  const upstreamBranch = await gitOutput(root, ['rev-parse', '--abbrev-ref', '--symbolic-full-name', '@{upstream}']).catch(() => '')
+  const upstreamHead = await gitOutput(root, ['rev-parse', '@{upstream}']).catch(() => '')
+  const localHead = await gitOutput(root, ['rev-parse', 'HEAD'])
+  const remote = await repositoryRemote(root)
+  let remoteHead: string | undefined
+  if (remote !== undefined) {
+    try { remoteHead = (await readRemoteHead(root, remote)).sha } catch { /* status remains useful without the network */ }
+  }
+  const ahead = counts.ahead ?? 0
+  const behind = counts.behind ?? 0
+  const state = syncState(localHead, upstreamHead || undefined, remoteHead, ahead, behind) ?? 'unknown'
+  const diffStat = await gitOutput(root, ['diff', 'HEAD', '--stat']).catch(() => '')
+  const trackedDiff = await gitOutput(root, ['diff', 'HEAD', '--no-ext-diff', '--unified=3']).catch(() => '')
+  const untracked = await untrackedDiff(root)
+  const diff = [trackedDiff, untracked].filter(Boolean).join('\n')
+  return {
+    repositoryRoot: root,
+    ...(remote === undefined ? {} : { remote }),
+    branch,
+    localHead,
+    ...(upstreamBranch === '' ? {} : { upstreamBranch }),
+    ...(upstreamHead === '' ? {} : { upstreamHead }),
+    ahead,
+    behind,
+    syncState: state,
+    status: statusLines.filter(line => !line.startsWith('## ')).join('\n'),
+    diffStat,
+    diff: truncate(diff, 120_000),
+  }
+}
+
+function repositoryRootFromRequest(requested: string): Promise<string> {
+  const path = requested.trim()
+  if (!isAbsolute(path)) throw new Error('仓库路径必须是绝对路径')
+  return gitOutput(resolve(path), ['rev-parse', '--show-toplevel']).then((root) => {
+    return Promise.all([realpath(resolve(root)), realpath(resolve(path))]).then(([normalized, requestedRoot]) => {
+      if (normalized !== requestedRoot) throw new Error('请指定仓库根目录')
+      return normalized
+    })
+  }).catch((error) => {
+    if (error instanceof Error && /请指定仓库根目录/u.test(error.message)) throw error
+    throw new Error('目标路径不是 Git 仓库')
+  })
+}
+
+async function pushRepository(request: RepositoryPushRequest): Promise<RepositoryPushResult> {
+  const root = await repositoryRootFromRequest(request.repositoryRoot)
+  const before = await repositorySnapshot(root)
+  if (before.remote === undefined) throw new Error('仓库没有 origin 远端，无法推送')
+  await execFileAsync('git', ['fetch', '--prune', 'origin'], {
+    cwd: root, env: { ...process.env, GIT_TERMINAL_PROMPT: '0' },
+    maxBuffer: 512 * 1024, encoding: 'utf8', timeout: 120_000,
+  })
+  const refreshed = await repositorySnapshot(root)
+  if (refreshed.behind > 0 && refreshed.ahead > 0) throw new Error('本地与远端已分叉，请先手动解决冲突')
+  if (refreshed.behind > 0) throw new Error('远端有新提交，请先同步后再推送')
+  const message = request.message?.trim() ?? ''
+  const dirty = refreshed.status.trim() !== ''
+  if (dirty && message === '') throw new Error('请填写提交说明后再推送')
+  if (dirty) {
+    if (request.includeUntracked !== false) await execFileAsync('git', ['add', '--all'], { cwd: root, maxBuffer: 128 * 1024, encoding: 'utf8' })
+    else await execFileAsync('git', ['add', '--update'], { cwd: root, maxBuffer: 128 * 1024, encoding: 'utf8' })
+    await execFileAsync('git', ['commit', '-m', message], { cwd: root, maxBuffer: 512 * 1024, encoding: 'utf8' })
+  }
+  const current = await repositorySnapshot(root)
+  if (current.behind > 0 && current.ahead > 0) throw new Error('本地与远端已分叉，请先手动解决冲突')
+  if (current.behind > 0) throw new Error('远端有新提交，请先同步后再推送')
+  const branch = current.branch
+  await execFileAsync('git', ['push', '--set-upstream', 'origin', branch], {
+    cwd: root, env: { ...process.env, GIT_TERMINAL_PROMPT: '0' },
+    maxBuffer: 512 * 1024, encoding: 'utf8', timeout: 120_000,
+  })
+  const after = await repositorySnapshot(root)
+  return {
+    ...after,
+    committed: dirty,
+    pushed: current.ahead > 0 || dirty,
+    ...(dirty ? { commitSha: after.localHead } : {}),
+  }
+}
+
+async function cloneOrSyncRepository(request: RepositoryCloneRequest): Promise<RepositoryCloneResult> {
+  const url = request.url.trim()
+  const target = resolve(request.targetDirectory.trim())
+  if (!validRepositoryUrl(url)) throw new Error('仅支持 HTTPS 或 SSH Git 仓库地址')
+  if (!isAbsolute(request.targetDirectory.trim())) throw new Error('目标文件夹必须是绝对路径')
+  const branch = request.branch?.trim() ?? ''
+  if (!validBranchName(branch)) throw new Error('分支名称无效')
+  if (target === dirname(target)) throw new Error('目标文件夹路径无效')
+
+  const state = await directoryState(target)
+  if (state === 'file') throw new Error('目标路径不是文件夹')
+  if (state === 'non-empty') {
+    let root: string
+    try {
+      root = await gitOutput(target, ['rev-parse', '--show-toplevel'])
+    } catch {
+      throw new Error('目标文件夹不为空，无法安全克隆；请选择空文件夹')
+    }
+    if (resolve(root) !== target) throw new Error('目标文件夹不是仓库根目录')
+    const existingRemote = await repositoryRemote(root)
+    if (existingRemote === undefined || normalizedRemote(existingRemote) !== normalizedRemote(url)) {
+      throw new Error('目标文件夹已关联其他远端仓库')
+    }
+    const dirty = await repositoryStatus(root)
+    if (dirty !== '') throw new Error('目标仓库有未提交修改，请先提交或保存后再同步')
+    const before = await gitOutput(root, ['rev-parse', 'HEAD'])
+    await execFileAsync('git', ['pull', '--ff-only', '--prune'], {
+      cwd: root, env: { ...process.env, GIT_TERMINAL_PROMPT: '0' },
+      maxBuffer: 512 * 1024, encoding: 'utf8', timeout: 120_000,
+    })
+    const after = await gitOutput(root, ['rev-parse', 'HEAD'])
+    return {
+      repositoryRoot: root,
+      remote: existingRemote,
+      branch: await gitOutput(root, ['branch', '--show-current']),
+      localHead: after,
+      action: before === after ? 'current' : 'synced',
+      changed: before !== after,
+    }
+  }
+
+  const cloneArgs = ['clone', ...(branch === '' ? [] : ['--branch', branch]), '--', url, target]
+  await execFileAsync('git', cloneArgs, {
+    cwd: dirname(target), env: { ...process.env, GIT_TERMINAL_PROMPT: '0' },
+    maxBuffer: 512 * 1024, encoding: 'utf8', timeout: 600_000,
+  })
+  const root = await gitOutput(target, ['rev-parse', '--show-toplevel'])
+  return {
+    repositoryRoot: root,
+    remote: await repositoryRemote(root) ?? url,
+    branch: await gitOutput(root, ['branch', '--show-current']),
+    localHead: await gitOutput(root, ['rev-parse', 'HEAD']),
+    action: 'cloned',
+    changed: true,
+  }
 }
 
 function commandName(name: string): string {
@@ -324,9 +592,9 @@ async function resolveRepositoryRoot(cwd: string): Promise<string | undefined> {
 
 /**
  * Captures Git metadata independently from Agent modes so the evidence is
- * available to presets, CLI sessions, and the Web trajectory alike. Its update
- * Remote is restricted to clean fast-forward checkouts and rebuilds the same
- * repository before scheduling a Host restart.
+ * available to presets, CLI sessions, and the Web trajectory alike. Checkout
+ * operations are explicit, path-checked, and fast-forward only for existing
+ * repositories.
  */
 export class GitWorkspaceService extends TypertRemoteService {
   static Config: schema<Config> = schema.object({
@@ -376,6 +644,30 @@ export class GitWorkspaceService extends TypertRemoteService {
     const root = await resolveRepositoryRoot(process.cwd())
     if (root === undefined) throw new Error('当前进程目录不是 Git 仓库')
     return repositoryUpdateStatus(root, true)
+  }
+
+  /** Clone a remote into a new folder, or fast-forward the matching checkout. */
+  @Remote('clone')
+  async clone(request: RepositoryCloneRequest): Promise<RepositoryCloneResult> {
+    return cloneOrSyncRepository(request)
+  }
+
+  /** Read branch names advertised by a remote without changing local files. */
+  @Remote('branches')
+  async branches(url: string): Promise<RepositoryBranchesResult> {
+    return listRemoteBranches(url)
+  }
+
+  /** Read the current checkout, worktree status, and bounded unified diff. */
+  @Remote('inspect')
+  async inspect(repositoryRoot: string): Promise<RepositoryChangeSnapshot> {
+    return repositorySnapshot(await repositoryRootFromRequest(repositoryRoot))
+  }
+
+  /** Commit explicit local changes and push the current branch to origin. */
+  @Remote('push')
+  async push(request: RepositoryPushRequest): Promise<RepositoryPushResult> {
+    return pushRepository(request)
   }
 
   /** Fast-forward the checkout, install locked dependencies, build, and restart the Host. */

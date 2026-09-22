@@ -10,6 +10,10 @@ import { BashCard } from '../src/client/BashCard.tsx'
 import type { BashCardProps } from '../src/client/BashCard.tsx'
 import { ConfigurablePluginsTab } from '../src/client/ConfigurablePluginsTab.tsx'
 import type { ConfigurablePluginsTabProps } from '../src/client/ConfigurablePluginsTab.tsx'
+import { ConnectionsSection } from '../src/client/ConnectionsSection.tsx'
+import type { ConnectionsSectionProps } from '../src/client/ConnectionsSection.tsx'
+import { FeishuCard } from '../src/client/FeishuCard.tsx'
+import type { FeishuCardProps } from '../src/client/FeishuCard.tsx'
 import { PluginsSettingsSection } from '../src/client/PluginsSettingsSection.tsx'
 import type { PluginsSettingsSectionProps, PluginsSettingsTabEntry } from '../src/client/PluginsSettingsSection.tsx'
 import { SubagentModelSelectionCard } from '../src/client/SubagentModelSelectionCard.tsx'
@@ -67,6 +71,36 @@ function renderConfigurable(namespaces: string[], cards: Record<string, string> 
     },
   } as unknown as ConfigurablePluginsTabProps
   render(<ConfigurablePluginsTab {...props} />)
+}
+
+function renderConnections(rendered = 'feishu') {
+  const props = {
+    t,
+    renderSlot: vi.fn(() => <li>{rendered}</li>),
+  } as unknown as ConnectionsSectionProps
+  render(<ConnectionsSection {...props} />)
+  return props.renderSlot
+}
+
+function renderFeishu(state: Partial<import('../src/client/feishu-card-controller.ts').FeishuCardState> = {}) {
+  const store = createSnapshotStore<import('../src/client/feishu-card-controller.ts').FeishuCardState>({
+    ...settled,
+    workspacePath: field('/workspace'),
+    agentPreset: field('standard'),
+    permissionPreset: field('read-only'),
+    requireMention: field('true'),
+    appId: field(''),
+    appSecret: field(''),
+    appIdConfigured: false,
+    appIdWritable: true,
+    appSecretConfigured: false,
+    appSecretWritable: true,
+    ...state,
+  })
+  const actions = cardActions()
+  const props = { ...actions, t, useFeishuCard: bindSnapshotSelector(store) } as unknown as FeishuCardProps
+  render(<FeishuCard {...props} />)
+  return actions
 }
 
 function renderBashCard(state: Partial<BashCardState> = {}) {
@@ -179,6 +213,29 @@ describe('PluginsSettingsSection', () => {
     fireEvent.keyDown(configurable, { key: 'Escape' })
     expect(document.activeElement).toBe(configurable)
     expect(configurable.getAttribute('aria-selected')).toBe('true')
+  })
+})
+
+describe('ConnectionsSection', () => {
+  it('renders the connections heading and registered cards', () => {
+    const renderSlot = renderConnections()
+    expect(screen.getByRole('heading', { name: en.connectionsTitle })).toBeTruthy()
+    expect(screen.getByText('feishu')).toBeTruthy()
+    expect(renderSlot).toHaveBeenCalledWith('settings.integration.item', {})
+  })
+})
+
+describe('FeishuCard', () => {
+  it('renders connection fields and stages edits', () => {
+    const actions = renderFeishu()
+    fireEvent.click(screen.getByText(en.feishuTitle))
+    fireEvent.change(screen.getByLabelText(en.feishuAppId), { target: { value: 'cli_test' } })
+    fireEvent.change(screen.getByLabelText(en.feishuWorkspacePath), { target: { value: '/work' } })
+    fireEvent.click(screen.getByLabelText(en.feishuRequireMention))
+
+    expect(actions.edit).toHaveBeenCalledWith('appId', 'cli_test')
+    expect(actions.edit).toHaveBeenCalledWith('workspacePath', '/work')
+    expect(actions.edit).toHaveBeenCalledWith('requireMention', 'false')
   })
 })
 

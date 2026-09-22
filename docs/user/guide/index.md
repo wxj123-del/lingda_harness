@@ -25,6 +25,8 @@ The agent can read and edit workspace files, run commands, delegate work, and ma
 ## Continue
 
 - [Configure models](./providers.md)
+- [Feishu bot quick setup](./feishu-bot.md)
+- [Feishu bot end-to-end article](./feishu-bot-end-to-end.md)
 - [Use the Python SDK](./python-sdk.md)
 - [Use other CLI modes](../../../apps/cli/README.md)
 - [Develop a plugin](../develop/basic/index.md)

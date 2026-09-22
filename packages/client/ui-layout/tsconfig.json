@@ -47,6 +47,9 @@
     },
     {
       "path": "../../core/tools"
+    },
+    {
+      "path": "../../workflow/workflow"
     }
   ]
 }

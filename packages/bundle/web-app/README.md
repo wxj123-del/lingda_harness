@@ -9,7 +9,7 @@ English | [中文](README.zh.md)
 
 ## Summary
 
-Run `dsh --profile web` to open an interactive browser GUI with chat, model and settings management, and session history. It uses the same model access, tools, and safety defaults as other dsh surfaces. Startup prints an authenticated URL and normally opens it in the default browser; SSH sessions and `--no-open` leave the URL for manual opening. Use `--mobile` to opt into a LAN bind; the terminal prints a QR code and the LAN URL for a phone connected to the same trusted network. Scan the QR code to sign in without typing the token-bearing URL. Choose this package for interactive browser work; use `dsh-headless` for one-shot command-line tasks.
+Run `dsh --profile web` to open an interactive browser GUI with chat, model and settings management, and session history. It uses the same model access, tools, and safety defaults as other dsh surfaces. Startup prints an authenticated URL and normally opens it in the default browser; SSH sessions and `--no-open` leave the URL for manual opening. Use `--mobile` to opt into a LAN bind; the terminal prints the LAN URL for a phone connected to the same trusted network. Choose this package for interactive browser work; use `dsh-headless` for one-shot command-line tasks.
 
 ## Table of Contents
 
@@ -41,6 +41,8 @@ After startup you see a `dsh web:` line whose root URL carries a fresh process t
 
 Saved model selections override the composition default. Both protocols share `deepseek-official` and `llm-deepseek` settings, so switching preserves model selections and credential references. Endpoint overrides retain their values; the settings card lets users supply a compatible API address.
 
+The Feishu bot is included with the Web app. Open **Settings -> Connections -> Feishu bot**, enter the Feishu App ID, App Secret, and workspace path, save, and restart DSH to chat with the Agent from a phone. It uses an outbound WebSocket by default, so the phone and computer do not need to share a network. The Connections page is the extension point for additional software connectors.
+
 ### Configuration
 
 Most users never set these; the command-line flags feed the settings below — `--mobile`, `--host`, `--port`, and `--trusted-host` come from the invocation, and `--no-open` turns the browser handoff off for that invocation. `--mobile` is an invocation-only switch and is not a deployment config field:
@@ -56,7 +58,7 @@ The generated [configuration catalog](../../../docs/config-catalog.md#deepseek-a
 
 ### Phone and LAN access
 
-By default the GUI accepts connections from this machine only. `--mobile` is an explicit opt-in that binds `0.0.0.0`, derives the machine's non-loopback IPv4 addresses, and prints a terminal QR code plus a `LAN:` URL carrying the process token for this run. Scan the QR code, or open the URL manually, on a phone connected to the same trusted Wi-Fi or wired network. The first page load exchanges the token for a signed cookie; later API and WebSocket requests require that cookie plus the Host/Origin trust checks. Do not share the QR code or URL outside the trusted network, and restart the process if it is exposed accidentally. LAN addresses are sampled once at startup, so a network change later is not picked up — restart the GUI to re-advertise.
+By default the GUI accepts connections from this machine only. `--mobile` is an explicit opt-in that binds `0.0.0.0`, derives the machine's non-loopback IPv4 addresses, and prints a `LAN:` URL carrying the process token for this run. Open that URL manually on a phone connected to the same trusted Wi-Fi or wired network. The first page load exchanges the token for a signed cookie; later API and WebSocket requests require that cookie plus the Host/Origin trust checks. Do not share the URL outside the trusted network, and restart the process if it is exposed accidentally. LAN addresses are sampled once at startup, so a network change later is not picked up — restart the GUI to re-advertise.
 
 ### Running over SSH
 
@@ -92,7 +94,7 @@ The URL line and browser handoff are readiness signals: supervisors RPC as soon 
 
 | File | Role |
 |---|---|
-| [`src/index.ts`](src/index.ts) | The `web-app` glue plugin: dist resolution, LAN trust sampling, prompt sections, bash variable, URL/QR sign-in output, browser handoff |
+| [`src/index.ts`](src/index.ts) | The `web-app` glue plugin: dist resolution, LAN trust sampling, prompt sections, bash variable, URL output, browser handoff |
 | [`src/startup.ts`](src/startup.ts) | The `web-startup` provider: `--mobile`, `--host`, `--port`, `--trusted-host`, `--no-open`, `--help` |
 | [`cordis.patch.yml`](cordis.patch.yml) | The web patch: restated base values, web host rows, browser roster, agent plane behind presets |
 | — | No runtime invariant companion is published; every contribution (frontend-static child plugin, prompt section, bashEnv registration) is registry-disposed with the fiber, and each owning registry's package carries that relation's invariant; the package holds no mutable state of its own to audit. |

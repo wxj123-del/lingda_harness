@@ -1,5 +1,5 @@
 ---
-description: "Independent Plugins page for the dsh web client: feature-owned tabs, the configurable host-plane plugin cards, and the settings.plugin.item extension point."
+description: "Independent Plugins and Connections pages for the dsh web client: feature-owned tabs, connector cards, configurable host-plane plugin cards, and their extension points."
 kind: "package-reference"
 ---
 
@@ -25,7 +25,7 @@ Use the independent **Plugins** page to configure the plugins exposed by the cur
 <a id="use-this-package"></a>
 ## Use this package
 
-Open **Plugins** from product navigation and select the **Plugin configuration** tab to edit the host-plane plugins this deployment composes. The cards appear in this order: the shell executor (`bash`), the agent loop's tool-call parallelism (`agent-loop`), subagent model selection (`subagent-model-selection`), and the DeepSeek search provider (`web-search-deepseek`).
+Open **Plugins** from product navigation and select the **Plugin configuration** tab to edit the host-plane plugins this deployment composes. Open **Connections** to configure external software connectors. The Web bundle currently contributes a Feishu bot card there; additional connectors can register cards without changing the settings shell.
 
 ### What appears here
 
@@ -53,7 +53,7 @@ The section is one extension point and one dispatch rule: feature plugins own th
 
 ### The tab extension point
 
-The package registers the `plugins` keyed `main` page outside Settings and declares `settings.plugins.tab`, a root list slot whose labels become ordered tabs; a tab stays mounted after its first selection so local drafts and read-only snapshots survive tab switches. The package registers its own `configurable` contribution, which declares the nested `settings.plugin.item` slot — keyed on the settings namespace a card edits. A plugin that ships a browser half registers its own card under its own namespace and owns every part of it: chrome, controls, and copy. Tabs follow the contribution's `order`; cards follow registration order.
+The package registers the `plugins` keyed `main` page outside Settings and declares `settings.plugins.tab`, a root list slot whose labels become ordered tabs; a tab stays mounted after its first selection so local drafts and read-only snapshots survive tab switches. It also registers the `connections` Settings section and declares the `settings.integration.item` root list slot. A plugin that ships a browser half registers its own card under that slot and owns every part of it: chrome, controls, and copy. Tabs and sections follow contribution order; cards follow registration order.
 
 ### The write path
 

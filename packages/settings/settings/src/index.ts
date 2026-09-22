@@ -478,6 +478,7 @@ export abstract class SettingsProvider extends Service {
   ): void {
     const scope = this.register<Namespace, T>(ns, schema, {
       base: entry,
+      ...hooks.applies === undefined ? {} : { applies: hooks.applies },
       ...hooks.validate === undefined ? {} : { validate: hooks.validate },
     })
     hooks.setSource(() => scope.get())
@@ -870,6 +871,8 @@ function isUnloading(ctx: Context): boolean {
 
 /** Hooks a consumer hands to {@link SettingsProvider.installSection}. */
 export interface SettingsSectionHooks<T> {
+  /** When a committed change takes effect for the consumer. */
+  applies?: SettingsApplies
   /**
    * Receive the active configuration source: the resolved settings scope
    * while one is attached, the composition entry otherwise. Called before

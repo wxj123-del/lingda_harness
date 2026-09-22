@@ -32,7 +32,7 @@ pnpm run dsh --profile web --patch ./packages/client/ui-step-insight/cordis.sour
 
 持久安装使用 `dsh plugin --profile web add ./packages/client/ui-step-insight` 安装已构建的目录，重启该 profile 后打开会话的 Token 轨迹标签页。执行 `dsh plugin --profile web remove @deepseek-ai/dsh-client-ui-step-insight` 并重启可恢复原视图。包通过 `dsh.bundle` 声明配置层，配置层挂载插件，宿主通过 `dsh.client` 发现已构建的浏览器入口。
 
-明细使用现有会话事件流实时更新。搜索匹配步骤、模型、提供方和工具名；筛选支持用量缺失与中断尝试；排序依据已上报总量或已知分项小计。选择一条记录可查看计量、输入来源、输出内容、工具和原始事件。仓库标签页独立于记录选择，并从同一事件流加载更早的会话事件；还可以在浏览器本地添加仓库地址，对 GitCode 等非 GitHub 远端匹配本地 `origin` 元数据，轮询公开 GitHub URL，并展示四阶段的仓库到变更流程和有大小上限的提交时间线。导出生成包含已加载明细与原始持久事件的 JSON。加载更早历史会扩展明细和统计范围。
+明细使用现有会话事件流实时更新。搜索匹配步骤、模型、提供方和工具名；筛选支持用量缺失与中断尝试；排序依据已上报总量或已知分项小计。选择一条记录可查看计量、输入来源、输出内容、工具和原始事件。列表上方的“上下文预览”会按最新模型请求绘制分段上下文图，并实时列出系统提示词、用户消息、历史输出、工具结果和工具定义；每段显示来源、序号和估算 Token，便于确认本次请求实际带了什么。仓库标签页独立于记录选择，并从同一事件流加载更早的会话事件；还可以在浏览器本地添加仓库地址，对 GitCode 等非 GitHub 远端匹配本地 `origin` 元数据，轮询公开 GitHub URL，并展示四阶段的仓库到变更流程和有大小上限的提交时间线。导出生成包含已加载明细与原始持久事件的 JSON。加载更早历史会扩展明细和统计范围。
 
 ### 计量口径
 
@@ -48,7 +48,7 @@ pnpm run dsh --profile web --patch ./packages/client/ui-step-insight/cordis.sour
 <details>
 <summary>实现细节</summary>
 
-客户端通过可撤销注册贡献一个更高优先级的会话视图和本地化字典。注册私有的渲染器 hook 读取现有 `SessionBinding.eventSource`，不创建额外传输订阅或宿主服务。`step-model.ts` 汇总请求尝试，`input-parts.ts` 还原选中请求的输入来源，`usage.ts` 保留计量中的未知状态。不发布 invariant 伴随插件，因为本插件只拥有派生界面，不拥有可独立变化的宿主关系。
+客户端通过可撤销注册贡献一个更高优先级的会话视图和本地化字典。注册私有的渲染器 hook 读取现有 `SessionBinding.eventSource`，不创建额外传输订阅或宿主服务。`step-model.ts` 汇总请求尝试，`input-parts.ts` 还原请求输入来源，`ContextPreview.tsx` 将最新输入绘制为分段图和可滚动来源列表，`usage.ts` 保留计量中的未知状态。不发布 invariant 伴随插件，因为本插件只拥有派生界面，不拥有可独立变化的宿主关系。
 
 追加事件复用请求组装状态，历史替换、分页和结算则从权威事件窗口重建。会话拥有者将插槽胜出项投影为标签页，因此替换后只显示一个标签，卸载后恢复原标签。profile 配置层插入 `ui-step-insight` 行，清单将浏览器入口限定在 Web 平台。
 

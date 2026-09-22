@@ -122,6 +122,7 @@
     "@deepseek-ai/dsh-web-search-deepseek": "workspace:^",
     "@deepseek-ai/dsh-workflow-ptc": "workspace:^",
     "@deepseek-ai/dsh-agent-instructions": "workspace:^",
+    "@deepseek-ai/dsh-context-router": "workspace:^",
     "@deepseek-ai/dsh-ptc-runtime-node": "workspace:^"
   },
   "peerDependencies": {

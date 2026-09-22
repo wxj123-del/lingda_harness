@@ -1,0 +1,17 @@
+# Feishu bot overlay. The default websocket transport needs no public callback
+# URL: the running DSH process connects outbound to Feishu.
+- insert:
+    - id: feishu-bot
+      name: '@deepseek-ai/dsh-webhook-feishu'
+      config:
+        transport: websocket
+        path: /feishu
+        appIdEnv: DSH_FEISHU_APP_ID
+        appSecretEnv: DSH_FEISHU_APP_SECRET
+        workspacePath: !!js process.env.DSH_FEISHU_WORKSPACE ?? process.cwd()
+        agentPreset: standard
+        permissionPreset: read-only
+        source: primary-feishu
+        maxBodyBytes: 1048576
+        requireMention: true
+        allowedOpenIds: []

@@ -60,7 +60,10 @@ async function bench(served?: string[]) {
 function declareRoot(slots: SlotRegistry): () => void {
   return slots.register({
     name: 'root',
-    children: { main: { kind: 'keyed', scope: 'root' } },
+    children: {
+      main: { kind: 'keyed', scope: 'root' },
+      'settings.section': { kind: 'list', scope: 'root' },
+    },
   } as never, () => null)
 }
 
@@ -83,7 +86,8 @@ describe('ui-settings-plugins apply', () => {
 
     const section = slots.entries('main')[0]!
     expect(section.options).toMatchObject({ key: 'plugins' })
-    expect(slots.entries('settings.section')).toHaveLength(0)
+    expect(slots.entries('settings.section').map(entry => entry.options.id)).toEqual(['connections'])
+    expect(slots.spec('settings.integration.item')).toMatchObject({ kind: 'list', scope: 'root' })
     expect(slots.spec('settings.plugins.tab')).toMatchObject({ kind: 'list', scope: 'root' })
     const tab = slots.entries('settings.plugins.tab')[0]!
     expect(tab.options).toMatchObject({ id: 'configurable', order: 0 })
@@ -235,11 +239,13 @@ describe('ui-settings-plugins apply', () => {
     const fiber = ctx.plugin({ inject: [...inject], apply })
     await fiber.await()
     expect(slots.entries('settings.plugin.item')).toHaveLength(4)
+    expect(slots.entries('settings.integration.item')).toHaveLength(1)
 
     await fiber.dispose()
 
     expect(slots.entries('main')).toHaveLength(0)
     expect(slots.spec('settings.plugins.tab')).toBeUndefined()
     expect(slots.spec('settings.plugin.item')).toBeUndefined()
+    expect(slots.spec('settings.integration.item')).toBeUndefined()
   })
 })

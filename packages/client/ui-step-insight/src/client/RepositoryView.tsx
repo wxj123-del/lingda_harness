@@ -16,7 +16,16 @@ function checkpointsOf(entries: readonly SessionEventLikeEntry[]): GitCheckpoint
 }
 
 /** Render repository state independently from the Token ledger selection. */
-export function RepositoryView({ useLedgerEvents, loadOlder, t }: RepositoryViewProps) {
+export function RepositoryView({
+  useLedgerEvents,
+  loadOlder,
+  workspacePath,
+  cloneRepository,
+  listRepositoryBranches,
+  inspectRepository,
+  pushRepository,
+  t,
+}: RepositoryViewProps) {
   const window = useLedgerEvents(value => value)
   const checkpoints = useMemo(() => checkpointsOf(window.entries), [window.entries])
   return <section className={css.repositoryRoot} aria-label={t('repositoryView')}>
@@ -27,7 +36,16 @@ export function RepositoryView({ useLedgerEvents, loadOlder, t }: RepositoryView
       </div>
       {window.hasMore && <button type="button" onClick={() => { void loadOlder() }}>{t('loadOlder')}</button>}
     </header>
-    <RepositoryFlow checkpoints={checkpoints} t={t} />
+    <RepositoryFlow
+      key={workspacePath ?? checkpoints.at(-1)?.cwd ?? 'unscoped'}
+      checkpoints={checkpoints}
+      t={t}
+      {...(workspacePath === undefined ? {} : { workspacePath })}
+      cloneRepository={cloneRepository}
+      listRepositoryBranches={listRepositoryBranches}
+      inspectRepository={inspectRepository}
+      pushRepository={pushRepository}
+    />
     {checkpoints.length === 0 && <p className={css.empty}>{t('repositoryNoData')}</p>}
     {window.hasMore && <p className={css.repositoryHint}>{t('partialHistory')}</p>}
   </section>

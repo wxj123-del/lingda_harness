@@ -1,0 +1,6 @@
+# Bilingual-pair consistency record (docs/i18n/README.md): the git blob hash of each
+# side as of the last confirmed-consistent state. Both languages carry equal authority;
+# after editing either side, bring the other along and re-record with:
+#   pnpm run verify-translation-pairing --write docs/user/guide/feishu-bot.md
+feishu-bot.md: e4f85df7a076419d77f13987e79eed645e430505
+feishu-bot.zh.md: d16e11dc6fef08085536694a07bdc2890de22c73

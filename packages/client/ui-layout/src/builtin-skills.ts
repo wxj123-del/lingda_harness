@@ -22,6 +22,11 @@ export const BUILTIN_SKILLS: readonly {
   },
 ]
 
+/** @param name - Stable built-in Skill name. @returns Persisted id used by imported built-ins. */
+export function builtinSkillId(name: string): string {
+  return `builtin-skill-${name}`
+}
+
 /** @param id - Saved authoring identity. @returns Registered Skill invocation name. */
 export function userSkillName(id: string): string {
   const stableId = id.toLowerCase().replace(/[^a-z0-9-]+/g, '-')

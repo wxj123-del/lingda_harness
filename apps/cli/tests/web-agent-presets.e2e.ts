@@ -13,7 +13,7 @@ import {
   type Profile,
 } from '@deepseek-ai/dsh-app-boot'
 import { provideCmdline } from '@deepseek-ai/dsh-cmdline'
-import { SessionId, SessionLogOffset } from '@deepseek-ai/dsh-session'
+import { Session, SessionId, SessionLogOffset } from '@deepseek-ai/dsh-session'
 import { agentEvents, assembleContextFor, type Agent } from '@deepseek-ai/dsh-agent'
 import { renderPrompt } from '@deepseek-ai/dsh-system-prompt'
 import type { PatchOptions } from '@deepseek-ai/cordis-plugin-include'
@@ -21,7 +21,7 @@ import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest'
 import { SUBAGENT_MODEL_SELECTION_SETTINGS_NAMESPACE } from '@deepseek-ai/dsh-tool-subagent/model-selection-settings'
 import { SETTINGS_NAMESPACE, SHIPPED_PRESET_ROOT } from '@deepseek-ai/dsh-agent-presets'
 import { applyChildComposition, childSessionMeta } from '@deepseek-ai/dsh-subagent'
-import { ToolCallId, createUserMessage } from '@deepseek-ai/dsh-llm'
+import { ToolCallId, createAssistantMessage, createUserMessage } from '@deepseek-ai/dsh-llm'
 import { defineTool } from '@deepseek-ai/dsh-tools'
 import { MockAdapter, toolCallResponse, textResponse } from '../../../packages/core/agent-loop/tests/mock-adapter.ts'
 import type { LocalEmbedding } from '../../../packages/host/knowledge/src/embedding.ts'
@@ -32,6 +32,7 @@ import type {} from '@deepseek-ai/dsh-tools'
 // Type-only: resolves `ctx.get('sessionProjections')` and `ctx.get('tokenMeter')`.
 import type {} from '@deepseek-ai/dsh-session-projection'
 import type {} from '@deepseek-ai/dsh-token-meter'
+import type {} from '@deepseek-ai/dsh-context-router'
 
 const REPO_ROOT = fileURLToPath(new URL('../../..', import.meta.url))
 /** The shipped Web surface: the dsh-base and dsh-web-app bundle patches over an empty preset root. */
@@ -550,6 +551,116 @@ describe('the shipped Web composition', () => {
         expect(observed).toMatchSnapshot('scoped skill catalog styles')
       } finally { removeSkill(); removeAdapter() }
     } finally { await ctx.fiber.dispose(); await rm(root, { recursive: true, force: true }) }
+  })
+
+  it('records the long-session baseline for unrelated and continuing questions', async () => {
+    const root = await mkdtemp(join(tmpdir(), 'dsh-context-baseline-'))
+    const legacyMarker = 'LEGACY_CONTEXT_BASELINE_MARKER'
+    const seedSession = Session.create(SessionId(`context-baseline-seed-${randomUUID()}`))
+    // Twenty completed turns at roughly 5,200 characters per message give the
+    // fixed four-characters-per-token estimate a stable ~50K-token history.
+    const historyBody = `${legacyMarker}: ${'old-task-detail '.repeat(325)}`
+    for (let turn = 1; turn <= 20; turn += 1) {
+      seedSession.append('turn/start', { turn })
+      seedSession.append('user/message', createUserMessage({
+        source: { kind: 'user' },
+        content: [{ type: 'text', text: `旧任务第 ${turn} 轮：${historyBody}` }],
+      }), { surfaceOp: 'append' })
+      seedSession.append('assistant/message', {
+        turn,
+        step: 1,
+        stream: [],
+        message: createAssistantMessage({
+          source: { provider: 'context-baseline', model: 'fixture' },
+          content: [{ type: 'text', text: `旧任务第 ${turn} 轮结果：${historyBody}` }],
+        }),
+      }, { surfaceOp: 'append' })
+      seedSession.append('turn/end', { turn, reason: { kind: 'completed' } })
+    }
+    const seed = seedSession.snapshotEvents()
+    const adapter = new MockAdapter([textResponse('baseline answer'), textResponse('baseline answer')])
+    const removeAdapter = ctx.llm.registerAdapter(['context-baseline'], adapter)
+
+    type Baseline = {
+      messageCount: number
+      requestJsonChars: number
+      estimatedInputTokens: number
+      systemMessages: number
+      historyMessages: number
+      toolResultMessages: number
+      legacyMessages: number
+      compactionTriggered: boolean
+      routerScope: string | undefined
+      routerDroppedMessages: number | undefined
+    }
+    const run = async (sessionId: string, question: string): Promise<Baseline> => {
+      const handle = await ctx.agents.create({
+        sessionId: SessionId(sessionId),
+        meta: { cwd: root },
+        seed,
+        agentOptions: { provider: 'context-baseline', model: 'fixture' },
+        setup: agentCtx => ctx.agentPresets.mount(agentCtx, 'diaosi').then(() => undefined),
+      })
+      try {
+        const before = handle.agent.session.snapshotEvents().length
+        handle.agent.followup(createUserMessage({
+          source: { kind: 'user' },
+          content: [{ type: 'text', text: question }],
+        }))
+        await handle.agent.whenIdle()
+        const request = adapter.requests.at(-1)
+        if (request === undefined) throw new Error('baseline request was not recorded')
+        const events = handle.agent.session.snapshotEvents()
+        const messages = request.messages
+        const estimatedInputTokens = messages.reduce((total, message) => total + ctx.tokenMeter.estimateMessage(message), 0)
+          + Math.ceil(JSON.stringify(request.tools ?? []).length / 4)
+        return {
+          messageCount: messages.length,
+          requestJsonChars: JSON.stringify(request).length,
+          estimatedInputTokens,
+          systemMessages: messages.filter(message => message.role === 'system').length,
+          historyMessages: messages.filter(message => message.role !== 'system').length,
+          toolResultMessages: messages.filter(message => message.content.some(block => block.type === 'tool-result')).length,
+          legacyMessages: messages.filter(message => JSON.stringify(message).includes(legacyMarker)).length,
+          compactionTriggered: events.slice(before).some(event => event.type === 'compaction/start'),
+          routerScope: events.slice(before).find(event => event.type === 'context/router')?.data.scope,
+          routerDroppedMessages: events.slice(before).find(event => event.type === 'context/router')?.data.droppedMessages,
+        }
+      } finally {
+        await handle.dispose()
+      }
+    }
+
+    try {
+      const unrelated = await run('context-baseline-unrelated', '今天天气怎么样？')
+      const continuing = await run('context-baseline-continuing', '继续刚才的旧任务。')
+
+      expect(unrelated).toMatchObject({
+        systemMessages: expect.any(Number),
+        toolResultMessages: 0,
+        compactionTriggered: false,
+      })
+      expect(continuing).toMatchObject({
+        systemMessages: unrelated.systemMessages,
+        toolResultMessages: 0,
+        compactionTriggered: false,
+      })
+      expect(unrelated.routerScope).toBe('fresh')
+      expect(continuing.routerScope).toBe('task')
+      expect(unrelated.routerDroppedMessages).toBeGreaterThan(continuing.routerDroppedMessages ?? 0)
+      expect(unrelated.estimatedInputTokens).toBeLessThan(30_000)
+      expect(continuing.estimatedInputTokens).toBeLessThan(30_000)
+      expect(unrelated.requestJsonChars).toBeLessThan(130_000)
+      expect(continuing.requestJsonChars).toBeLessThan(130_000)
+      expect(unrelated.legacyMessages).toBe(0)
+      expect(continuing.legacyMessages).toBeGreaterThanOrEqual(unrelated.legacyMessages)
+      expect(unrelated.historyMessages).toBeLessThan(continuing.historyMessages)
+      expect(unrelated.messageCount).toBeLessThan(continuing.messageCount)
+      expect({ unrelated, continuing }).toMatchSnapshot('50K context request baseline')
+    } finally {
+      removeAdapter()
+      await rm(root, { recursive: true, force: true })
+    }
   })
 
   it('applies the default-off subagent model allowlist only to new sessions', async () => {

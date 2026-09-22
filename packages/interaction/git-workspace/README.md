@@ -9,7 +9,7 @@ English | [中文](README.zh.md)
 
 ## Summary
 
-`dsh-git-workspace` is the default read-only Git evidence plugin for local sessions. It records a bounded workspace snapshot before and after each turn with the repository root, origin URL when available, current branch, short status, diff statistics, and a unified diff. When the session cwd is not itself a repository but contains one direct child repository, that child is resolved for the snapshot. Resuming a session that already has Git checkpoints schedules one fresh after-checkpoint immediately, so the UI can reflect repository layout changes without requiring a new user turn. The event is ignorable and can be rendered by trajectory clients without coupling Git behavior to a particular Agent mode or preset.
+`dsh-git-workspace` records bounded Git evidence for local sessions and exposes guarded, explicit clone/sync operations for the repository UI. It records a workspace snapshot before and after each turn with the repository root, origin URL when available, current branch, short status, diff statistics, and a unified diff. When the session cwd is not itself a repository but contains one direct child repository, that child is resolved for the snapshot. Resuming a session that already has Git checkpoints schedules one fresh after-checkpoint immediately, so the UI can reflect repository layout changes without requiring a new user turn. Clone and sync reject unsafe URLs, non-empty unrelated folders, dirty worktrees, and non-fast-forward updates. The event is ignorable and can be rendered by trajectory clients without coupling Git behavior to a particular Agent mode or preset.
 
 The plugin does not mutate the worktree while recording checkpoints. Its Remote update action checks `https://atomgit.com/XJ-Cyber/lingda-harness` directly, even when the checkout has no `atomgit` remote configured. It requires a clean checkout and a fast-forward-only update, installs the frozen lockfile, rebuilds the project, and schedules a Host restart. Dirty, diverged, detached, and local-ahead checkouts are refused.
 
@@ -31,7 +31,7 @@ The `agent/git-checkpoint` event is the stable integration point for trajectory 
 
 | File | Role |
 |---|---|
-| [`src/index.ts`](src/index.ts) | Service, config, checkpoint event, and read-only capture |
+| [`src/index.ts`](src/index.ts) | Service, config, checkpoint event, and guarded Git operations |
 | [`tests/git-workspace.spec.ts`](tests/git-workspace.spec.ts) | Turn ordering and disabled-plugin coverage |
 
 ## Limits
