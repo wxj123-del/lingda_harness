@@ -308,7 +308,7 @@
 }
 
 .lane {
-  width: min(100%, 1280px);
+  width: 100%;
   box-sizing: border-box;
   margin: 0 auto;
   padding: 14px 16px 16px;
@@ -365,7 +365,7 @@
 }
 
 .nodeGroup[data-kind='model'] {
-  width: min(100%, 560px);
+  width: min(100%, 300px);
 }
 
 .nodeGroup[data-kind='model'] > .node {
@@ -376,7 +376,7 @@
   display: grid;
   grid-template-columns: minmax(280px, 0.9fr) minmax(260px, 1.1fr);
   gap: 12px;
-  width: min(100%, 900px);
+  width: min(100%, 920px);
 }
 
 .nodeGroup[data-kind='model'][data-expanded='true'] > .childNodes {
@@ -486,10 +486,10 @@
 .node {
   --workflow-accent: var(--dsw-alias-label-tertiary);
   display: grid;
-  grid-template-columns: 24px minmax(140px, 300px) minmax(48px, auto) 18px;
+  grid-template-columns: 24px minmax(0, 1fr) auto 18px;
   align-items: start;
   gap: 8px;
-  width: fit-content;
+  width: 100%;
   max-width: 100%;
   box-sizing: border-box;
   min-height: 46px;
@@ -533,7 +533,7 @@ button.node:hover {
 .node[data-kind='result'][data-error='true'] { --workflow-accent: #c65757; }
 
 .node[data-kind='input'] {
-  width: min(100%, 300px);
+  width: min(100%, 270px);
 }
 
 .node[data-kind='tool'],
@@ -542,7 +542,8 @@ button.node:hover {
 }
 
 .node[data-kind='model'] {
-  min-width: min(100%, 360px);
+  min-width: 0;
+  width: 100%;
   min-height: 62px;
   padding-top: 12px;
   padding-bottom: 12px;
