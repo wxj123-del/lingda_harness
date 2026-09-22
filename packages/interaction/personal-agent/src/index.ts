@@ -693,6 +693,12 @@ export class PersonalAgentService extends TypertRemoteService {
     return this.policies[this.activeModes.get(session) ?? this.currentForSession(session)]
   }
 
+  /** Return the mode context ceiling without applying it to legacy preset sessions. */
+  contextBudget(session: Session): number | undefined {
+    if (this.unmanagedSessions.has(session)) return undefined
+    return this.policy(session).maxContextTokens
+  }
+
   /**
    * Answer the capability question used by late tool-discovery adapters.
    *

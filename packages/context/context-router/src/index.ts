@@ -131,12 +131,9 @@ export function apply(ctx: Context, config: Config = {}): void {
       : resolveContextRouteForMessages(queryText, transformed, options.recentMessages)
     const capacity = contextCapacity(agent.session)
     const personalAgent = ctx.get('personalAgent') as {
-      policy?: (session: Session) => { maxContextTokens?: number }
+      contextBudget?: (session: Session) => number | undefined
     } | undefined
-    const policy = personalAgent === undefined || personalAgent.policy === undefined
-      ? undefined
-      : personalAgent.policy(agent.session)
-    const policyMaxTokens = policy?.maxContextTokens
+    const policyMaxTokens = personalAgent?.contextBudget?.(agent.session)
     const configuredMaxTokens = config.maxTokens === undefined
       ? policyMaxTokens ?? options.maxTokens
       : Math.min(options.maxTokens, policyMaxTokens ?? options.maxTokens)

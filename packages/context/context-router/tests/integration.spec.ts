@@ -23,7 +23,7 @@ describe('context router integration', () => {
     const current = user('当前请求')
     const transformed: Message[] = [system, current]
     let innerInput: readonly Message[] | undefined
-    ctx.provide('personalAgent', { policy: () => ({ maxContextTokens: 32_000 }) } as never)
+    ctx.provide('personalAgent', { contextBudget: () => 32_000 } as never)
     ctx.on('agent/request-context', async ({ messages }, next) => {
       innerInput = messages
       await next()
