@@ -1059,7 +1059,7 @@ export class PersonalAgentService extends TypertRemoteService {
       const head = raw.slice(0, Math.floor(budget * 0.65))
       const tail = raw.slice(-Math.floor(budget * 0.3))
       const clipped = `[工具结果已裁剪，原始内容 ${Buffer.byteLength(raw, 'utf8')} 字节]\n${head}\n…\n${tail}`
-      return { ...block, content: [{ type: 'text', text: clipped }] }
+      return { ...block, content: [{ type: 'text' as const, text: clipped }] }
     })
     return changed ? { ...message, content } : message
   }
