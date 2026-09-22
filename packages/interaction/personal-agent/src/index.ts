@@ -760,26 +760,31 @@ export class PersonalAgentService extends TypertRemoteService {
     // provider-aware token budget. Keep this layer's tool-result clipping and
     // deduplication, but do not silently apply a second history cutoff.
     const routerActive = (this.rootCtx.get('contextRouter') as { active?: boolean } | undefined)?.active === true
-    const cutoff = Math.max(1, turn - policy.historyTurns + 1)
-    const events = session.snapshotEvents()
-    const nodeTurns = new Map<number, number>()
-    let activeTurn = 0
-    for (const event of events) {
-      if (event.type === 'turn/start') activeTurn = event.data.turn
-      if (session.surface.nodes.includes(event.seq)) nodeTurns.set(Number(event.seq), activeTurn)
-    }
-    const selected = new Set<string>()
-    for (const seq of session.surface.nodes) {
-      const event = events[Number(seq)]
-      if (event === undefined) continue
-      const message = session.deriveEventMessage(event)
-      if (message !== null && (event.type === 'system/message' || (nodeTurns.get(Number(seq)) ?? turn) >= cutoff)) {
-        selected.add(String(message.id))
+    let source: Message[]
+    if (routerActive) {
+      source = messages
+    } else {
+      const cutoff = Math.max(1, turn - policy.historyTurns + 1)
+      const events = session.snapshotEvents()
+      const nodeTurns = new Map<number, number>()
+      let activeTurn = 0
+      for (const event of events) {
+        if (event.type === 'turn/start') activeTurn = event.data.turn
+        if (session.surface.nodes.includes(event.seq)) nodeTurns.set(Number(event.seq), activeTurn)
       }
+      const selected = new Set<string>()
+      for (const seq of session.surface.nodes) {
+        const event = events[Number(seq)]
+        if (event === undefined) continue
+        const message = session.deriveEventMessage(event)
+        if (message !== null && (event.type === 'system/message' || (nodeTurns.get(Number(seq)) ?? turn) >= cutoff)) {
+          selected.add(String(message.id))
+        }
+      }
+      const retained = messages.filter(message => selected.has(String(message.id)))
+      source = retained.length === 0 ? messages.slice(-1) : retained
     }
-    const retained = messages.filter(message => selected.has(String(message.id)))
     const currentUser = messages.findLast(isCurrentUserMessage)
-    const source = routerActive ? messages : retained.length === 0 ? messages.slice(-1) : retained
     // Retrieval and policy notices are appended after the human message. If
     // projection selection omitted that message, put it back before the
     // budget pass so the current request cannot disappear silently.
