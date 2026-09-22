@@ -15,6 +15,8 @@ English | [中文](README.zh.md)
 
 The base bundle mounts this plugin globally. Its defaults retain 16 recent messages, up to 32 task-related messages, and at most 24,000 estimated tokens per request. `fresh` removes old ordinary conversation history; `task` adds older messages sharing request terms; `full` retains the complete history subject to the token budget. The durable log is never deleted or rewritten.
 
+When `personal-agent` is mounted as well, the router reads the active mode's `maxContextTokens` as an upper bound. personal-agent no longer applies a second history or token-budget trim; it continues to clip tool results and mark duplicate context, so each request has one history selector and one budget authority.
+
 ```yaml
 - name: '@deepseek-ai/dsh-context-router'
   config:

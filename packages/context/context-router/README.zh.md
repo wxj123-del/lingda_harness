@@ -15,6 +15,8 @@ kind: "package-reference"
 
 `dsh-base` 会全局挂载本插件。默认每次请求保留最近 16 条消息，最多补充 32 条任务相关消息，并限制在估算 24,000 token 以内。`fresh` 会删除旧的普通对话历史；`task` 会补充与当前请求共享关键词的旧消息；`full` 会在 token 预算内保留完整历史。持久日志不会被删除或重写。
 
+如果同时挂载 `personal-agent`，路由器会读取当前模式的 `maxContextTokens` 作为上限。personal-agent 不再重复裁剪历史或 Token 预算，只继续负责工具结果裁剪和重复上下文标记，因此每个请求只有一处历史选择和预算裁决。
+
 ```yaml
 - name: '@deepseek-ai/dsh-context-router'
   config:
