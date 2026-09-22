@@ -1049,15 +1049,19 @@ export class PersonalAgentService extends TypertRemoteService {
   }
 
   private clipToolResult(message: Message, maxBytes: number): Message {
-    if (maxBytes <= 0 || message.role !== 'user' || message.content[0]?.type !== 'tool-result') return message
-    const block = message.content[0]
-    if (Buffer.byteLength(JSON.stringify(block), 'utf8') <= maxBytes) return message
-    const raw = block.content.map(content => content.type === 'text' ? content.text : JSON.stringify(content)).join('\n')
-    const budget = Math.max(64, maxBytes - 96)
-    const head = raw.slice(0, Math.floor(budget * 0.65))
-    const tail = raw.slice(-Math.floor(budget * 0.3))
-    const clipped = `[工具结果已裁剪，原始内容 ${Buffer.byteLength(raw, 'utf8')} 字节]\n${head}\n…\n${tail}`
-    return { ...message, content: [{ ...block, content: [{ type: 'text', text: clipped }] }] }
+    if (maxBytes <= 0 || message.role !== 'user') return message
+    let changed = false
+    const content = message.content.map((block) => {
+      if (block.type !== 'tool-result' || Buffer.byteLength(JSON.stringify(block), 'utf8') <= maxBytes) return block
+      changed = true
+      const raw = block.content.map(content => content.type === 'text' ? content.text : JSON.stringify(content)).join('\n')
+      const budget = Math.max(64, maxBytes - 96)
+      const head = raw.slice(0, Math.floor(budget * 0.65))
+      const tail = raw.slice(-Math.floor(budget * 0.3))
+      const clipped = `[工具结果已裁剪，原始内容 ${Buffer.byteLength(raw, 'utf8')} 字节]\n${head}\n…\n${tail}`
+      return { ...block, content: [{ type: 'text', text: clipped }] }
+    })
+    return changed ? { ...message, content } : message
   }
 
   private pinInitialMode(agentOrSession: Agent | Session, preferredMode?: AgentMode): void {

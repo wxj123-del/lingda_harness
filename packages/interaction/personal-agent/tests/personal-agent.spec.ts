@@ -194,6 +194,39 @@ describe('personal agent modes', () => {
     expect(sessionEvents(session).at(-1)?.data).toMatchObject({ outputMessages: 1, droppedMessages: 2 })
   })
 
+  it('clips every tool-result block without dropping sibling results', async () => {
+    const { ctx, session, agent } = await harness(false, { modes: { qa: { maxToolResultBytes: 120 } } })
+    const first = ToolCallId('multi-clip-first')
+    const second = ToolCallId('multi-clip-second')
+    const assistant = createAssistantMessage({
+      source: { provider: 'test', model: 'test' },
+      content: [
+        { type: 'tool-call', id: first, name: 'lookup', arguments: '{}' },
+        { type: 'tool-call', id: second, name: 'lookup', arguments: '{}' },
+      ],
+    })
+    const result = createUserMessage({
+      source: { kind: 'tool' },
+      content: [
+        { type: 'tool-result', toolCallId: first, isError: false, content: [{ type: 'text', text: 'a'.repeat(500) }] },
+        { type: 'tool-result', toolCallId: second, isError: false, content: [{ type: 'text', text: 'b'.repeat(500) }] },
+      ],
+    })
+    const current = createUserMessage({ source: { kind: 'user' }, content: [{ type: 'text', text: '当前请求' }] })
+    session.append('turn/start', { turn: 1 })
+    session.append('user/message', current, { surfaceOp: 'append' })
+    session.append('assistant/message', { turn: 1, step: 1, message: assistant, stream: [], usage: { inputTokens: 0, outputTokens: 0 } }, { surfaceOp: 'append' })
+    session.append('tool/result', { turn: 1, step: 1, message: result }, { surfaceOp: 'append' })
+    const retained = await agentEvents(ctx, agent).waterfall('agent/request-context', {
+      turn: 1, step: 1, messages: [assistant, result, current], signal: new AbortController().signal,
+    }, () => Promise.resolve([assistant, result, current]))
+
+    const output = retained.find(message => message.role === 'user' && message.source.kind === 'tool')
+    expect(output?.content).toHaveLength(2)
+    expect(output?.content.every(block => block.type === 'tool-result' && block.content[0]?.type === 'text')).toBe(true)
+    expect(output?.content.every(block => block.type === 'tool-result' && block.content[0]?.type === 'text' && block.content[0].text.includes('工具结果已裁剪'))).toBe(true)
+  })
+
   it('projects a durable task lifecycle on top of turn events', async () => {
     const { ctx, session } = await harness()
     session.append('turn/start', { turn: 1 })
