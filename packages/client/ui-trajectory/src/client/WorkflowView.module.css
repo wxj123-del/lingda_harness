@@ -162,55 +162,55 @@
 }
 
 .lane {
-  display: grid;
-  grid-template-columns: 88px minmax(0, 1fr);
-  column-gap: 12px;
-  width: min(100%, 1120px);
+  width: min(100%, 1280px);
+  box-sizing: border-box;
   margin: 0 auto;
+  padding: 14px 16px 16px;
+  border: 1px solid var(--dsw-alias-border-l2);
+  border-radius: 10px;
+  background: var(--dsw-alias-bg-layer-2);
 }
 
 .lane + .lane {
-  margin-top: 16px;
+  margin-top: 12px;
 }
 
 .laneLabel {
-  position: sticky;
-  top: 0;
-  align-self: start;
-  padding-top: 8px;
-  color: var(--dsw-alias-label-tertiary);
-  font: var(--dsw-font-xxs-12);
-  text-align: right;
+  display: flex;
+  align-items: center;
+  min-height: 24px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--dsw-alias-border-l3);
+  color: var(--dsw-alias-label-primary);
+  font: var(--dsw-font-s-14);
+  font-weight: 600;
+  text-align: left;
   white-space: nowrap;
 }
 
 .laneBody {
   position: relative;
-  display: block;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 12px;
   min-width: 0;
-  padding-left: 20px;
+  padding-top: 14px;
 }
 
 .laneBody::before {
-  position: absolute;
-  top: 16px;
-  bottom: 16px;
-  left: 7px;
-  width: 1px;
-  border-radius: 2px;
-  background: color-mix(in srgb, var(--dsw-alias-brand-primary) 22%, var(--dsw-alias-border-l3));
-  content: '';
+  display: none;
 }
 
 .step {
   position: relative;
   min-width: 0;
-  width: 100%;
+  width: auto;
   max-width: 100%;
 }
 
 .step + .step {
-  margin-top: 18px;
+  margin-top: 0;
 }
 
 .nodeGroup {
@@ -219,12 +219,45 @@
 }
 
 .nodeGroup[data-kind='model'] {
-  width: 100%;
+  width: min(100%, 560px);
 }
 
 .nodeGroup[data-kind='model'] > .node {
-  width: min(100%, 560px);
-  margin-inline: auto;
+  width: 100%;
+}
+
+.nodeGroup[data-kind='model'][data-expanded='true'] {
+  display: grid;
+  grid-template-columns: minmax(280px, 0.9fr) minmax(260px, 1.1fr);
+  gap: 12px;
+  width: min(100%, 900px);
+}
+
+.nodeGroup[data-kind='model'][data-expanded='true'] > .childNodes {
+  grid-column: 2;
+  grid-row: 1;
+  display: flex;
+  flex-wrap: wrap;
+  align-content: start;
+  gap: 10px;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+.nodeGroup[data-kind='model'][data-expanded='true'] > .childNodes::before {
+  top: 30px;
+  right: 0;
+  bottom: auto;
+  left: -12px;
+  width: auto;
+  height: 1px;
+}
+
+.nodeGroup[data-kind='model'][data-expanded='true'] > .childNodes > .nodeGroup::before {
+  top: 30px;
+  left: -12px;
+  width: 12px;
 }
 
 .childNodes {
@@ -257,6 +290,11 @@
   content: '';
 }
 
+.nodeGroup[data-kind='tool'] {
+  flex: 1 1 240px;
+  min-width: min(100%, 240px);
+}
+
 .nodeGroup[data-kind='tool'] > .childNodes {
   display: flex;
   flex-direction: column;
@@ -281,9 +319,21 @@
 .connector {
   position: absolute;
   top: 50%;
-  left: -16px;
-  width: 16px;
-  border-top: 1px solid color-mix(in srgb, var(--dsw-alias-brand-primary) 22%, var(--dsw-alias-border-l3));
+  right: -12px;
+  width: 12px;
+  height: 1px;
+  background: color-mix(in srgb, var(--dsw-alias-brand-primary) 28%, var(--dsw-alias-border-l3));
+}
+
+.connector::after {
+  position: absolute;
+  top: -4px;
+  right: -1px;
+  width: 7px;
+  height: 7px;
+  border-top: 1px solid color-mix(in srgb, var(--dsw-alias-brand-primary) 42%, var(--dsw-alias-border-l3));
+  border-right: 1px solid color-mix(in srgb, var(--dsw-alias-brand-primary) 42%, var(--dsw-alias-border-l3));
+  transform: rotate(45deg);
   content: '';
 }
 
@@ -335,6 +385,15 @@ button.node:hover {
 .node[data-kind='tool'] { --workflow-accent: #c27a32; }
 .node[data-kind='result'] { --workflow-accent: #4b9a72; }
 .node[data-kind='result'][data-error='true'] { --workflow-accent: #c65757; }
+
+.node[data-kind='input'] {
+  width: min(100%, 300px);
+}
+
+.node[data-kind='tool'],
+.node[data-kind='result'] {
+  width: 100%;
+}
 
 .node[data-kind='model'] {
   min-width: min(100%, 360px);
@@ -594,8 +653,7 @@ button.node:hover {
   }
 
   .lane {
-    grid-template-columns: 62px minmax(0, 1fr);
-    column-gap: 10px;
+    padding: 12px;
   }
 
   .laneLabel {
@@ -630,6 +688,11 @@ button.node:hover {
     width: 100%;
   }
 
+  .node[data-kind='input'],
+  .node[data-kind='model'] {
+    width: 100%;
+  }
+
   .laneBody {
     display: block;
   }
@@ -644,7 +707,7 @@ button.node:hover {
 
   .connector {
     top: 23px;
-    left: -14px;
+    right: -14px;
     width: 14px;
   }
 
@@ -657,6 +720,33 @@ button.node:hover {
     width: auto;
     margin: 12px 0 0;
     padding: 12px 0 0 18px;
+  }
+
+  .nodeGroup[data-kind='model'][data-expanded='true'] {
+    display: block;
+    width: 100%;
+  }
+
+  .nodeGroup[data-kind='model'][data-expanded='true'] > .childNodes {
+    display: block;
+    width: auto;
+    margin: 12px 0 0;
+    padding: 12px 0 0 18px;
+  }
+
+  .nodeGroup[data-kind='model'][data-expanded='true'] > .childNodes::before {
+    top: 0;
+    right: auto;
+    bottom: 14px;
+    left: 9px;
+    width: 1px;
+    height: auto;
+  }
+
+  .nodeGroup[data-kind='model'][data-expanded='true'] > .childNodes > .nodeGroup::before {
+    top: 23px;
+    left: -18px;
+    width: 18px;
   }
 
   .childNodes > .nodeGroup + .nodeGroup {

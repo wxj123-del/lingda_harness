@@ -552,7 +552,9 @@ describe('tab switching in ConversationRoot', () => {
     mount(b)
     fireEvent.click(screen.getByRole('tab', { name: 'Workflow' }))
 
-    const model = screen.getByRole('button', { name: /模型.*1 个工具调用.*bash/ })
+    expect(screen.getByText('模型调用 #1')).toBeTruthy()
+    expect(screen.getByText('请求')).toBeTruthy()
+    const model = screen.getByRole('button', { name: /响应.*1 个工具调用/ })
     expect(model.getAttribute('aria-expanded')).toBe('false')
     expect(screen.queryByRole('button', { name: /^bash/ })).toBeNull()
 

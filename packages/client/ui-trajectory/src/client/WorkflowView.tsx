@@ -41,6 +41,7 @@ interface WorkflowLane {
 interface WorkflowData {
   readonly lanes: readonly WorkflowLane[]
   readonly calls: ReadonlyMap<string, WorkflowCall>
+  readonly modelCount: number
 }
 
 export type WorkflowViewProps = ConvViewProps & PropsLocale<'trajectory'>
@@ -162,30 +163,28 @@ function toolStepsForCall(call: WorkflowCall, t: WorkflowViewProps['t']): Workfl
   return steps
 }
 
-function toolNames(calls: readonly WorkflowCall[], t: WorkflowViewProps['t']): string {
-  if (calls.length === 0) return t('workflow.noTools')
-  return calls.map(call => call.name).join(' · ')
-}
-
 function inputPreview(node: Extract<ConversationNode, { kind: 'user' | 'steering' | 'context' }>): string {
   return contentText(node.content) || ' '
 }
 
-function buildLanes(snapshot: TrajectorySnapshot, t: WorkflowViewProps['t']): readonly WorkflowLane[] {
+function buildWorkflowLanes(snapshot: TrajectorySnapshot, t: WorkflowViewProps['t']): { lanes: readonly WorkflowLane[]; modelCount: number } {
   const results = collectResultCalls(snapshot.eventNodes)
   const shownCalls = new Set<string>()
   const lanes: WorkflowLane[] = []
+  let pendingInputs: WorkflowStep[] = []
+  let modelCount = 0
+  const flushInputs = (): void => {
+    if (pendingInputs.length === 0) return
+    lanes.push({ key: `input:${pendingInputs[0]?.id ?? lanes.length}`, label: t('workflow.input'), steps: pendingInputs })
+    pendingInputs = []
+  }
   for (const node of snapshot.eventNodes) {
     if (node.kind === 'user' || node.kind === 'steering' || node.kind === 'context') {
-      lanes.push({
-        key: `input:${node.seq}`,
-        label: t('workflow.input'),
-        steps: [{
-          id: `input:${node.seq}`,
-          kind: 'input',
-          title: node.kind === 'context' ? t('workflow.context') : t('workflow.user'),
-          detail: inputPreview(node),
-        }],
+      pendingInputs.push({
+        id: `input:${node.seq}`,
+        kind: 'input',
+        title: node.kind === 'context' ? t('workflow.context') : t('workflow.request'),
+        detail: inputPreview(node),
       })
       continue
     }
@@ -193,39 +192,49 @@ function buildLanes(snapshot: TrajectorySnapshot, t: WorkflowViewProps['t']): re
       const calls = node.blocks
         .filter((block): block is Extract<AssistantBlock, { kind: 'tool-call' }> => block.kind === 'tool-call')
         .map(block => callFromBlock(block, results))
-      const steps: WorkflowStep[] = [{
+      modelCount += 1
+      const response = blockText(node.blocks, 'text') || blockText(node.blocks, 'reasoning') || t('workflow.waiting')
+      const modelStep: WorkflowStep = {
         id: `assistant:${node.seq}`,
         kind: 'model',
-        title: t('workflow.model'),
+        title: t('workflow.response'),
         detail: calls.length > 0
-          ? `${t('workflow.toolsCount', { count: calls.length })} · ${toolNames(calls, t)}`
-          : blockText(node.blocks, 'text') || blockText(node.blocks, 'reasoning') || t('workflow.waiting'),
+          ? `${response} · ${t('workflow.toolsCount', { count: calls.length })}`
+          : response,
         status: node.interrupted === true ? 'workflow.interrupted' : 'workflow.completed',
         children: calls.flatMap(call => toolStepsForCall(call, t)),
-      }]
+      }
       for (const block of node.blocks) {
         if (block.kind !== 'tool-call') continue
         shownCalls.add(block.callId)
       }
-      lanes.push({ key: `turn:${node.turn}:step:${node.step}:${node.seq}`, label: t('workflow.step', { turn: node.turn, step: node.step }), steps })
+      lanes.push({
+        key: `turn:${node.turn}:step:${node.step}:${node.seq}`,
+        label: t('workflow.modelCall', { count: modelCount }),
+        steps: [...pendingInputs, modelStep],
+      })
+      pendingInputs = []
       continue
     }
     if (node.kind === 'tool-result' && !shownCalls.has(node.callId)) {
+      flushInputs()
       shownCalls.add(node.callId)
       const steps = toolStepsForCall(callFromResult(node, results), t)
       lanes.push({ key: `tool:${node.seq}`, label: t('workflow.tool'), steps })
     }
   }
+  flushInputs()
   const pendingCalls = snapshot.runningCalls.filter(call => !shownCalls.has(call.callId))
   if (pendingCalls.length > 0) {
     const steps = pendingCalls.flatMap(call => toolStepsForCall(callFromBlock(call, results), t))
     lanes.push({ key: 'running', label: t('workflow.tool'), steps })
   }
-  return lanes
+  return { lanes, modelCount }
 }
 
 function buildWorkflowData(snapshot: TrajectorySnapshot, t: WorkflowViewProps['t']): WorkflowData {
-  return { lanes: buildLanes(snapshot, t), calls: collectCalls(snapshot) }
+  const workflow = buildWorkflowLanes(snapshot, t)
+  return { ...workflow, calls: collectCalls(snapshot) }
 }
 
 function countTools(steps: readonly WorkflowStep[]): number {
@@ -284,7 +293,12 @@ function WorkflowNode({ step, onInspect, onToggle, expanded, selectedCallId, t }
       title={t('workflow.inspect')}
       onClick={() => { onInspect(step.callId as string) }}
     >{content}</button>
-  return <div className={css.nodeGroup} data-kind={step.kind} data-has-children={expandable || undefined}>
+  return <div
+    className={css.nodeGroup}
+    data-kind={step.kind}
+    data-has-children={expandable || undefined}
+    data-expanded={expandable && expanded || undefined}
+  >
     {node}
     {showChildren && (
       <div className={css.childNodes}>
@@ -405,7 +419,7 @@ function WorkflowInspector({ call, onClose, onInspect, t }: {
 export function WorkflowView({ useTrajectory, t }: WorkflowViewProps) {
   const snapshot = useTrajectory(value => value)
   const data = useMemo(() => buildWorkflowData(snapshot, t), [snapshot, t])
-  const { lanes, calls } = data
+  const { lanes, calls, modelCount } = data
   const [selectedCallId, setSelectedCallId] = useState<string | null>(null)
   const [canvasCollapsed, setCanvasCollapsed] = useState(false)
   const [expandedIds, setExpandedIds] = useState<ReadonlySet<string>>(new Set())
@@ -429,7 +443,7 @@ export function WorkflowView({ useTrajectory, t }: WorkflowViewProps) {
             {canvasCollapsed ? <IconChevronRightOutline14 size={16} /> : <IconChevronLeftOutline14 size={16} />}
           </button>
           <h1 className={css.title}>{t('view.workflow')}</h1>
-          <span className={css.summary}>{t('workflow.summary', { turns: lanes.length, tools: toolCount })}</span>
+          <span className={css.summary}>{t('workflow.summary', { models: modelCount, tools: toolCount })}</span>
         </div>
         <div className={css.legend} aria-hidden="true">
           <span className={css.legendItem}><span className={css.legendDot} style={{ '--workflow-accent': '#8a6fd1' } as CSSProperties} />{t('workflow.model')}</span>

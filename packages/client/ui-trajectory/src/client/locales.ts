@@ -194,6 +194,9 @@ export const zh = {
   'workflow.input': '输入',
   'workflow.step': '第 {turn} 轮 · 第 {step} 步',
   'workflow.user': '用户请求',
+  'workflow.request': '请求',
+  'workflow.response': '响应',
+  'workflow.modelCall': '模型调用 #{count}',
   'workflow.context': '上下文注入',
   'workflow.model': '模型',
   'workflow.tool': '工具调用',
@@ -219,7 +222,7 @@ export const zh = {
   'workflow.resultPayload': '执行结果',
   'workflow.children': '嵌套调用',
   'workflow.noResult': '结果尚未返回',
-  'workflow.summary': '{turns} 个节点 · {tools} 个工具调用',
+  'workflow.summary': '{models} 个模型调用 · {tools} 个工具调用',
 } as const
 
 /** The trajectory dictionary key union. */
@@ -427,6 +430,9 @@ export const en: Record<TrajectoryKey, string> = {
   'workflow.input': 'Input',
   'workflow.step': 'Turn {turn} · Step {step}',
   'workflow.user': 'User request',
+  'workflow.request': 'Request',
+  'workflow.response': 'Response',
+  'workflow.modelCall': 'Model call #{count}',
   'workflow.context': 'Context injection',
   'workflow.model': 'Model',
   'workflow.tool': 'Tool call',
@@ -452,5 +458,5 @@ export const en: Record<TrajectoryKey, string> = {
   'workflow.resultPayload': 'Result',
   'workflow.children': 'Nested calls',
   'workflow.noResult': 'Result is not available yet',
-  'workflow.summary': '{turns} nodes · {tools} tool calls',
+  'workflow.summary': '{models} model calls · {tools} tool calls',
 }

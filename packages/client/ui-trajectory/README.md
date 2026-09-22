@@ -11,7 +11,7 @@ English | [中文](README.zh.md)
 
 The Trajectory tab lets you inspect agent activity as a turn-aware ledger and interactive timing overview. It groups User, Assistant, Tool, nested Subtool, and compaction records, marks turn and step boundaries, and opens a record inspector for token usage, duration, input, output, timing, images, and attachment summaries. Long histories open at the current tail, load older pages on demand, and render only visible rows. During streaming, the view follows the tail until you scroll upward, and in-flight records show a start marker without inventing elapsed time.
 
-The Workflow tab presents the same session as a readable chain: user input, model step, tool call, nested calls, and each result are connected in execution order. Select a tool or result card to open an independent inspector beside the workflow with arguments, results, errors, and nested calls; it does not navigate to the Token trajectory.
+The Workflow tab presents the same session as model-call cards: each card groups the request, response, and expandable tool branches in execution order. Select a tool or result card to open an independent inspector beside the workflow with arguments, results, errors, and nested calls; it does not navigate to the Token trajectory.
 
 ## Table of Contents
 
