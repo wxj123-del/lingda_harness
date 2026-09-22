@@ -23,7 +23,7 @@ kind: "package-reference"
     maxTokens: 24000
 ```
 
-每次请求都会记录 `context/router` 审计事件，其中包含范围、原因、消息数量和估算输入 token。该事件只用于诊断，不会成为模型上下文。
+每次请求都会记录 `context/router` 审计事件，其中包含范围、原因、消息数量、估算输入 token 和最终消息预算。若 Session 已记录提供方的 `contextWindow`、输出 `maxTokens` 与工具 schema，路由器会先从模型总窗口中扣除输出和 schema，再选择消息，避免固定预算把小窗口模型推过上限。该事件只用于诊断，不会成为模型上下文。
 
 ## 模型体验
 

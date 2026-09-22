@@ -7,15 +7,17 @@ import type {} from '@deepseek-ai/dsh-session'
 import type { Session } from '@deepseek-ai/dsh-session'
 import {
   messageText,
+  contextCapacity,
   resolveContextRoute,
   resolveContextRouteForMessages,
+  resolveContextBudget,
   resolveRouterOptions,
   selectContextMessages,
   type ContextRouterOptions,
 } from './router.ts'
 
-export { messageText, resolveContextRoute, resolveContextRouteForMessages, selectContextMessages }
-export type { ContextRoute, ContextScope, ContextSelection, ContextRouterOptions } from './router.ts'
+export { contextCapacity, messageText, resolveContextBudget, resolveContextRoute, resolveContextRouteForMessages, selectContextMessages }
+export type { ContextCapacity, ContextRoute, ContextScope, ContextSelection, ContextRouterOptions } from './router.ts'
 
 /** Cordis plugin name used by loader diagnostics. */
 export const name = 'context-router'
@@ -50,6 +52,10 @@ export interface ContextRouterAudit {
   droppedMessages: number
   estimatedInputTokens: number
   selectedMessageIds: string[]
+  maxInputTokens?: number
+  contextWindow?: number
+  outputBudgetTokens?: number
+  toolSchemaTokens?: number
 }
 
 declare module '@deepseek-ai/dsh-session/types' {
@@ -65,6 +71,10 @@ declare module '@deepseek-ai/dsh-session/types' {
       droppedMessages: number
       estimatedInputTokens: number
       selectedMessageIds: string[]
+      maxInputTokens?: number
+      contextWindow?: number
+      outputBudgetTokens?: number
+      toolSchemaTokens?: number
     }
   }
 }
@@ -107,7 +117,9 @@ export function apply(ctx: Context, config: Config = {}): void {
     const route = step > 1
       ? { scope: 'task' as const, reason: '当前 turn 工作集必须保留' }
       : resolveContextRouteForMessages(queryText, transformed, options.recentMessages)
-    const selection = selectContextMessages(transformed, route, options, currentTurnStart)
+    const capacity = contextCapacity(agent.session)
+    const maxInputTokens = resolveContextBudget(options, capacity)
+    const selection = selectContextMessages(transformed, route, { ...options, maxTokens: maxInputTokens }, currentTurnStart)
     agent.session.append('context/router', {
       turn,
       step,
@@ -118,6 +130,8 @@ export function apply(ctx: Context, config: Config = {}): void {
       droppedMessages: selection.droppedMessages,
       estimatedInputTokens: selection.estimatedInputTokens,
       selectedMessageIds: selection.messages.map(message => String(message.id)),
+      maxInputTokens,
+      ...capacity,
     }, { ignorable: true })
     return selection.messages
   // Wrap the other request-context listeners so this selector runs on their

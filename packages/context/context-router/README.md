@@ -23,7 +23,7 @@ The base bundle mounts this plugin globally. Its defaults retain 16 recent messa
     maxTokens: 24000
 ```
 
-Each request records a `context/router` audit event with the selected scope, reason, message counts, and estimated input tokens. The event is diagnostic and does not become model context.
+Each request records a `context/router` audit event with the selected scope, reason, message counts, estimated input tokens, and final message budget. When the Session has recorded the provider `contextWindow`, output `maxTokens`, and tool schemas, the router subtracts output and schema reservations from the model window before selecting messages, preventing the fixed budget from overflowing smaller models. The event is diagnostic and does not become model context.
 
 ## Model Experience
 

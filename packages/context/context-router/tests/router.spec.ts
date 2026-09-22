@@ -1,10 +1,28 @@
 import { describe, expect, it } from 'vitest'
 import { ToolCallId, createAssistantMessage, createSystemMessage, createToolResultMessage, createUserMessage } from '@deepseek-ai/dsh-llm'
 import type { Message } from '@deepseek-ai/dsh-llm'
-import { resolveContextRoute, resolveContextRouteForMessages, selectContextMessages } from '../src/router.ts'
+import { contextCapacity, resolveContextBudget, resolveContextRoute, resolveContextRouteForMessages, selectContextMessages } from '../src/router.ts'
 
 const user = (text: string): Message => createUserMessage({ source: { kind: 'user' }, content: [{ type: 'text', text }] })
 describe('context router', () => {
+  it('reserves output and tool schemas inside the provider context window', () => {
+    expect(resolveContextBudget({ maxTokens: 24_000 }, {
+      contextWindow: 8_192, outputBudgetTokens: 2_048, toolSchemaTokens: 1_024,
+    })).toBe(5_120)
+    expect(resolveContextBudget({ maxTokens: 24_000 }, { contextWindow: 128_000 })).toBe(24_000)
+    expect(resolveContextBudget({ maxTokens: 24_000 })).toBe(24_000)
+  })
+
+  it('reads provider capacity from the durable request header', () => {
+    const capacity = contextCapacity({
+      requestContext: () => ({ provider: 'test', model: 'test', contextWindow: 8_192 }),
+      requestHeader: () => ({ config: { maxTokens: 2_048 }, tools: [{ name: 'lookup' }] }),
+    })
+    expect(capacity.contextWindow).toBe(8_192)
+    expect(capacity.outputBudgetTokens).toBe(2_048)
+    expect(capacity.toolSchemaTokens).toBeGreaterThan(0)
+  })
+
   it('classifies explicit routing language', () => {
     expect(resolveContextRoute('今天天气怎么样？').scope).toBe('recent')
     expect(resolveContextRoute('继续刚才的旧任务').scope).toBe('task')

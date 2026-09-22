@@ -1,4 +1,5 @@
 import type { Message } from '@deepseek-ai/dsh-llm'
+import type { Session } from '@deepseek-ai/dsh-session'
 
 /** The amount of durable history selected for one request. */
 export type ContextScope = 'fresh' | 'recent' | 'task' | 'full'
@@ -19,6 +20,16 @@ export interface ContextRouterOptions {
   maxTokens: number
 }
 
+/** Provider capacity that constrains the message portion of one request. */
+export interface ContextCapacity {
+  /** Combined input and output context window advertised by the provider. */
+  contextWindow?: number
+  /** Output reservation from the request header. */
+  outputBudgetTokens?: number
+  /** Tool schema reservation from the request header. */
+  toolSchemaTokens?: number
+}
+
 /** The result and accounting produced by one context selection. */
 export interface ContextSelection {
   messages: Message[]
@@ -32,6 +43,19 @@ const DEFAULT_OPTIONS: ContextRouterOptions = {
   recentMessages: 16,
   taskMessages: 32,
   maxTokens: 24_000,
+}
+
+/** Resolve the effective message budget without exceeding provider capacity. */
+export function resolveContextBudget(
+  inputOptions: Partial<ContextRouterOptions> = {},
+  capacity: ContextCapacity = {},
+): number {
+  const options = { ...DEFAULT_OPTIONS, ...inputOptions }
+  if (capacity.contextWindow === undefined) return options.maxTokens
+  const available = capacity.contextWindow
+    - (capacity.outputBudgetTokens ?? 0)
+    - (capacity.toolSchemaTokens ?? 0)
+  return Math.max(1, Math.min(options.maxTokens, available))
 }
 
 const FULL_RE = /(?:完整|全部|所有|全量|从头|历史记录|完整回顾|full history|entire history|all context)/iu
@@ -84,6 +108,25 @@ function tokens(text: string): string[] {
 
 function estimate(message: Message): number {
   return Math.max(1, Math.ceil(JSON.stringify(message).length / 4))
+}
+
+function estimateSerialized(value: unknown): number {
+  return Math.max(1, Math.ceil(JSON.stringify(value).length / 4))
+}
+
+/** Read the provider envelope limits recorded before request-context dispatch. */
+export function contextCapacity(session: Pick<Session, 'requestContext' | 'requestHeader'>): ContextCapacity {
+  const header = session.requestHeader()
+  const contextWindow = session.requestContext()?.contextWindow
+  const toolSchemaTokens = header?.tools === undefined || header.tools.length === 0
+    ? 0
+    : estimateSerialized(header.tools)
+  const outputBudgetTokens = header?.config.maxTokens
+  return {
+    ...(contextWindow === undefined ? {} : { contextWindow }),
+    ...(outputBudgetTokens === undefined ? {} : { outputBudgetTokens }),
+    toolSchemaTokens,
+  }
 }
 
 function isToolResult(message: Message): boolean {
