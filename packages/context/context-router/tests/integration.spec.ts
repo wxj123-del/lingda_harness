@@ -1,6 +1,10 @@
 import { describe, expect, it } from 'vitest'
+import { Context } from '@deepseek-ai/cordis'
+import { agentEvents, type Agent } from '@deepseek-ai/dsh-agent'
 import { ToolCallId, createAssistantMessage, createSystemMessage, createToolResultMessage, createUserMessage } from '@deepseek-ai/dsh-llm'
 import type { Message } from '@deepseek-ai/dsh-llm'
+import SessionStore, { SessionId } from '@deepseek-ai/dsh-session'
+import { apply as applyContextRouter } from '../src/index.ts'
 import { selectContextMessages } from '../src/router.ts'
 
 const user = (text: string): Message => createUserMessage({
@@ -9,6 +13,40 @@ const user = (text: string): Message => createUserMessage({
 })
 
 describe('context router integration', () => {
+  it('audits the final snapshot after an inner context listener transforms it', async () => {
+    const ctx = new Context()
+    await ctx.plugin(SessionStore)
+    const session = ctx.sessions.create(SessionId('context-router-order'))
+    const agent = { id: session.id, session, ctx } as unknown as Agent
+    const system = createSystemMessage('system', 'test')
+    const old = user('旧历史')
+    const current = user('当前请求')
+    const transformed: Message[] = [system, current]
+    let innerInput: readonly Message[] | undefined
+    ctx.on('agent/request-context', async ({ messages }, next) => {
+      innerInput = messages
+      await next()
+      return transformed
+    })
+    applyContextRouter(ctx)
+    session.append('turn/start', { turn: 1 })
+    session.append('user/message', old, { surfaceOp: 'append' })
+    session.append('user/message', current, { surfaceOp: 'append' })
+
+    const result = await agentEvents(ctx, agent).waterfall('agent/request-context', {
+      turn: 1, step: 1, messages: [system, old, current], signal: new AbortController().signal,
+    }, () => Promise.resolve([system, old, current]))
+
+    expect(innerInput).toEqual([system, old, current])
+    expect(result).toEqual(transformed)
+    const audit = session.snapshotEvents().find(event => event.type === 'context/router')
+    expect(audit?.data).toMatchObject({
+      inputMessages: 2,
+      outputMessages: 2,
+      selectedMessageIds: [String(system.id), String(current.id)],
+    })
+  })
+
   it('keeps a multi-step tool working set instead of routing each step as fresh', () => {
     const id = ToolCallId('context-router-call')
     const assistant = createAssistantMessage({

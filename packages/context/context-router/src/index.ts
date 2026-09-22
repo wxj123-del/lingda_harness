@@ -120,5 +120,8 @@ export function apply(ctx: Context, config: Config = {}): void {
       selectedMessageIds: selection.messages.map(message => String(message.id)),
     }, { ignorable: true })
     return selection.messages
-  }, { global: true })
+  // Wrap the other request-context listeners so this selector runs on their
+  // final output. The audit must describe the snapshot that reaches the loop,
+  // not an intermediate history before mode-specific bounds are applied.
+  }, { global: true, prepend: true })
 }
