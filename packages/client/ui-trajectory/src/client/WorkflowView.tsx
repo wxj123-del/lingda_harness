@@ -36,6 +36,7 @@ interface WorkflowLane {
   readonly key: string
   readonly label: string
   readonly steps: readonly WorkflowStep[]
+  readonly modelIndex?: number
 }
 
 interface WorkflowData {
@@ -212,6 +213,7 @@ function buildWorkflowLanes(snapshot: TrajectorySnapshot, t: WorkflowViewProps['
         key: `turn:${node.turn}:step:${node.step}:${node.seq}`,
         label: t('workflow.modelCall', { count: modelCount }),
         steps: [...pendingInputs, modelStep],
+        modelIndex: modelCount,
       })
       pendingInputs = []
       continue
@@ -239,6 +241,19 @@ function buildWorkflowData(snapshot: TrajectorySnapshot, t: WorkflowViewProps['t
 
 function countTools(steps: readonly WorkflowStep[]): number {
   return steps.reduce((count, step) => count + (step.kind === 'tool' ? 1 : 0) + countTools(step.children ?? []), 0)
+}
+
+function formatDuration(snapshot: TrajectorySnapshot): string {
+  const times = snapshot.eventNodes
+    .map(node => node.time)
+    .filter((time): time is number => typeof time === 'number' && Number.isFinite(time))
+  if (times.length < 2) return '—'
+  const milliseconds = Math.max(0, Math.max(...times) - Math.min(...times))
+  if (milliseconds < 1_000) return `${milliseconds}ms`
+  const seconds = milliseconds / 1_000
+  if (seconds < 60) return `${seconds.toFixed(seconds >= 10 ? 0 : 1)}s`
+  const minutes = Math.floor(seconds / 60)
+  return `${minutes}m${Math.round(seconds % 60)}s`
 }
 
 function stepIcon(kind: WorkflowKind) {
@@ -274,25 +289,25 @@ function WorkflowNode({ step, onInspect, onToggle, expanded, selectedCallId, t }
   const node = !clickable && !expandable
     ? <div className={css.node} data-kind={step.kind}>{content}</div>
     : !clickable
-    ? <button
-      type="button"
-      className={css.node}
-      data-kind={step.kind}
-      data-expanded={expanded || undefined}
-      aria-expanded={expandable ? expanded : undefined}
-      title={expandable ? t('workflow.toggleTools') : undefined}
-      onClick={() => { if (expandable) onToggle(step.id) }}
-    >{content}</button>
-    : <button
-      type="button"
-      className={css.node}
-      data-kind={step.kind}
-      data-error={step.error || undefined}
-      data-selected={selected || undefined}
-      aria-pressed={selected || undefined}
-      title={t('workflow.inspect')}
-      onClick={() => { onInspect(step.callId as string) }}
-    >{content}</button>
+      ? <button
+        type="button"
+        className={css.node}
+        data-kind={step.kind}
+        data-expanded={expanded || undefined}
+        aria-expanded={expandable ? expanded : undefined}
+        title={expandable ? t('workflow.toggleTools') : undefined}
+        onClick={() => { if (expandable) onToggle(step.id) }}
+      >{content}</button>
+      : <button
+        type="button"
+        className={css.node}
+        data-kind={step.kind}
+        data-error={step.error || undefined}
+        data-selected={selected || undefined}
+        aria-pressed={selected || undefined}
+        title={t('workflow.inspect')}
+        onClick={() => { onInspect(step.callId as string) }}
+      >{content}</button>
   return <div
     className={css.nodeGroup}
     data-kind={step.kind}
@@ -428,6 +443,12 @@ export function WorkflowView({ useTrajectory, t }: WorkflowViewProps) {
   }, [calls, selectedCallId])
   const selectedCall = selectedCallId === null ? undefined : calls.get(selectedCallId)
   const toolCount = lanes.reduce((count, lane) => count + countTools(lane.steps), 0)
+  const userMessageCount = snapshot.eventNodes.filter(node => node.kind === 'user').length
+  const modelLanes = lanes.filter(lane => lane.modelIndex !== undefined)
+  const jumpToLane = (key: string): void => {
+    const target = document.querySelector<HTMLElement>(`[data-workflow-lane="${CSS.escape(key)}"]`)
+    target?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  }
   return (
     <section className={css.root} aria-label={t('workflow.aria')}>
       <header className={css.header}>
@@ -445,10 +466,18 @@ export function WorkflowView({ useTrajectory, t }: WorkflowViewProps) {
           <h1 className={css.title}>{t('view.workflow')}</h1>
           <span className={css.summary}>{t('workflow.summary', { models: modelCount, tools: toolCount })}</span>
         </div>
-        <div className={css.legend} aria-hidden="true">
-          <span className={css.legendItem}><span className={css.legendDot} style={{ '--workflow-accent': '#8a6fd1' } as CSSProperties} />{t('workflow.model')}</span>
-          <span className={css.legendItem}><span className={css.legendDot} style={{ '--workflow-accent': '#c27a32' } as CSSProperties} />{t('workflow.tool')}</span>
-          <span className={css.legendItem}><span className={css.legendDot} style={{ '--workflow-accent': '#4b9a72' } as CSSProperties} />{t('workflow.result')}</span>
+        <div className={css.headerRight}>
+          <div className={css.stats} aria-label={t('workflow.stats')}>
+            <div className={css.stat}><strong>{userMessageCount}</strong><span>{t('workflow.userMessages')}</span></div>
+            <div className={css.stat}><strong>{modelCount}</strong><span>{t('workflow.modelCalls')}</span></div>
+            <div className={css.stat}><strong>{toolCount}</strong><span>{t('workflow.toolCalls')}</span></div>
+            <div className={css.stat}><strong>{formatDuration(snapshot)}</strong><span>{t('workflow.totalDuration')}</span></div>
+          </div>
+          <div className={css.legend} aria-hidden="true">
+            <span className={css.legendItem}><span className={css.legendDot} style={{ '--workflow-accent': '#8a6fd1' } as CSSProperties} />{t('workflow.model')}</span>
+            <span className={css.legendItem}><span className={css.legendDot} style={{ '--workflow-accent': '#c27a32' } as CSSProperties} />{t('workflow.tool')}</span>
+            <span className={css.legendItem}><span className={css.legendDot} style={{ '--workflow-accent': '#4b9a72' } as CSSProperties} />{t('workflow.result')}</span>
+          </div>
         </div>
       </header>
       <div
@@ -470,33 +499,60 @@ export function WorkflowView({ useTrajectory, t }: WorkflowViewProps) {
             </button>
             : lanes.length === 0
               ? <p className={css.empty}>{t('workflow.empty')}</p>
-              : lanes.map(lane => (
-                <div className={css.lane} key={lane.key}>
-                  <div className={css.laneLabel}>{lane.label}</div>
-                  <div className={css.laneBody}>
-                    {lane.steps.map((step, index) => (
-                      <div className={css.step} key={step.id}>
-                        {index > 0 && <span className={css.connector} aria-hidden="true" />}
-                        <WorkflowNode
-                          step={step}
-                          selectedCallId={selectedCallId}
-                          onInspect={(callId) => { setSelectedCallId(callId) }}
-                          onToggle={(id) => {
-                            setExpandedIds(current => {
-                              const next = new Set(current)
-                              if (next.has(id)) next.delete(id)
-                              else next.add(id)
-                              return next
-                            })
-                          }}
-                          expanded={expandedIds.has(step.id)}
-                          t={t}
-                        />
-                      </div>
+              : <div className={css.canvasInner}>
+                <nav className={css.callRail} aria-label={t('workflow.callList')}>
+                  <div className={css.callRailHeader}>
+                    <span>{t('workflow.userConversation')}</span>
+                    <strong>{userMessageCount}</strong>
+                  </div>
+                  <div className={css.callRailList}>
+                    {modelLanes.map(lane => (
+                      <button
+                        type="button"
+                        className={css.callRailItem}
+                        key={lane.key}
+                        onClick={() => { jumpToLane(lane.key) }}
+                      >
+                        <span className={css.callRailTitle}>{lane.label}</span>
+                        <span className={css.callRailMeta}>{t('workflow.toolsCount', { count: countTools(lane.steps) })}</span>
+                        <span className={css.callRailStatus}><span className={css.callRailDot} />{t('workflow.completed')}</span>
+                      </button>
                     ))}
                   </div>
+                </nav>
+                <div className={css.flowList}>
+                  {lanes.map(lane => (
+                    <div className={css.lane} key={lane.key} data-workflow-lane={lane.key}>
+                      <div className={css.laneLabel}>
+                        <span>{lane.label}</span>
+                        {lane.modelIndex !== undefined && <span className={css.laneMeta}>{t('workflow.callSummary', { tools: countTools(lane.steps) })}</span>}
+                      </div>
+                      <div className={css.laneBody}>
+                        {lane.steps.map((step, index) => (
+                          <div className={css.step} key={step.id}>
+                            {index > 0 && <span className={css.connector} aria-hidden="true" />}
+                            <WorkflowNode
+                              step={step}
+                              selectedCallId={selectedCallId}
+                              onInspect={(callId) => { setSelectedCallId(callId) }}
+                              onToggle={(id) => {
+                                setExpandedIds((current) => {
+                                  const next = new Set(current)
+                                  if (next.has(id)) next.delete(id)
+                                  else next.add(id)
+                                  return next
+                                })
+                              }}
+                              expanded={expandedIds.has(step.id)}
+                              t={t}
+                            />
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
                 </div>
-              ))}
+              </div>}
         </div>
         {selectedCall !== undefined && (
           <WorkflowInspector

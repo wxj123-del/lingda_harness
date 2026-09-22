@@ -223,6 +223,14 @@ export const zh = {
   'workflow.children': '嵌套调用',
   'workflow.noResult': '结果尚未返回',
   'workflow.summary': '{models} 个模型调用 · {tools} 个工具调用',
+  'workflow.stats': '工作流统计',
+  'workflow.userMessages': '用户对话',
+  'workflow.modelCalls': '模型调用',
+  'workflow.toolCalls': '工具调用',
+  'workflow.totalDuration': '总耗时',
+  'workflow.callList': '模型调用列表',
+  'workflow.userConversation': '用户对话',
+  'workflow.callSummary': '{tools} 个工具调用',
 } as const
 
 /** The trajectory dictionary key union. */
@@ -459,4 +467,12 @@ export const en: Record<TrajectoryKey, string> = {
   'workflow.children': 'Nested calls',
   'workflow.noResult': 'Result is not available yet',
   'workflow.summary': '{models} model calls · {tools} tool calls',
+  'workflow.stats': 'Workflow statistics',
+  'workflow.userMessages': 'User messages',
+  'workflow.modelCalls': 'Model calls',
+  'workflow.toolCalls': 'Tool calls',
+  'workflow.totalDuration': 'Total duration',
+  'workflow.callList': 'Model call list',
+  'workflow.userConversation': 'User conversation',
+  'workflow.callSummary': '{tools} tool calls',
 }
