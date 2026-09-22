@@ -74,4 +74,29 @@ describe('Token trajectory interactions', () => {
     expect(preview.textContent).toContain('You audit requests.')
     expect(preview.textContent).toContain('Inspect the source')
   })
+
+  it('renders the router-selected snapshot instead of the whole reconstructed surface', () => {
+    const events = fixture()
+    const system = (events[2] as { event: { data: { message: { id: unknown } } } }).event.data.message
+    const user = (events[3] as { event: { data: { id: unknown } } }).event.data
+    events.splice(10, 0, {
+      ...events[10],
+      event: {
+        ...events[10]!.event,
+        seq: 9.5 as never,
+        type: 'context/router',
+        data: {
+          turn: 1, step: 2, scope: 'recent', reason: 'fixture route',
+          inputMessages: 4, outputMessages: 2, droppedMessages: 2,
+          estimatedInputTokens: 20,
+          selectedMessageIds: [String(system.id), String(user.id)],
+        },
+      },
+    } as never)
+    render(<TokenLedger {...props(events)} />)
+    const preview = screen.getByRole('region', { name: zh.contextPreview })
+    expect(preview.textContent).toContain('You audit requests.')
+    expect(preview.textContent).toContain('Inspect the source')
+    expect(preview.textContent).not.toContain('export const source = 1')
+  })
 })

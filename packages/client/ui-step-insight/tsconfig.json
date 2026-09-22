@@ -16,6 +16,7 @@
     { "path": "../../core/tools" },
     { "path": "../../llm/llm" },
     { "path": "../../compaction/compaction" },
+    { "path": "../../context/context-router" },
     { "path": "../../interaction/git-workspace" },
     { "path": "../../host/knowledge" }
   ]

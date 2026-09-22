@@ -52,6 +52,7 @@ export function inspectInput(entries: readonly SessionEventLikeEntry[], row: Ste
     if (message === null && event.type !== 'system/message' && event.type !== 'assistant/message') unsupported = true
     const part: InputPart = { id: `event:${event.seq}`, seq: event.seq, kind, source, text,
       tokens: estimateText(text), media: message !== null && hasMedia(message.content),
+      ...(message === null ? {} : { messageId: String(message.id) }),
       ...(kind === 'user' && message !== null ? {
         userText: message.content.filter(block => block.type === 'text').map(block => block.text).join('\n'),
       } : {}) }

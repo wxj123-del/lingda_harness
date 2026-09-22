@@ -41,9 +41,15 @@ export function ContextPreview({ row, window, t }: ContextPreviewProps) {
   )
   if (row === undefined || input.parts.length === 0) return null
 
-  const totalTokens = input.parts.reduce((sum, part) => sum + part.tokens, 0)
+  const selectedIds = row.contextRoute?.selectedMessageIds === undefined
+    ? undefined
+    : new Set(row.contextRoute.selectedMessageIds)
+  const routedParts = selectedIds === undefined
+    ? input.parts
+    : input.parts.filter(part => part.kind === 'schema' || (part.messageId !== undefined && selectedIds.has(part.messageId)))
+  const totalTokens = routedParts.reduce((sum, part) => sum + part.tokens, 0)
   const grouped = KIND_ORDER.map((kind) => {
-    const parts = input.parts.filter(part => part.kind === kind)
+    const parts = routedParts.filter(part => part.kind === kind)
     return { kind, count: parts.length, tokens: parts.reduce((sum, part) => sum + part.tokens, 0) }
   }).filter(group => group.count > 0)
 
@@ -55,7 +61,7 @@ export function ContextPreview({ row, window, t }: ContextPreviewProps) {
       <span className={css.contextPreviewLive}>{t('contextPreviewLive')}</span>
     </header>
     <div className={css.contextPreviewMap} role="img" aria-label={`${t('contextPreviewTotal')} ~${number(totalTokens)} ${t('token')}`}>
-      {input.parts.map(part => <span
+      {routedParts.map(part => <span
         key={part.id}
         className={css.contextPreviewSegment}
         data-kind={part.kind}
@@ -72,7 +78,7 @@ export function ContextPreview({ row, window, t }: ContextPreviewProps) {
     </div>
     {(input.incomplete || input.unsupported) && <p className={css.contextPreviewNotice}>{t('contextPreviewIncomplete')}</p>}
     <div className={css.contextPreviewList}>
-      {input.parts.map((part) => {
+      {routedParts.map((part) => {
         const source = sourceText(part)
         return <div className={css.contextPreviewItem} key={part.id}>
           <span className={css.contextPreviewKind} data-kind={part.kind}>{t(part.kind)}</span>

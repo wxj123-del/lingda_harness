@@ -39,6 +39,19 @@ interface OpenTurnStart {
   messageId?: string
 }
 
+/** Durable accounting for the exact message snapshot sent to the model. */
+export interface ContextRouterAudit {
+  turn: number
+  step: number
+  scope: 'fresh' | 'recent' | 'task' | 'full'
+  reason: string
+  inputMessages: number
+  outputMessages: number
+  droppedMessages: number
+  estimatedInputTokens: number
+  selectedMessageIds: string[]
+}
+
 declare module '@deepseek-ai/dsh-session/types' {
   interface SessionEventMap {
     /** Audit of the request-context snapshot selected by the global router. */
@@ -51,6 +64,7 @@ declare module '@deepseek-ai/dsh-session/types' {
       outputMessages: number
       droppedMessages: number
       estimatedInputTokens: number
+      selectedMessageIds: string[]
     }
   }
 }
@@ -103,6 +117,7 @@ export function apply(ctx: Context, config: Config = {}): void {
       outputMessages: selection.messages.length,
       droppedMessages: selection.droppedMessages,
       estimatedInputTokens: selection.estimatedInputTokens,
+      selectedMessageIds: selection.messages.map(message => String(message.id)),
     }, { ignorable: true })
     return selection.messages
   }, { global: true })

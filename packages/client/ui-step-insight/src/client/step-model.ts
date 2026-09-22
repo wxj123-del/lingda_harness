@@ -8,6 +8,7 @@ import type {} from '@deepseek-ai/dsh-compaction/types'
 import type {} from '@deepseek-ai/dsh-host-knowledge'
 import type {} from '@deepseek-ai/dsh-personal-agent'
 import type {} from '@deepseek-ai/dsh-git-workspace'
+import type {} from '@deepseek-ai/dsh-context-router'
 import type {} from '@deepseek-ai/dsh-tools/types'
 import type { GitCheckpointAudit, KnowledgeRetrievalAudit, StepRow, ToolDeniedAudit, ToolRow, ToolSelectionReason } from './types.ts'
 import { readUsage } from './usage.ts'
@@ -119,6 +120,12 @@ function createAccumulator() {
         case 'agent/request-context': {
           const row = active(event.data.turn, event.data.step, event.seq)
           row.context = event.data
+          row.evidence.push(event.seq)
+          break
+        }
+        case 'context/router': {
+          const row = active(event.data.turn, event.data.step, event.seq)
+          row.contextRoute = event.data
           row.evidence.push(event.seq)
           break
         }

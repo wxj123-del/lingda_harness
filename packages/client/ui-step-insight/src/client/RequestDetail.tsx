@@ -62,6 +62,10 @@ export function RequestDetail({ row, window, t, initialTab = 'inputTab' }: Detai
       {row.context.deduplicatedMessages !== undefined && row.context.deduplicatedMessages > 0
         && ` · ${t('deduplicated')} ${row.context.deduplicatedMessages}`}
     </p>}
+    {row.contextRoute !== undefined && <p className={css.requestAudit}>
+      <b>{t('contextRoute')}</b> {t(row.contextRoute.scope === 'fresh' ? 'contextRouteFresh' : row.contextRoute.scope === 'recent' ? 'contextRouteRecent' : row.contextRoute.scope === 'task' ? 'contextRouteTask' : 'contextRouteFull')}
+      {' · '}{row.contextRoute.reason}{' · '}{t('contextMessages')} {row.contextRoute.outputMessages}/{row.contextRoute.inputMessages}
+    </p>}
     {row.context?.estimatedInputTokens !== undefined && <div className={css.contextBreakdown}>
       <b>{t('contextBreakdown')}</b>
       <div className={css.contextBreakdownGrid}>

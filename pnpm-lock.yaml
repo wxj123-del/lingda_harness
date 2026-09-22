@@ -4492,6 +4492,9 @@ importers:
       '@deepseek-ai/dsh-compaction':
         specifier: workspace:^
         version: link:../../compaction/compaction
+      '@deepseek-ai/dsh-context-router':
+        specifier: workspace:^
+        version: link:../../context/context-router
       '@deepseek-ai/dsh-git-workspace':
         specifier: workspace:^
         version: link:../../interaction/git-workspace

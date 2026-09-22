@@ -2,6 +2,9 @@
 import type { SessionEventSource } from '@deepseek-ai/dsh-api-session-controller/client'
 import type { ContentBlock, TokenUsage } from '@deepseek-ai/dsh-llm/types'
 import type { GitCheckpoint, GitCommitAudit, GitSyncState, RepositoryBranchesResult, RepositoryChangeSnapshot, RepositoryCloneRequest, RepositoryCloneResult, RepositoryPushRequest, RepositoryPushResult } from '@deepseek-ai/dsh-git-workspace'
+import type { ContextRouterAudit } from '@deepseek-ai/dsh-context-router'
+
+export type { ContextRouterAudit }
 
 export type { GitCheckpoint, GitCommitAudit, GitSyncState }
 
@@ -42,6 +45,7 @@ export interface StepRow {
   evidence: number[]
   error?: string | undefined
   context?: RequestContextAudit | undefined
+  contextRoute?: ContextRouterAudit | undefined
   /** Read-only workspace snapshots captured around this turn. */
   gitCheckpoints?: GitCheckpointAudit[] | undefined
   toolSelectionReasons?: ToolSelectionReason[] | undefined
@@ -133,6 +137,7 @@ export interface ToolRow {
 /** One inspectable part of the input, priced only with a labelled text heuristic. */
 export interface InputPart {
   id: string
+  messageId?: string
   seq: number
   kind: 'system' | 'schema' | 'user' | 'context' | 'assistant' | 'tool' | 'unknown'
   source: string
