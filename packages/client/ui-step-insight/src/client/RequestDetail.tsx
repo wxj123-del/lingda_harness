@@ -65,6 +65,8 @@ export function RequestDetail({ row, window, t, initialTab = 'inputTab' }: Detai
     {row.contextRoute !== undefined && <p className={css.requestAudit}>
       <b>{t('contextRoute')}</b> {t(row.contextRoute.scope === 'fresh' ? 'contextRouteFresh' : row.contextRoute.scope === 'recent' ? 'contextRouteRecent' : row.contextRoute.scope === 'task' ? 'contextRouteTask' : 'contextRouteFull')}
       {' · '}{row.contextRoute.reason}{' · '}{t('contextMessages')} {row.contextRoute.outputMessages}/{row.contextRoute.inputMessages}
+      {row.contextRoute.maxInputTokens !== undefined && <> {' · '}{t('contextBudget')} ~{number(row.contextRoute.maxInputTokens)}</>}
+      {row.contextRoute.contextWindow !== undefined && <> {' · '}{t('contextWindow')} ~{number(row.contextRoute.contextWindow)}</>}
     </p>}
     {row.context?.estimatedInputTokens !== undefined && <div className={css.contextBreakdown}>
       <b>{t('contextBreakdown')}</b>

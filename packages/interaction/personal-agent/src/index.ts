@@ -756,6 +756,10 @@ export class PersonalAgentService extends TypertRemoteService {
 
   /** Choose a bounded request snapshot while leaving the durable transcript intact. */
   private limitContext(session: Session, messages: Message[], turn: number, policy: ModePolicy): ContextBudgetResult {
+    // When the global router is mounted, it owns history selection and the
+    // provider-aware token budget. Keep this layer's tool-result clipping and
+    // deduplication, but do not silently apply a second history cutoff.
+    const routerActive = (this.rootCtx.get('contextRouter') as { active?: boolean } | undefined)?.active === true
     const cutoff = Math.max(1, turn - policy.historyTurns + 1)
     const events = session.snapshotEvents()
     const nodeTurns = new Map<number, number>()
@@ -775,7 +779,7 @@ export class PersonalAgentService extends TypertRemoteService {
     }
     const retained = messages.filter(message => selected.has(String(message.id)))
     const currentUser = messages.findLast(isCurrentUserMessage)
-    const source = retained.length === 0 ? messages.slice(-1) : retained
+    const source = routerActive ? messages : retained.length === 0 ? messages.slice(-1) : retained
     // Retrieval and policy notices are appended after the human message. If
     // projection selection omitted that message, put it back before the
     // budget pass so the current request cannot disappear silently.
@@ -784,7 +788,9 @@ export class PersonalAgentService extends TypertRemoteService {
       : source
     const clipped = withCurrentUser.map(message => this.clipToolResult(message, policy.maxToolResultBytes))
     const deduped = this.deduplicateContext(clipped)
-    const bounded = this.boundContextTokens(deduped.messages, policy.maxContextTokens)
+    const bounded = routerActive
+      ? { messages: deduped.messages, dropped: 0 }
+      : this.boundContextTokens(deduped.messages, policy.maxContextTokens)
     return {
       messages: bounded.messages,
       clippedToolResults: clipped.filter((message, index) => message !== withCurrentUser[index]).length,

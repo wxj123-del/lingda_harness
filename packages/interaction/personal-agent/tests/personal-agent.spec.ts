@@ -151,6 +151,25 @@ describe('personal agent modes', () => {
     })
   })
 
+  it('leaves history selection and token bounds to the global context router when mounted', async () => {
+    const { ctx, session, agent } = await harness(false, { modes: { qa: { historyTurns: 1, maxContextTokens: 20 } } })
+    ctx.provide('contextRouter', { active: true })
+    const old = createUserMessage({ source: { kind: 'user' }, content: [{ type: 'text', text: '很早以前的历史内容'.repeat(20) }] })
+    const current = createUserMessage({ source: { kind: 'user' }, content: [{ type: 'text', text: '当前请求' }] })
+    session.append('turn/start', { turn: 1 })
+    session.append('user/message', old, { surfaceOp: 'append' })
+    session.append('turn/end', { turn: 1, reason: { kind: 'completed' } })
+    session.append('turn/start', { turn: 2 })
+    session.append('user/message', current, { surfaceOp: 'append' })
+
+    const result = await agentEvents(ctx, agent).waterfall('agent/request-context', {
+      turn: 2, step: 1, messages: [old, current], signal: new AbortController().signal,
+    }, () => Promise.resolve([old, current]))
+
+    expect(result).toEqual([old, current])
+    expect(sessionEvents(session).at(-1)?.data).toMatchObject({ outputMessages: 2, droppedMessages: 0 })
+  })
+
   it('drops a tool call and its result together when the pair exceeds the context budget', async () => {
     const { ctx, session, agent } = await harness(false, { modes: { qa: { maxContextTokens: 60 } } })
     const callId = ToolCallId('call-orphan-prevention')

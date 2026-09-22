@@ -22,6 +22,17 @@ export type { ContextCapacity, ContextRoute, ContextScope, ContextSelection, Con
 /** Cordis plugin name used by loader diagnostics. */
 export const name = 'context-router'
 
+/** Runtime marker consumed by policy layers that must avoid a second history trim. */
+export interface ContextRouterService {
+  readonly active: boolean
+}
+
+declare module '@deepseek-ai/cordis' {
+  interface Context {
+    contextRouter: ContextRouterService
+  }
+}
+
 /** Router configuration. */
 export interface Config extends Partial<ContextRouterOptions> {
   /** Disable routing while retaining the plugin registration. */
@@ -83,6 +94,7 @@ declare module '@deepseek-ai/dsh-session/types' {
 export function apply(ctx: Context, config: Config = {}): void {
   const enabled = config.enabled !== false
   const options = resolveRouterOptions(config)
+  ctx.provide('contextRouter', { active: enabled })
   const openTurns = new WeakMap<Session, OpenTurnStart>()
   ctx.on('session/event', (session, event) => {
     if (event.type === 'turn/start') {
@@ -118,8 +130,19 @@ export function apply(ctx: Context, config: Config = {}): void {
       ? { scope: 'task' as const, reason: '当前 turn 工作集必须保留' }
       : resolveContextRouteForMessages(queryText, transformed, options.recentMessages)
     const capacity = contextCapacity(agent.session)
-    const maxInputTokens = resolveContextBudget(options, capacity)
-    const selection = selectContextMessages(transformed, route, { ...options, maxTokens: maxInputTokens }, currentTurnStart)
+    const personalAgent = ctx.get('personalAgent') as {
+      policy?: (session: Session) => { maxContextTokens?: number }
+    } | undefined
+    const policy = personalAgent === undefined || personalAgent.policy === undefined
+      ? undefined
+      : personalAgent.policy(agent.session)
+    const policyMaxTokens = policy?.maxContextTokens
+    const configuredMaxTokens = config.maxTokens === undefined
+      ? policyMaxTokens ?? options.maxTokens
+      : Math.min(options.maxTokens, policyMaxTokens ?? options.maxTokens)
+    const routedOptions = { ...options, maxTokens: configuredMaxTokens }
+    const maxInputTokens = resolveContextBudget(routedOptions, capacity)
+    const selection = selectContextMessages(transformed, route, { ...routedOptions, maxTokens: maxInputTokens }, currentTurnStart)
     agent.session.append('context/router', {
       turn,
       step,

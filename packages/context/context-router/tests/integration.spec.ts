@@ -23,6 +23,7 @@ describe('context router integration', () => {
     const current = user('当前请求')
     const transformed: Message[] = [system, current]
     let innerInput: readonly Message[] | undefined
+    ctx.provide('personalAgent', { policy: () => ({ maxContextTokens: 32_000 }) } as never)
     ctx.on('agent/request-context', async ({ messages }, next) => {
       innerInput = messages
       await next()
@@ -43,6 +44,7 @@ describe('context router integration', () => {
     expect(audit?.data).toMatchObject({
       inputMessages: 2,
       outputMessages: 2,
+      maxInputTokens: 32_000,
       selectedMessageIds: [String(system.id), String(current.id)],
     })
   })
