@@ -61,6 +61,13 @@ export function resolveContextBudget(
 const FULL_RE = /(?:完整|全部|所有|全量|从头|历史记录|完整回顾|full history|entire history|all context)/iu
 const FRESH_RE = /(?:新话题|新的问题|换个话题|换一个问题|不相关|无关|忽略上文|不用参考|new topic|unrelated|different question)/iu
 const TASK_RE = /(?:继续|刚才|之前|上次|这个任务|当前任务|接着|恢复|回到|continue|previous|earlier|resume|this task)/iu
+const FOLLOW_UP_RE = /(?:怎么回事|怎么办|改好了吗|修好了吗|完成了吗|结果呢|进展|还要多久|如何了|怎么样了|what happened|is it done|any update)/iu
+/** High-frequency Chinese function phrases are not useful routing evidence. */
+const ROUTING_STOPWORDS = new Set([
+  '这个', '那个', '问题', '事情', '内容', '部分', '东西', '方面', '一下', '怎么', '如何',
+  '可以', '需要', '现在', '已经', '还是', '然后', '以及', '关于', '帮我', '请问', '为什么',
+])
+const ROUTING_STOP_CHARS = new Set('个问题需要怎么解决一下关于请帮我为的了是和在有无')
 
 /** Extract model-visible text from one message for local routing heuristics. */
 export function messageText(message: Message): string {
@@ -89,8 +96,13 @@ export function resolveContextRouteForMessages(
 ): ContextRoute {
   const route = resolveContextRoute(query)
   if (route.scope !== 'recent') return route
+  if (FOLLOW_UP_RE.test(query)) return { scope: 'task', reason: '当前请求是对近期任务的简短追问' }
   const queryTerms = new Set(tokens(query))
-  if (queryTerms.size === 0) return route
+  if (queryTerms.size === 0) {
+    return query.trim() === ''
+      ? route
+      : { scope: 'fresh', reason: '当前请求只包含通用表达，无法建立可靠的历史联系' }
+  }
   const directUsers = messages.filter(message => message.source.kind === 'user')
   const prior = directUsers.slice(0, -1).slice(-Math.max(1, recentMessages))
   const connected = prior.some(message => tokens(messageText(message)).some(term => queryTerms.has(term)))
@@ -103,7 +115,8 @@ function tokens(text: string): string[] {
   const latin = text.toLocaleLowerCase().match(/[a-z0-9_./-]{2,}/gu) ?? []
   const cjk = text.match(/[\u3400-\u9fff]+/gu) ?? []
   const bigrams = cjk.flatMap(run => Array.from({ length: Math.max(0, run.length - 1) }, (_, index) => run.slice(index, index + 2)))
-  return [...new Set([...latin, ...bigrams])]
+  return [...new Set([...latin, ...bigrams])].filter(term => !ROUTING_STOPWORDS.has(term)
+    && !Array.from(term).some(character => ROUTING_STOP_CHARS.has(character)))
 }
 
 function estimate(message: Message): number {

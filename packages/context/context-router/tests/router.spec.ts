@@ -36,6 +36,16 @@ describe('context router', () => {
     expect(resolveContextRouteForMessages('context router 测试失败了', messages, 4).scope).toBe('recent')
   })
 
+  it('does not treat generic Chinese phrases as a task connection', () => {
+    const messages = [user('这个问题需要继续处理旧的登录任务'), user('这个问题怎么解决')]
+    expect(resolveContextRouteForMessages('这个问题怎么解决', messages, 4).scope).toBe('fresh')
+  })
+
+  it('keeps short status follow-ups attached to the recent task', () => {
+    const messages = [user('继续处理旧的登录任务'), user('改好了吗')]
+    expect(resolveContextRouteForMessages('改好了吗', messages, 4).scope).toBe('task')
+  })
+
   it('drops old ordinary history for a fresh question but keeps system and current user', () => {
     const messages = [createSystemMessage('system', 'test'), user('旧问题'), user('今天天气怎么样？')]
     const result = selectContextMessages(messages, resolveContextRoute('换个话题').scope === 'fresh'
