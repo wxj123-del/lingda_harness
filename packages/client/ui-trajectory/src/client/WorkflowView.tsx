@@ -37,6 +37,8 @@ interface WorkflowLane {
   readonly label: string
   readonly steps: readonly WorkflowStep[]
   readonly modelIndex?: number
+  readonly modelName?: string
+  readonly duration?: string
 }
 
 interface WorkflowData {
@@ -209,11 +211,24 @@ function buildWorkflowLanes(snapshot: TrajectorySnapshot, t: WorkflowViewProps['
         if (block.kind !== 'tool-call') continue
         shownCalls.add(block.callId)
       }
+      const modelName = node.providerMetadata?.model ?? node.requestConfig?.model
+      const callStart = node.timing?.stepStartTime
+      const callEnd = node.timing?.completedTime ?? node.time
+      const duration = callStart !== null && callStart !== undefined && callEnd >= callStart
+        ? formatMilliseconds(callEnd - callStart)
+        : undefined
+      const callInputs = modelName === undefined
+        ? pendingInputs
+        : pendingInputs.map((step, index) => index === pendingInputs.length - 1
+          ? { ...step, detail: modelName }
+          : step)
       lanes.push({
         key: `turn:${node.turn}:step:${node.step}:${node.seq}`,
         label: t('workflow.modelCall', { count: modelCount }),
-        steps: [...pendingInputs, modelStep],
+        steps: [...callInputs, modelStep],
         modelIndex: modelCount,
+        ...(modelName === undefined ? {} : { modelName }),
+        ...(duration === undefined ? {} : { duration }),
       })
       pendingInputs = []
       continue
@@ -243,17 +258,20 @@ function countTools(steps: readonly WorkflowStep[]): number {
   return steps.reduce((count, step) => count + (step.kind === 'tool' ? 1 : 0) + countTools(step.children ?? []), 0)
 }
 
-function formatDuration(snapshot: TrajectorySnapshot): string {
-  const times = snapshot.eventNodes
-    .map(node => node.time)
-    .filter((time): time is number => typeof time === 'number' && Number.isFinite(time))
-  if (times.length < 2) return '—'
-  const milliseconds = Math.max(0, Math.max(...times) - Math.min(...times))
+function formatMilliseconds(milliseconds: number): string {
   if (milliseconds < 1_000) return `${milliseconds}ms`
   const seconds = milliseconds / 1_000
   if (seconds < 60) return `${seconds.toFixed(seconds >= 10 ? 0 : 1)}s`
   const minutes = Math.floor(seconds / 60)
   return `${minutes}m${Math.round(seconds % 60)}s`
+}
+
+function formatDuration(snapshot: TrajectorySnapshot): string {
+  const times = snapshot.eventNodes
+    .map(node => node.time)
+    .filter((time): time is number => typeof time === 'number' && Number.isFinite(time))
+  if (times.length < 2) return '—'
+  return formatMilliseconds(Math.max(0, Math.max(...times) - Math.min(...times)))
 }
 
 function stepIcon(kind: WorkflowKind) {
@@ -262,6 +280,15 @@ function stepIcon(kind: WorkflowKind) {
     case 'model': return <IconSparkle16 size={14} />
     case 'tool': return <IconCodeOutline16 size={14} />
     case 'result': return <IconCheckOutline16 size={14} />
+  }
+}
+
+function stepTag(kind: WorkflowKind, t: WorkflowViewProps['t']): string {
+  switch (kind) {
+    case 'input': return t('workflow.requestTag')
+    case 'model': return t('workflow.responseTag')
+    case 'tool': return t('workflow.toolTag')
+    case 'result': return t('workflow.resultTag')
   }
 }
 
@@ -280,7 +307,7 @@ function WorkflowNode({ step, onInspect, onToggle, expanded, selectedCallId, t }
   const content = <>
     <span className={css.nodeIcon} aria-hidden="true">{stepIcon(step.kind)}</span>
     <span className={css.nodeContent}>
-      <span className={css.nodeTitle}>{step.title}</span>
+      <span className={css.nodeTitle}><span className={css.nodeTag}>{stepTag(step.kind, t)}</span>{step.title}</span>
       {step.detail !== undefined && <span className={css.nodeMeta}>{step.detail}</span>}
     </span>
     {step.status !== undefined && <span className={css.nodeStatus}>{t(step.status)}</span>}
@@ -305,6 +332,7 @@ function WorkflowNode({ step, onInspect, onToggle, expanded, selectedCallId, t }
         data-error={step.error || undefined}
         data-selected={selected || undefined}
         aria-pressed={selected || undefined}
+        aria-label={step.kind === 'tool' ? `${step.title}${step.detail ?? ''}${step.status === undefined ? '' : ` ${t(step.status)}`}` : undefined}
         title={t('workflow.inspect')}
         onClick={() => { onInspect(step.callId as string) }}
       >{content}</button>
@@ -437,6 +465,7 @@ export function WorkflowView({ useTrajectory, t }: WorkflowViewProps) {
   const { lanes, calls, modelCount } = data
   const [selectedCallId, setSelectedCallId] = useState<string | null>(null)
   const [canvasCollapsed, setCanvasCollapsed] = useState(false)
+  const [railCollapsed, setRailCollapsed] = useState(false)
   const [expandedIds, setExpandedIds] = useState<ReadonlySet<string>>(new Set())
   useEffect(() => {
     if (selectedCallId !== null && !calls.has(selectedCallId)) setSelectedCallId(null)
@@ -445,6 +474,11 @@ export function WorkflowView({ useTrajectory, t }: WorkflowViewProps) {
   const toolCount = lanes.reduce((count, lane) => count + countTools(lane.steps), 0)
   const userMessageCount = snapshot.eventNodes.filter(node => node.kind === 'user').length
   const modelLanes = lanes.filter(lane => lane.modelIndex !== undefined)
+  const firstInput = snapshot.eventNodes.find(node => node.kind === 'user' || node.kind === 'steering' || node.kind === 'context')
+  const conversationPreview = firstInput === undefined
+    ? t('workflow.userConversation')
+    : shorten(inputPreview(firstInput).trim(), 58) || t('workflow.userConversation')
+  const workflowRunning = snapshot.partial !== null || snapshot.runningCalls.length > 0
   const jumpToLane = (key: string): void => {
     const target = document.querySelector<HTMLElement>(`[data-workflow-lane="${CSS.escape(key)}"]`)
     target?.scrollIntoView({ behavior: 'smooth', block: 'start' })
@@ -485,7 +519,7 @@ export function WorkflowView({ useTrajectory, t }: WorkflowViewProps) {
         data-inspector-open={selectedCall === undefined ? undefined : true}
         data-canvas-collapsed={canvasCollapsed || undefined}
       >
-        <div className={css.canvas} data-collapsed={canvasCollapsed || undefined}>
+        <div className={css.canvas} data-workflow-canvas="true" data-collapsed={canvasCollapsed || undefined}>
           {canvasCollapsed
             ? <button
               type="button"
@@ -499,33 +533,55 @@ export function WorkflowView({ useTrajectory, t }: WorkflowViewProps) {
             </button>
             : lanes.length === 0
               ? <p className={css.empty}>{t('workflow.empty')}</p>
-              : <div className={css.canvasInner}>
-                <nav className={css.callRail} aria-label={t('workflow.callList')}>
+              : <div className={css.canvasInner} data-rail-collapsed={railCollapsed || undefined}>
+                <nav className={css.callRail} data-collapsed={railCollapsed || undefined} aria-label={t('workflow.callList')}>
                   <div className={css.callRailHeader}>
-                    <span>{t('workflow.userConversation')}</span>
-                    <strong>{userMessageCount}</strong>
+                    {!railCollapsed && <><span>{t('workflow.userConversation')}</span><strong>{userMessageCount}</strong></>}
+                    <button
+                      type="button"
+                      className={css.railToggle}
+                      aria-expanded={!railCollapsed}
+                      aria-label={railCollapsed ? t('workflow.expandSidebar') : t('workflow.collapseSidebar')}
+                      title={railCollapsed ? t('workflow.expandSidebar') : t('workflow.collapseSidebar')}
+                      onClick={() => { setRailCollapsed(value => !value) }}
+                    >
+                      {railCollapsed ? <IconChevronRightOutline14 size={14} /> : <IconChevronLeftOutline14 size={14} />}
+                    </button>
                   </div>
-                  <div className={css.callRailList}>
-                    {modelLanes.map(lane => (
-                      <button
-                        type="button"
-                        className={css.callRailItem}
-                        key={lane.key}
-                        onClick={() => { jumpToLane(lane.key) }}
-                      >
-                        <span className={css.callRailTitle}>{lane.label}</span>
-                        <span className={css.callRailMeta}>{t('workflow.toolsCount', { count: countTools(lane.steps) })}</span>
-                        <span className={css.callRailStatus}><span className={css.callRailDot} />{t('workflow.completed')}</span>
-                      </button>
-                    ))}
-                  </div>
+                  {!railCollapsed && <div className={css.callRailContent}>
+                    <button type="button" className={css.conversationItem} onClick={() => { document.querySelector<HTMLElement>('[data-workflow-canvas="true"]')?.scrollTo({ top: 0, behavior: 'smooth' }) }}>
+                      <span className={css.conversationTitle}>{conversationPreview}</span>
+                      <span className={css.conversationMeta}>{t('workflow.conversationSummary', { models: modelCount, tools: toolCount })}</span>
+                      <span className={css.callRailStatus} data-running={workflowRunning || undefined}><span className={css.callRailDot} />{workflowRunning ? t('workflow.running') : t('workflow.completed')}</span>
+                    </button>
+                    <div className={css.callRailSection}>{t('workflow.modelCalls')}</div>
+                    <div className={css.callRailList}>
+                      {modelLanes.map(lane => (
+                        <button
+                          type="button"
+                          className={css.callRailItem}
+                          key={lane.key}
+                          onClick={() => { jumpToLane(lane.key) }}
+                        >
+                          <span className={css.callRailTitle}>{lane.label}</span>
+                          <span className={css.callRailMeta}>{t('workflow.toolsCount', { count: countTools(lane.steps) })}</span>
+                          <span className={css.callRailStatus}><span className={css.callRailDot} />{t('workflow.completed')}</span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>}
                 </nav>
                 <div className={css.flowList}>
                   {lanes.map(lane => (
                     <div className={css.lane} key={lane.key} data-workflow-lane={lane.key}>
                       <div className={css.laneLabel}>
                         <span>{lane.label}</span>
-                        {lane.modelIndex !== undefined && <span className={css.laneMeta}>{t('workflow.callSummary', { tools: countTools(lane.steps) })}</span>}
+                        {lane.modelIndex !== undefined && <span className={css.laneMeta}>
+                          {lane.modelName !== undefined && <span className={css.laneModel}>{lane.modelName}</span>}
+                          {lane.duration !== undefined && <span>{lane.duration}</span>}
+                          {t('workflow.callSummary', { tools: countTools(lane.steps) })}
+                          <span className={css.laneStatus}><span className={css.callRailDot} />{workflowRunning ? t('workflow.running') : t('workflow.completed')}</span>
+                        </span>}
                       </div>
                       <div className={css.laneBody}>
                         {lane.steps.map((step, index) => (

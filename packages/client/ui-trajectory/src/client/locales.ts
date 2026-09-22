@@ -231,6 +231,13 @@ export const zh = {
   'workflow.callList': '模型调用列表',
   'workflow.userConversation': '用户对话',
   'workflow.callSummary': '{tools} 个工具调用',
+  'workflow.requestTag': 'REQUEST',
+  'workflow.responseTag': 'RESPONSE',
+  'workflow.toolTag': 'TOOL',
+  'workflow.resultTag': 'RESULT',
+  'workflow.conversationSummary': '{models} 个模型调用 · {tools} 个工具调用',
+  'workflow.collapseSidebar': '收起左侧栏',
+  'workflow.expandSidebar': '展开左侧栏',
 } as const
 
 /** The trajectory dictionary key union. */
@@ -475,4 +482,11 @@ export const en: Record<TrajectoryKey, string> = {
   'workflow.callList': 'Model call list',
   'workflow.userConversation': 'User conversation',
   'workflow.callSummary': '{tools} tool calls',
+  'workflow.requestTag': 'REQUEST',
+  'workflow.responseTag': 'RESPONSE',
+  'workflow.toolTag': 'TOOL',
+  'workflow.resultTag': 'RESULT',
+  'workflow.conversationSummary': '{models} model calls · {tools} tool calls',
+  'workflow.collapseSidebar': 'Collapse sidebar',
+  'workflow.expandSidebar': 'Expand sidebar',
 }

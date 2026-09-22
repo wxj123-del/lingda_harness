@@ -578,6 +578,11 @@ describe('tab switching in ConversationRoot', () => {
     fireEvent.click(screen.getByRole('button', { name: '展开工作流' }))
     expect(screen.getByRole('button', { name: '收起工作流' })).toBeTruthy()
 
+    fireEvent.click(screen.getByRole('button', { name: '收起左侧栏' }))
+    expect(screen.getByRole('button', { name: '展开左侧栏' })).toBeTruthy()
+    fireEvent.click(screen.getByRole('button', { name: '展开左侧栏' }))
+    expect(screen.getByRole('button', { name: '收起左侧栏' })).toBeTruthy()
+
     fireEvent.click(screen.getByRole('button', { name: /c1/ }))
     expect(screen.getByRole('complementary', { name: '工作流节点详情' }).textContent).toContain('c1')
   })
