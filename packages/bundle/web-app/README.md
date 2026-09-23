@@ -41,7 +41,7 @@ After startup you see a `dsh web:` line whose root URL carries a fresh process t
 
 Saved model selections override the composition default. Both protocols share `deepseek-official` and `llm-deepseek` settings, so switching preserves model selections and credential references. Endpoint overrides retain their values; the settings card lets users supply a compatible API address.
 
-The Feishu bot is included with the Web app. Open **Settings -> Connections -> Feishu bot**, enter the Feishu App ID, App Secret, and workspace path, save, and restart DSH to chat with the Agent from a phone. It uses an outbound WebSocket by default, so the phone and computer do not need to share a network. The Connections page is the extension point for additional software connectors.
+The Feishu bot is included with the Web app. Open **Settings -> Connections -> Feishu bot**, enter the Feishu App ID, App Secret, and workspace path, save, and restart DSH to chat with the Agent from a phone. It uses an outbound WebSocket by default, so the phone and computer do not need to share a network. **Settings -> Connections -> Phone access** opens one ngrok tunnel to this GUI for a phone on another network: save an authtoken, generate the code, quit DSH, run the printed `dsh web --trusted-host <host>`, and scan once it is up. The Connections page is the extension point for additional software connectors.
 
 ### Configuration
 

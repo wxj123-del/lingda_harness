@@ -35,6 +35,9 @@
     },
     {
       "path": "../ui-slots"
+    },
+    {
+      "path": "../../webhook/phone-access"
     }
   ]
 }

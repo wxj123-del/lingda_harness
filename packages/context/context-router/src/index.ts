@@ -22,8 +22,14 @@ import {
   type ContextRouterOptions,
 } from './router.ts'
 
-export { contextCapacity, messageText, messageTokens, resolveContextBudget, resolveContextRoute, resolveContextRouteForMessages, selectContextMessages }
-export type { ContextAuditMetadata, ContextCapacity, ContextMessageAudit, ContextMessageKind, ContextRoute, ContextRouteSignal, ContextScope, ContextSelection, ContextRouterOptions } from './router.ts'
+export {
+  contextCapacity, messageText, messageTokens, resolveContextBudget, resolveContextRoute,
+  resolveContextRouteForMessages, selectContextMessages,
+}
+export type {
+  ContextAuditMetadata, ContextCapacity, ContextMessageAudit, ContextMessageKind, ContextRoute,
+  ContextRouteSignal, ContextScope, ContextSelection, ContextRouterOptions,
+} from './router.ts'
 
 /** Cordis plugin name used by loader diagnostics. */
 export const name = 'context-router'
@@ -637,7 +643,7 @@ export function apply(ctx: Context, config: Config = {}): void {
       turn,
       step,
       scope: selection.scope,
-      signal: selection.signal,
+      ...(selection.signal === undefined ? {} : { signal: selection.signal }),
       reason: selection.reason,
       inputMessages: transformed.length,
       outputMessages: selection.messages.length,

@@ -521,7 +521,7 @@ export function selectContextMessages(
     messages: result,
     scope: route.scope,
     reason: route.reason,
-    signal: route.signal,
+    ...(route.signal === undefined ? {} : { signal: route.signal }),
     estimatedInputTokens,
     droppedMessages: Math.max(0, messages.length - result.length),
     budgetExceeded: overflowTokens > 0,

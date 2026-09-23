@@ -2,12 +2,15 @@ import { describe, expect, it, vi } from 'vitest'
 import { Context } from '@deepseek-ai/cordis'
 import { agentEvents, type Agent } from '@deepseek-ai/dsh-agent'
 import { ToolCallId, createAssistantMessage, createSystemMessage, createToolResultMessage, createUserMessage } from '@deepseek-ai/dsh-llm'
-import type { Message } from '@deepseek-ai/dsh-llm'
+import type { Message, UserMessage } from '@deepseek-ai/dsh-llm'
 import SessionStore, { SessionId } from '@deepseek-ai/dsh-session'
+// Type-only: merges the personal-agent task events into SessionEventMap, which
+// the durable task fixtures append.
+import type {} from '@deepseek-ai/dsh-personal-agent'
 import { apply as applyContextRouter } from '../src/index.ts'
 import { selectContextMessages } from '../src/router.ts'
 
-const user = (text: string): Message => createUserMessage({
+const user = (text: string): UserMessage => createUserMessage({
   source: { kind: 'user' },
   content: [{ type: 'text', text }],
 })
@@ -139,14 +142,14 @@ describe('context router integration', () => {
       content: [{ type: 'text', text: '原始工具结果' }],
     })
     const normalized = '规范化后的工具结果'
-    ctx.on('agent/request-context', async ({ messages }, next) => {
+    ctx.on('agent/request-context', async (_payload, next) => {
       const downstream = await next()
       return downstream.map(message => message.source.kind === 'tool'
         ? {
           ...message,
           content: [{
-            type: 'tool-result', toolCallId: callId, isError: false,
-            content: [{ type: 'text', text: normalized }],
+            type: 'tool-result' as const, toolCallId: callId, isError: false,
+            content: [{ type: 'text' as const, text: normalized }],
           }],
         }
         : message)
@@ -173,7 +176,7 @@ describe('context router integration', () => {
     const routed = await agentEvents(ctx, agent).waterfall('agent/request-context', {
       turn: 1, step: 1, messages: [current], signal: new AbortController().signal,
     }, () => Promise.resolve([current]))
-    const projected = {
+    const projected: Message = {
       ...routed[0]!,
       content: [{ type: 'text', text: 'provider-visible projected content' }],
     }
@@ -286,10 +289,10 @@ describe('context router integration', () => {
     const current = user('好的')
     session.append('turn/start', { turn: 1 })
     session.append('user/message', old, { surfaceOp: 'append' })
-    session.append('task/created' as never, {
+    session.append('task/created', {
       id: 'task-1', goal: '实现飞书消息渲染', status: 'created', owner: 'test', turn: 1,
       budget: { maxSteps: 2 }, createdAt: 1, updatedAt: 1,
-    } as never, { ignorable: true } as never)
+    }, { ignorable: true })
     session.append('turn/end', { turn: 1, reason: { kind: 'completed' } })
     session.append('turn/start', { turn: 2 })
     session.append('user/message', current, { surfaceOp: 'append' })
@@ -313,10 +316,10 @@ describe('context router integration', () => {
     const current = user('好的')
     session.append('turn/start', { turn: 1 })
     for (const message of prior) session.append('user/message', message, { surfaceOp: 'append' })
-    session.append('task/created' as never, {
+    session.append('task/created', {
       id: 'task-bounded', goal: '持续任务', status: 'created', owner: 'test', turn: 1,
       budget: { maxSteps: 2 }, createdAt: 1, updatedAt: 1,
-    } as never, { ignorable: true } as never)
+    }, { ignorable: true })
     session.append('turn/end', { turn: 1, reason: { kind: 'completed' } })
     session.append('turn/start', { turn: 2 })
     session.append('user/message', current, { surfaceOp: 'append' })
@@ -340,10 +343,10 @@ describe('context router integration', () => {
     const current = user('继续上下文路由任务')
     session.append('turn/start', { turn: 1 })
     session.append('user/message', old, { surfaceOp: 'append' })
-    session.append('task/created' as never, {
+    session.append('task/created', {
       id: 'task-1', goal: '持续优化上下文路由', status: 'created', owner: 'test', turn: 1,
       budget: { maxSteps: 2 }, createdAt: 1, updatedAt: 1,
-    } as never, { ignorable: true } as never)
+    }, { ignorable: true })
     session.append('turn/end', { turn: 1, reason: { kind: 'completed' } })
     session.append('turn/start', { turn: 2 })
     session.append('user/message', current, { surfaceOp: 'append' })

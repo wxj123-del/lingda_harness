@@ -30,6 +30,7 @@ import type { PluginsSettingsSectionInjected, PluginsSettingsTabEntry } from './
 import { SubagentModelSelectionCard } from './SubagentModelSelectionCard.tsx'
 import { WebSearchCard } from './WebSearchCard.tsx'
 import { FeishuCard } from './FeishuCard.tsx'
+import { PhoneAccessCard } from './PhoneAccessCard.tsx'
 import { AGENT_LOOP_NS, AgentLoopCardController } from './agent-loop-card-controller.ts'
 import { SHELL_NS, BashCardController } from './bash-card-controller.ts'
 import { ConfigurablePluginsTabController } from './tab-store.ts'
@@ -38,6 +39,7 @@ import {
 } from './subagent-model-selection-card-controller.ts'
 import { WEB_SEARCH_NS, WebSearchCardController } from './web-search-card-controller.ts'
 import { FEISHU_NS, FeishuCardController } from './feishu-card-controller.ts'
+import { PhoneAccessCardController } from './phone-access-card-controller.ts'
 import { en, zh } from './locales.ts'
 
 export type { PluginsSettingsSectionInjected, PluginsSettingsSectionProps } from './PluginsSettingsSection.tsx'
@@ -53,6 +55,7 @@ export type { AgentLoopCardFace, AgentLoopCardState } from './agent-loop-card-co
 export type { BashCardFace, BashCardState } from './bash-card-controller.ts'
 export type { WebSearchCardFace, WebSearchCardState } from './web-search-card-controller.ts'
 export type { FeishuCardFace, FeishuCardState } from './feishu-card-controller.ts'
+export type { PhoneAccessCardFace, PhoneAccessCardState, PhoneAccessTunnel } from './phone-access-card-controller.ts'
 
 /** Dictionary namespace owned by this plugin. */
 const NS = 'settings.plugins'
@@ -79,6 +82,7 @@ export function apply(ctx: ClientContext): void {
     ctx,
   )
   const feishu = new FeishuCardController(ctx.settingsScope.bind({ namespace: FEISHU_NS }), ctx)
+  const phoneAccess = new PhoneAccessCardController(ctx.settingsScope.bind({ namespace: FEISHU_NS }), ctx)
 
   // The credential a card reports is not part of any settings section, so its
   // scope publishes nothing when one is written. This is the only signal that
@@ -90,6 +94,10 @@ export function apply(ctx: ClientContext): void {
   ctx.effect(
     () => ctx.remote.$on('credentials/reference-updated', (ref) => { feishu.refreshCredential(ref) }),
     'ui-settings-plugins: Feishu credential invalidations',
+  )
+  ctx.effect(
+    () => ctx.remote.$on('credentials/reference-updated', (ref) => { phoneAccess.refreshCredential(ref) }),
+    'ui-settings-plugins: phone access credential invalidations',
   )
   ctx.effect(
     () => ctx.remote.$on('llm/adapters-updated', () => { subagentModelSelection.refreshCatalog() }),
@@ -215,4 +223,10 @@ export function apply(ctx: ClientContext): void {
     locale: NS,
     inject: () => feishu.inject(),
   }, FeishuCard))
+  ctx.slots.inject('settings.integration.item', () => ctx.slots.register({
+    name: 'settings.integration.item',
+    id: 'phone-access',
+    locale: NS,
+    inject: () => phoneAccess.inject(),
+  }, PhoneAccessCard))
 }

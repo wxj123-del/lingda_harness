@@ -493,6 +493,7 @@
       "@deepseek-ai/dsh-web-search-perplexity": ["./packages/web/web-search-perplexity/src"],
       "@deepseek-ai/dsh-webhook": ["./packages/webhook/webhook/src"],
       "@deepseek-ai/dsh-webhook/invariant": ["./packages/webhook/webhook/src/invariant.ts"],
+      "@deepseek-ai/dsh-phone-access": ["./packages/webhook/phone-access/src"],
       "@deepseek-ai/dsh-webhook-feishu": ["./packages/webhook/webhook-feishu/src"],
       "@deepseek-ai/dsh-webhook-github": ["./packages/webhook/webhook-github/src"],
       "@deepseek-ai/dsh-win32-process": ["./packages/subprocess/win32-process/src"],

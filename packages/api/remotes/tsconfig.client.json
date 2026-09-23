@@ -87,6 +87,9 @@
       "path": "../settings-controller"
     },
     {
+      "path": "../../webhook/phone-access"
+    },
+    {
       "path": "../workspace-controller/tsconfig.client.json"
     },
     {

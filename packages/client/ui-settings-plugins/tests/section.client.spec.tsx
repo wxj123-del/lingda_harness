@@ -14,6 +14,8 @@ import { ConnectionsSection } from '../src/client/ConnectionsSection.tsx'
 import type { ConnectionsSectionProps } from '../src/client/ConnectionsSection.tsx'
 import { FeishuCard } from '../src/client/FeishuCard.tsx'
 import type { FeishuCardProps } from '../src/client/FeishuCard.tsx'
+import { PhoneAccessCard } from '../src/client/PhoneAccessCard.tsx'
+import type { PhoneAccessCardProps } from '../src/client/PhoneAccessCard.tsx'
 import { PluginsSettingsSection } from '../src/client/PluginsSettingsSection.tsx'
 import type { PluginsSettingsSectionProps, PluginsSettingsTabEntry } from '../src/client/PluginsSettingsSection.tsx'
 import { SubagentModelSelectionCard } from '../src/client/SubagentModelSelectionCard.tsx'
@@ -24,6 +26,7 @@ import type { AgentLoopCardState } from '../src/client/agent-loop-card-controlle
 import type { BashCardState } from '../src/client/bash-card-controller.ts'
 import type { CardFieldState, CardShell } from '../src/client/card-form.ts'
 import type { ConfigurablePluginsTabState } from '../src/client/tab-store.ts'
+import type { PhoneAccessCardState } from '../src/client/phone-access-card-controller.ts'
 import type { WebSearchCardState } from '../src/client/web-search-card-controller.ts'
 import type { SubagentModelSelectionCardState } from '../src/client/subagent-model-selection-card-controller.ts'
 import { en } from '../src/client/locales.ts'
@@ -80,6 +83,23 @@ function renderConnections(rendered = 'feishu') {
   } as unknown as ConnectionsSectionProps
   render(<ConnectionsSection {...props} />)
   return props.renderSlot
+}
+
+function renderPhoneAccess(state: Partial<PhoneAccessCardState> = {}) {
+  const store = createSnapshotStore<PhoneAccessCardState>({
+    ...settled,
+    token: field(''),
+    tokenConfigured: false,
+    tokenWritable: true,
+    generating: false,
+    tunnel: undefined,
+    failure: undefined,
+    ...state,
+  })
+  const actions = { ...cardActions(), generate: vi.fn() }
+  const props = { ...actions, t, usePhoneAccessCard: bindSnapshotSelector(store) } as unknown as PhoneAccessCardProps
+  render(<PhoneAccessCard {...props} />)
+  return actions
 }
 
 function renderFeishu(state: Partial<import('../src/client/feishu-card-controller.ts').FeishuCardState> = {}) {
@@ -222,6 +242,42 @@ describe('ConnectionsSection', () => {
     expect(screen.getByRole('heading', { name: en.connectionsTitle })).toBeTruthy()
     expect(screen.getByText('feishu')).toBeTruthy()
     expect(renderSlot).toHaveBeenCalledWith('settings.integration.item', {})
+  })
+})
+
+describe('PhoneAccessCard', () => {
+  it('stages the authtoken and withholds the code until one is configured', () => {
+    const actions = renderPhoneAccess()
+    fireEvent.click(screen.getByText(en.phoneAccessTitle))
+
+    expect(screen.getByRole('button', { name: en.phoneAccessGenerate })).toHaveProperty('disabled', true)
+    expect(screen.queryByText(en.phoneAccessWarning)).toBeNull()
+    fireEvent.change(screen.getByLabelText(en.phoneAccessToken), { target: { value: 'tok' } })
+
+    expect(actions.edit).toHaveBeenCalledWith('token', 'tok')
+  })
+
+  it('asks for a tunnel once a token is configured', () => {
+    const actions = renderPhoneAccess({ tokenConfigured: true })
+    fireEvent.click(screen.getByText(en.phoneAccessTitle))
+
+    fireEvent.click(screen.getByRole('button', { name: en.phoneAccessGenerate }))
+
+    expect(actions.generate).toHaveBeenCalledTimes(1)
+  })
+
+  it('shows the scan warning and the restart command for a live tunnel', () => {
+    renderPhoneAccess({
+      tokenConfigured: true,
+      tunnel: {
+        scanUrl: 'https://abc.ngrok-free.app/?token=launch',
+        restartCommand: 'dsh web --trusted-host abc.ngrok-free.app',
+      },
+    })
+    fireEvent.click(screen.getByText(en.phoneAccessTitle))
+
+    expect(screen.getByText(en.phoneAccessWarning)).toBeTruthy()
+    expect(screen.getByText('dsh web --trusted-host abc.ngrok-free.app')).toBeTruthy()
   })
 })
 

@@ -28,6 +28,9 @@
     },
     {
       "path": "../../llm/token-meter"
+    },
+    {
+      "path": "../../interaction/personal-agent"
     }
   ]
 }

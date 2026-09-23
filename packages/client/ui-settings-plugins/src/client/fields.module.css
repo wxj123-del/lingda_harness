@@ -91,3 +91,52 @@
   line-height: 1.5;
   color: var(--dsw-alias-label-tertiary);
 }
+
+.action {
+  align-self: flex-start;
+  appearance: none;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  padding: 5px 14px;
+  background: var(--dsw-alias-label-primary);
+  font: inherit;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--dsw-alias-bg-layer-3);
+  cursor: pointer;
+}
+
+.action:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.action:focus-visible {
+  outline: 2px solid var(--dsw-alias-brand-primary);
+  outline-offset: 1px;
+}
+
+.qr {
+  width: 220px;
+  height: 220px;
+  border-radius: 8px;
+  background: var(--dsw-alias-bg-layer-3);
+}
+
+.command {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.command code {
+  flex: 1;
+  min-width: 0;
+  overflow-x: auto;
+  padding: 6px 10px;
+  border-radius: 8px;
+  background: var(--dsw-alias-bg-layer-3);
+  font-size: 12px;
+  line-height: 1.5;
+  white-space: nowrap;
+}

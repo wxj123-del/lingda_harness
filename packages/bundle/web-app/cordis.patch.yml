@@ -170,6 +170,13 @@
         requireMention: true
         allowedOpenIds: []
 
+    # Phone QR access. Idle until an authtoken is saved from Settings ->
+    # Connections -> Phone access; generating a code opens one ngrok tunnel to
+    # this process's Web port and the card prints the restart command that
+    # admits the resulting domain.
+    - id: phone-access
+      name: '@deepseek-ai/dsh-phone-access'
+
     # Web glue owned by this bundle: resolves the built frontend dist (an
     # assembly fact of dsh-web-app, never user config), mounts the
     # frontend-static fallback owner, registers the web-surface prompt

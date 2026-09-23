@@ -39,7 +39,7 @@ dsh --profile web --mobile --no-open
 
 **设置 → 模型**显示 **DeepSeek**，使用 `DEEPSEEK_API_KEY`。默认模型为 `deepseek-official` / `deepseek-flash`（DeepSeek-V41-Flash）。[DeepSeek 插件](../../llm/llm-deepseek/README.zh.md#choose-a-protocol)默认使用 Messages；在 Cordis YAML 中设置 `protocol: chat-completions` 可选择 Chat Completions。Web 不提供协议选择器。
 
-飞书机器人也随 Web 版一起提供。打开 **设置 → 连接服务 → 飞书机器人**，填写飞书应用的 App ID、App Secret 和工作区路径，保存并重启 DSH 后即可从手机飞书与 Agent 对话。默认使用出站 WebSocket，不要求手机和电脑处于同一网络；连接服务页面也为其他软件连接器预留了扩展入口。
+飞书机器人也随 Web 版一起提供。打开 **设置 → 连接服务 → 飞书机器人**，填写飞书应用的 App ID、App Secret 和工作区路径，保存并重启 DSH 后即可从手机飞书与 Agent 对话。默认使用出站 WebSocket，不要求手机和电脑处于同一网络。**设置 → 连接服务 → 手机访问** 为另一张网络上的手机打开一条指向本界面的 ngrok 隧道：保存 authtoken，生成二维码，退出 DSH，运行卡片给出的 `dsh web --trusted-host <主机名>`，等它起来后再扫。连接服务页面也为其他软件连接器预留了扩展入口。
 
 已保存的模型选择优先于组合默认值。两种协议共用 `deepseek-official` 与 `llm-deepseek` 设置，因此切换协议不改变模型选择或复制凭据。端点覆盖保持原值；设置卡片允许用户填写兼容的 API 地址。
 

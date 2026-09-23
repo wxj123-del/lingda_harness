@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { ToolCallId, createAssistantMessage, createSystemMessage, createToolResultMessage, createUserMessage } from '@deepseek-ai/dsh-llm'
-import type { Message } from '@deepseek-ai/dsh-llm'
+import type { Message, UserMessage } from '@deepseek-ai/dsh-llm'
 import { CompactionId } from '@deepseek-ai/dsh-compaction'
 import { compactCheckpointSource } from '@deepseek-ai/dsh-compaction/checkpoint'
 import { estimateMessage, estimateToolsTokens } from '@deepseek-ai/dsh-token-meter'
@@ -22,7 +22,10 @@ describe('context router', () => {
   it('reads provider capacity from the durable request header', () => {
     const capacity = contextCapacity({
       requestContext: () => ({ provider: 'test', model: 'test', contextWindow: 8_192 }),
-      requestHeader: () => ({ config: { maxTokens: 2_048 }, tools: [{ name: 'lookup' }] }),
+      requestHeader: () => ({
+        config: { provider: 'test', model: 'test', maxTokens: 2_048 },
+        tools: [{ name: 'lookup', description: 'look up', parameters: {} }],
+      }),
     })
     expect(capacity.contextWindow).toBe(8_192)
     expect(capacity.outputBudgetTokens).toBe(2_048)
@@ -33,7 +36,10 @@ describe('context router', () => {
     const messages = [createSystemMessage('system', 'system prompt'), user('current request')]
     const selection = selectContextMessages(messages, { scope: 'full', reason: 'test' })
     expect(selection.estimatedInputTokens).toBe(messages.reduce((total, message) => total + estimateMessage(message), 0))
-    const header = { config: {}, tools: [{ name: 'lookup' }] }
+    const header = {
+      config: { provider: 'test', model: 'test' },
+      tools: [{ name: 'lookup', description: 'look up', parameters: {} }],
+    }
     expect(contextCapacity({
       requestContext: () => ({ provider: 'test', model: 'test', contextWindow: 8_192 }),
       requestHeader: () => header,
@@ -197,13 +203,15 @@ describe('context router', () => {
         { type: 'tool-call', id: second, name: 'lookup', arguments: '{}' },
       ],
     })
+    // Two results share one message, which the single-result constructor cannot
+    // express; the cast keeps the sibling block the router must not drop.
     const result = createUserMessage({
-      source: { kind: 'tool' },
+      source: { kind: 'tool', callId: first },
       content: [
         { type: 'tool-result', toolCallId: first, isError: false, content: [{ type: 'text', text: 'one' }] },
         { type: 'tool-result', toolCallId: second, isError: false, content: [{ type: 'text', text: 'two' }] },
       ],
-    })
+    }) as UserMessage
     const messages = [user('old'), assistant, result, user('current')]
     const retained = selectContextMessages(messages, { scope: 'full', reason: 'test' })
     expect(retained.messages).toEqual(messages)

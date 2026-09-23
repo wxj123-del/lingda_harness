@@ -25,7 +25,7 @@ Use the independent **Plugins** page to configure the plugins exposed by the cur
 <a id="use-this-package"></a>
 ## Use this package
 
-Open **Plugins** from product navigation and select the **Plugin configuration** tab to edit the host-plane plugins this deployment composes. Open **Connections** to configure external software connectors. The Web bundle currently contributes a Feishu bot card there; additional connectors can register cards without changing the settings shell.
+Open **Plugins** from product navigation and select the **Plugin configuration** tab to edit the host-plane plugins this deployment composes. Open **Connections** to configure external software connectors. The Web bundle contributes a Feishu bot card and a Phone access card there; additional connectors can register cards without changing the settings shell.
 
 ### What appears here
 

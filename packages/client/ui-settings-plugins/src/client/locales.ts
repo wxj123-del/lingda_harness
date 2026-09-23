@@ -16,6 +16,9 @@ export type PluginsSettingsLocaleKey =
   | 'feishuAppSecret' | 'feishuAppSecretHint' | 'feishuCredentialSet' | 'feishuCredentialUnset'
   | 'feishuWorkspacePath' | 'feishuWorkspacePathHint' | 'feishuAgentPreset' | 'feishuAgentPresetHint'
   | 'feishuPermissionPreset' | 'feishuPermissionPresetHint' | 'feishuRequireMention' | 'feishuRequireMentionHint'
+  | 'phoneAccessTitle' | 'phoneAccessDescription' | 'phoneAccessToken' | 'phoneAccessTokenHint'
+  | 'phoneAccessCredentialSet' | 'phoneAccessCredentialUnset' | 'phoneAccessGenerate' | 'phoneAccessGenerating'
+  | 'phoneAccessMissing' | 'phoneAccessWarning' | 'phoneAccessRestart' | 'phoneAccessCopy' | 'phoneAccessCopied'
   | 'subagentModelSelectionTitle' | 'subagentModelSelectionDescription'
   | 'subagentModelSelectionToggle' | 'subagentModelSelectionChoose' | 'subagentModelSelectionAllowed'
   | 'subagentModelSelectionLoading' | 'subagentModelSelectionLoadFailed' | 'subagentModelSelectionRetry'
@@ -81,6 +84,19 @@ export const en: Record<PluginsSettingsLocaleKey, string> = {
   feishuPermissionPresetHint: 'Start with read-only. This controls what the remote agent may do.',
   feishuRequireMention: 'Require @mention in group chats',
   feishuRequireMentionHint: 'Private chats always work; group messages are ignored unless the bot is mentioned when enabled.',
+  phoneAccessTitle: 'Phone access',
+  phoneAccessDescription: 'Open this DSH from a phone on another network by scanning a code.',
+  phoneAccessToken: 'ngrok authtoken',
+  phoneAccessTokenHint: 'Stored outside the settings file. Install ngrok and sign in before generating a code.',
+  phoneAccessCredentialSet: 'Configured',
+  phoneAccessCredentialUnset: 'Not configured',
+  phoneAccessGenerate: 'Generate QR code',
+  phoneAccessGenerating: 'Generating…',
+  phoneAccessMissing: 'ngrok is not installed on this computer, or the authtoken was rejected.',
+  phoneAccessWarning: 'This code is a login key. Do not share it.',
+  phoneAccessRestart: 'Quit DSH, run this, wait until it is up, then scan:',
+  phoneAccessCopy: 'Copy',
+  phoneAccessCopied: 'Copied',
   subagentModelSelectionTitle: 'Subagent',
   subagentModelSelectionDescription: 'Control which models agents may choose for subagents.',
   subagentModelSelectionToggle: 'Allow agents to choose models for subagents',
@@ -156,6 +172,19 @@ export const zh: Record<PluginsSettingsLocaleKey, string> = {
   feishuPermissionPresetHint: '建议先使用 read-only，控制远程 Agent 可以执行的操作。',
   feishuRequireMention: '群聊需要 @机器人',
   feishuRequireMentionHint: '私聊始终有效；开启后，群聊消息必须 @机器人 才会处理。',
+  phoneAccessTitle: '手机访问',
+  phoneAccessDescription: '在另一台网络的手机上扫码打开这个 DSH。',
+  phoneAccessToken: 'ngrok authtoken',
+  phoneAccessTokenHint: '不写入设置文件。生成二维码前请先安装 ngrok 并登录。',
+  phoneAccessCredentialSet: '已配置',
+  phoneAccessCredentialUnset: '未配置',
+  phoneAccessGenerate: '生成二维码',
+  phoneAccessGenerating: '生成中…',
+  phoneAccessMissing: '本机没有安装 ngrok，或 authtoken 无效。',
+  phoneAccessWarning: '这个码等同于登录钥匙，不要发给别人。',
+  phoneAccessRestart: '先退出当前 DSH，运行这行，等它起来后再扫：',
+  phoneAccessCopy: '复制',
+  phoneAccessCopied: '已复制',
   subagentModelSelectionTitle: 'Subagent',
   subagentModelSelectionDescription: '控制 Agent 为 Subagent 选择模型的权限。',
   subagentModelSelectionToggle: '允许 Agent 为 Subagent 选择模型',

@@ -7,6 +7,7 @@ import ToolRuntime, { defineContentToolFixture } from '@deepseek-ai/dsh-tools'
 import type { Agent } from '@deepseek-ai/dsh-agent'
 import { agentEvents, assembleContextFor } from '@deepseek-ai/dsh-agent'
 import { ToolCallId, createAssistantMessage, createToolResultMessage, createUserMessage } from '@deepseek-ai/dsh-llm'
+import type { ToolResultMessage, UserMessage } from '@deepseek-ai/dsh-llm'
 import { SettingsProvider } from '@deepseek-ai/dsh-settings'
 import type { SettingsNamespace } from '@deepseek-ai/dsh-settings'
 import PersonalAgentService, { suggestMode, type Config as PersonalAgentConfig } from '../src/index.ts'
@@ -22,7 +23,9 @@ class MemorySettings extends SettingsProvider {
   }
 }
 
-async function harness(withSettings = false, personalConfig?: PersonalAgentConfig): Promise<{ ctx: Context; session: Session; agent: Agent }> {
+async function harness(
+  withSettings = false, personalConfig?: PersonalAgentConfig,
+): Promise<{ ctx: Context; session: Session; agent: Agent }> {
   const ctx = new Context()
   await ctx.plugin(SessionStore)
   await ctx.plugin(SessionProjectionRegistry)
@@ -68,7 +71,9 @@ describe('personal agent modes', () => {
     ctx.systemPrompt.section({ name: 'tool:bash', order: 100, text: 'bash guidance' })
     const assembly = await ctx.systemPrompt.assemble(assembleContextFor(agent))
     expect(assembly.tools.map(tool => tool.name)).not.toContain('read')
-    const denied = await ctx.tools.execute({ name: 'bash', callId: 'mode-denied' as never, arguments: {}, agent, signal: new AbortController().signal })
+    const denied = await ctx.tools.execute({
+      name: 'bash', callId: 'mode-denied' as never, arguments: {}, agent, signal: new AbortController().signal,
+    })
     expect(denied.isError).toBe(true)
     expect(JSON.stringify(denied.content)).toContain('不在当前问答模式的允许范围内')
   })
@@ -135,7 +140,9 @@ describe('personal agent modes', () => {
     const { ctx, agent } = await harness(false, { modes: { qa: { maxContextTokens: 20 } } })
     const old = createUserMessage({ source: { kind: 'user' }, content: [{ type: 'text', text: '旧历史内容' }] })
     const current = createUserMessage({ source: { kind: 'user' }, content: [{ type: 'text', text: '当前用户请求必须保留' }] })
-    const retrieval = createUserMessage({ source: { kind: 'plugin', plugin: 'knowledge-auto-retrieval' }, content: [{ type: 'text', text: '检索结果应该被裁剪' }] })
+    const retrieval = createUserMessage({
+      source: { kind: 'plugin', plugin: 'knowledge-auto-retrieval' }, content: [{ type: 'text', text: '检索结果应该被裁剪' }],
+    })
     agent.session.append('turn/start', { turn: 1 })
     agent.session.append('user/message', old, { surfaceOp: 'append' })
     agent.session.append('user/message', current, { surfaceOp: 'append' })
@@ -185,7 +192,8 @@ describe('personal agent modes', () => {
     })
     session.append('turn/start', { turn: 1 })
     session.append('user/message', current, { surfaceOp: 'append' })
-    session.append('assistant/message', { turn: 1, step: 1, message: assistant, stream: [], usage: { inputTokens: 0, outputTokens: 0 } }, { surfaceOp: 'append' })
+    session.append('assistant/message',
+      { turn: 1, step: 1, message: assistant, stream: [], usage: { inputTokens: 0, outputTokens: 0 } }, { surfaceOp: 'append' })
     session.append('tool/result', { turn: 1, step: 1, message: result }, { surfaceOp: 'append' })
     const retained = await agentEvents(ctx, agent).waterfall('agent/request-context', {
       turn: 1, step: 2, messages: [current, assistant, result], signal: new AbortController().signal,
@@ -205,18 +213,23 @@ describe('personal agent modes', () => {
         { type: 'tool-call', id: second, name: 'lookup', arguments: '{}' },
       ],
     })
+    // Two results share one message, which the single-result constructor cannot
+    // express; the cast keeps the sibling block this layer must clip in place.
     const result = createUserMessage({
-      source: { kind: 'tool' },
+      source: { kind: 'tool', callId: first },
       content: [
         { type: 'tool-result', toolCallId: first, isError: false, content: [{ type: 'text', text: 'a'.repeat(500) }] },
         { type: 'tool-result', toolCallId: second, isError: false, content: [{ type: 'text', text: 'b'.repeat(500) }] },
       ],
-    })
+    }) as UserMessage
     const current = createUserMessage({ source: { kind: 'user' }, content: [{ type: 'text', text: '当前请求' }] })
     session.append('turn/start', { turn: 1 })
     session.append('user/message', current, { surfaceOp: 'append' })
-    session.append('assistant/message', { turn: 1, step: 1, message: assistant, stream: [], usage: { inputTokens: 0, outputTokens: 0 } }, { surfaceOp: 'append' })
-    session.append('tool/result', { turn: 1, step: 1, message: result }, { surfaceOp: 'append' })
+    session.append('assistant/message',
+      { turn: 1, step: 1, message: assistant, stream: [], usage: { inputTokens: 0, outputTokens: 0 } }, { surfaceOp: 'append' })
+    // The durable event types a tool result as one block, while this case feeds
+    // the request a message carrying two; the log row only has to exist.
+    session.append('tool/result', { turn: 1, step: 1, message: result as unknown as ToolResultMessage }, { surfaceOp: 'append' })
     const retained = await agentEvents(ctx, agent).waterfall('agent/request-context', {
       turn: 1, step: 1, messages: [assistant, result, current], signal: new AbortController().signal,
     }, () => Promise.resolve([assistant, result, current]))
@@ -224,7 +237,8 @@ describe('personal agent modes', () => {
     const output = retained.find(message => message.role === 'user' && message.source.kind === 'tool')
     expect(output?.content).toHaveLength(2)
     expect(output?.content.every(block => block.type === 'tool-result' && block.content[0]?.type === 'text')).toBe(true)
-    expect(output?.content.every(block => block.type === 'tool-result' && block.content[0]?.type === 'text' && block.content[0].text.includes('工具结果已裁剪'))).toBe(true)
+    expect(output?.content.every(block => block.type === 'tool-result'
+      && block.content[0]?.type === 'text' && block.content[0].text.includes('工具结果已裁剪'))).toBe(true)
   })
 
   it('projects a durable task lifecycle on top of turn events', async () => {
@@ -234,7 +248,9 @@ describe('personal agent modes', () => {
     expect(ctx.sessionProjections.stateOf(session, 'personalAgentTask')?.current).toMatchObject({
       id: `${String(session.id)}:1`, status: 'created', turn: 1,
     })
-    session.append('user/message', createUserMessage({ source: { kind: 'user' }, content: [{ type: 'text', text: '实现任务状态投影' }] }), { surfaceOp: 'append' })
+    session.append('user/message', createUserMessage({
+      source: { kind: 'user' }, content: [{ type: 'text', text: '实现任务状态投影' }],
+    }), { surfaceOp: 'append' })
     session.append('step/start', { turn: 1, step: 1 })
     session.append('turn/end', { turn: 1, reason: { kind: 'completed' } })
     await new Promise(resolve => setTimeout(resolve, 0))
