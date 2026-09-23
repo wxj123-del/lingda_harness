@@ -8,6 +8,7 @@
 
 import type {} from '@deepseek-ai/dsh-api-session-controller/remote-events'
 import type {} from '@deepseek-ai/dsh-permission-presets/types'
+import type {} from '@deepseek-ai/dsh-workflow'
 import type { TypertForwardableEventEntry } from '@deepseek-ai/dsh-typert-protocol'
 
 /**
@@ -35,4 +36,12 @@ export const API_REMOTE_FORWARDED_EVENTS = [
   { event: 'permission-presets/catalog-changed', mode: 'emit' },
   { event: 'settings/document-updated', mode: 'emit' },
   { event: 'user-questions/request', mode: 'waterfall' },
+  { event: 'workflow/start', mode: 'emit' },
+  { event: 'workflow/phase', mode: 'emit' },
+  { event: 'workflow/log', mode: 'emit' },
+  { event: 'workflow/agent-start', mode: 'emit' },
+  { event: 'workflow/agent-end', mode: 'emit' },
+  { event: 'workflow/node-start', mode: 'emit' },
+  { event: 'workflow/node-end', mode: 'emit' },
+  { event: 'workflow/end', mode: 'emit' },
 ] as const satisfies readonly TypertForwardableEventEntry[]

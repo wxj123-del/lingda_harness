@@ -15,6 +15,7 @@
     { "path": "../../core/system-prompt" },
     { "path": "../user-approval" },
     { "path": "../../core/tools" },
+    { "path": "../../llm/token-meter" },
     { "path": "../../typert/protocol" }
   ]
 }

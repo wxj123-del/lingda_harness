@@ -9,7 +9,7 @@ English | [中文](README.zh.md)
 
 ## Summary
 
-Run JavaScript workflows in fresh Node processes under the calling Session's file sandbox policy. Scripts keep the `agent()`, `parallel()`, `pipeline()`, `phase()` and `log()` hooks while subagents perform delegated work. The same execution provider serves PTC and workflows, including the opt-in Ralph loop. Runs have no overall elapsed deadline; cancellation stops the managed process and disposes child agents. The selected sandbox and subprocess providers determine enforcement and cleanup limits.
+Run JavaScript workflows in fresh Node processes under the calling Session's file sandbox policy. Scripts keep the `agent()`, `parallel()`, `pipeline()`, `phase()`, `log()` and host-controlled `httpRequest()` hooks while subagents perform delegated work. The same execution provider serves PTC and workflows, including the opt-in Ralph loop. Runs have no overall elapsed deadline; cancellation stops the managed process and disposes child agents. The selected sandbox and subprocess providers determine enforcement and cleanup limits.
 
 ## Table of Contents
 
@@ -43,6 +43,11 @@ With those dependencies available, mount the engine and its model-facing consume
 | `maxTotalAgents` | `1000` | Total `agent()` calls one run may start. |
 | `maxItemsPerCall` | `4096` | Items accepted by one `parallel()` or `pipeline()` call. |
 | `syncTimeoutMs` | `5000` | VM timeout for the script's initial synchronous slice, in milliseconds. |
+| `httpAllowedHosts` | `['*']` | Hostname allowlist for `httpRequest()`; private and loopback destinations are always rejected. |
+| `httpTimeoutMs` | `30000` | Per-request host-side HTTP timeout, in milliseconds. |
+| `httpMaxRequestBytes` | `1000000` | Maximum encoded HTTP request body size. |
+| `httpMaxResponseBytes` | `5000000` | Maximum response bytes read from the network. |
+| `httpMaxResponseChars` | `100000` | Maximum decoded response characters returned to the guest. |
 
 An owning consumer may set `WorkflowStartRequest.subagentProvider` and lower `WorkflowStartRequest.maxTotalAgents` for one run. Script hooks cannot change either choice. Process heap, output, control and termination limits belong to the Node PTC provider; the engine adds no overall elapsed timer. The generated [configuration catalog](../../../docs/config-catalog.md#deepseek-aidsh-workflow-ptc) defines accepted engine fields.
 
@@ -50,13 +55,15 @@ The Node PTC provider's `maxPendingCalls` also limits workflow concurrency: chil
 
 ### Results and failures
 
-The script runs with top-level `await`; `meta` and `args` arrive as JSON data. Every `agent()` call uses the configured subagent provider and the run's fixed parent. The final lossless-JSON return value becomes the run result; an ordinary child failure resolves `agent()` to `null`.
+The script runs with top-level `await`; `meta` and `args` arrive as JSON data. Every `agent()` call uses the configured subagent provider and the run's fixed parent. Its optional `toolFilter` is forwarded to the child provider, which must enforce the filter as both tool visibility and execution authority. The final lossless-JSON return value becomes the run result; an ordinary child failure resolves `agent()` to `null`.
+
+`httpRequest({ url, method, body?, credential? })` runs on the host rather than inside the VM. It accepts bounded `GET`, `POST`, `PUT`, `PATCH`, `DELETE` and `HEAD` requests, applies the hostname allowlist and size/timeout caps, returns a redacted header snapshot plus bounded text and optional parsed JSON, and resolves `credential` through the host credential plane (falling back to the named environment variable). Visual `GET` and `HEAD` nodes retry thrown request errors within their node retry budget; other methods are single-shot, and a cancellation is classified separately so it is never retried. Request bodies and credential values are never written to workflow progress logs.
 
 Invalid metadata, an unparseable body, an unavailable provider route or a per-run cap above the ceiling is rejected before a run is published. During execution, hook misuse and tripped cooperative caps fail the workflow. Process failures, unavailable required confinement and PTC output or control limits also fail the run.
 
 ### File policy and cancellation
 
-The engine resolves the calling Session's standing file policy and cwd for PTC execution. The VM retains the documented helper API, but it is not a security boundary: code that reaches Node remains subject to the selected OS file policy. The program-visible environment is empty. Network access is not restricted by the file policy.
+The engine resolves the calling Session's standing file policy and cwd for PTC execution. The VM retains the documented helper API, but it is not a security boundary: code that reaches Node remains subject to the selected OS file policy. The program-visible environment is empty. Native workflow HTTP traffic is an explicit host binding with its own allowlist and resource caps; arbitrary `fetch` remains unavailable in the VM.
 
 The workflow requests `timeoutMs: null` from PTC. Its initial VM slice still has `syncTimeoutMs`, and a caller's abort signal still applies, including an enclosing tool deadline. Cancellation immediately aborts the PTC process and pending or active subagents. The caller must dispose every run and await child cleanup; there is no separate workflow cleanup timer.
 
@@ -91,7 +98,7 @@ One self-contained guest program runs the existing VM and workflow helpers insid
 
 The guest materializes outbound values as lossless JSON before PTC transport. Exotic prototypes, functions, symbols, cycles, sparse arrays, non-finite numbers and nested `undefined` are rejected. Child results cross back as JSON; same-process observer events retain their own cloning and callback-containment rules.
 
-The host tracks pending provider starts separately from published children. A shared abort signal closes both paths; a child that becomes ready after cancellation is disposed. Each published child's disposal is shared by all cleanup paths. In-flight host bindings remain the workflow adapter's responsibility after PTC stops the program.
+The host tracks pending provider starts separately from published children and HTTP operations. A shared abort signal closes all paths; a child or request that becomes ready after cancellation is disposed or aborted. Each published child's disposal is shared by all cleanup paths. In-flight host bindings remain the workflow adapter's responsibility after PTC stops the program. Visual workflow node audit also records downstream nodes as `blocked` when an upstream dependency wave fails; this is distinct from a conditionally `skipped` node.
 
 ### Cancellation and outcomes
 
@@ -122,7 +129,7 @@ Use these references for the shared execution guarantees and workflow contracts.
 
 #### What the model sees
 
-Every script `agent()` call sends its prompt verbatim and optional model or structured-output schema to a subagent provider. Each child sees that provider's own context; phase and log narration stays on observer events.
+Every script `agent()` call sends its prompt verbatim plus optional model, structured-output schema, and tool filter to a subagent provider. Each child sees that provider's own context and only the tools admitted by the filter; phase and log narration stays on observer events.
 
 #### Token effect
 
@@ -130,7 +137,7 @@ Each child consumes its own model context. Cooperative concurrency, total-agent 
 
 #### KV Cache effect
 
-Independent of the parent request cache and of sibling children. Each child can reuse only a byte-identical prefix under its own provider, model, prompt and schema.
+Independent of the parent request cache and of sibling children. Each child can reuse only a byte-identical prefix under its own provider, model, prompt, schema and visible tool set.
 
 ### Parent tool result, indirectly
 

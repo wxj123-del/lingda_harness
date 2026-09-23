@@ -17,6 +17,12 @@ export interface TerminalBodyInjected extends TerminalInjected {
   readonly hooks: { readonly theme: HostObservable<ThemeSnapshot> }
 }
 
+/** The conversation view's one terminal model and live application theme. */
+export interface ConversationTerminalInjected {
+  readonly terminal: TerminalView
+  readonly hooks: { readonly theme: HostObservable<ThemeSnapshot> }
+}
+
 declare module '@deepseek-ai/dsh-client-ui-sidebar-right/client' {
   interface SidebarRightTabParamsMap {
     /** An existing Host terminal selected from the Session terminal list. */

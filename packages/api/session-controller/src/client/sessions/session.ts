@@ -17,6 +17,12 @@ import type {
   SessionProjectionBaseline,
   SessionQueuedItem,
   SessionRequestId,
+  WorkflowRemoteRunListValue,
+  WorkflowRemoteRunRequest,
+  WorkflowRemoteRunView,
+  WorkflowRemoteRunsRequest,
+  WorkflowRemoteStartRequest,
+  WorkflowRemoteStartValue,
 } from '../../types.ts'
 import type {
   BeginSubmissionInput, PendingSubmissionRetirement, SessionFace, SubmissionHandle,
@@ -320,6 +326,26 @@ export class Session implements SessionFace {
   /** Apply one operation to a still-pending queue occurrence. */
   async updateQueue(itemId: MessageId, action: QueueAction): Promise<RemoteResult<{ accepted: true }>> {
     return this.remote.session.updateQueue({ sessionId: this.sessionId, itemId, action })
+  }
+
+  /** Start one visual workflow directly on this Session's Host Agent. */
+  workflowStart(request: Omit<WorkflowRemoteStartRequest, 'sessionId'>): Promise<RemoteResult<WorkflowRemoteStartValue>> {
+    return this.remote.session.workflowStart({ ...request, sessionId: this.sessionId })
+  }
+
+  /** Cancel one visual workflow run owned by this Session. */
+  workflowCancel(runId: WorkflowRemoteRunRequest['runId']): Promise<RemoteResult<{ runId: WorkflowRemoteRunRequest['runId']; status: 'cancelling' }>> {
+    return this.remote.session.workflowCancel({ sessionId: this.sessionId, runId })
+  }
+
+  /** Read one visual workflow run owned by this Session. */
+  workflowStatus(runId: WorkflowRemoteRunRequest['runId']): Promise<RemoteResult<WorkflowRemoteRunView>> {
+    return this.remote.session.workflowStatus({ sessionId: this.sessionId, runId })
+  }
+
+  /** List recent visual workflow runs owned by this Session. */
+  workflowList(request: WorkflowRemoteRunsRequest = {}): Promise<RemoteResult<WorkflowRemoteRunListValue>> {
+    return this.remote.session.workflowList(this.sessionId, request)
   }
 
   /**

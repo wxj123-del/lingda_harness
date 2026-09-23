@@ -75,7 +75,7 @@ The package separates the script, run, result, and event contracts from executio
 | File | Role |
 |---|---|
 | [`src/index.ts`](src/index.ts) | Service definition, `workflow/*` event declarations, `WorkflowError` and its fatal flag |
-| [`src/types.ts`](src/types.ts) | Browser-safe vocabulary: `WorkflowMeta`, `WorkflowResult`, run and agent event info |
+| [`src/types.ts`](src/types.ts) | Browser-safe vocabulary: `WorkflowMeta`, `WorkflowResult`, run, agent, and node audit event info |
 | [`src/runtime-types.ts`](src/runtime-types.ts) | Host-only `WorkflowStartRequest` and `WorkflowRun` handles |
 | [`src/invariant.ts`](src/invariant.ts) | Invariant companion: event pairing and identity checks |
 
@@ -83,7 +83,7 @@ The package separates the script, run, result, and event contracts from executio
 
 A run is holder-owned: engine-plugin unload prevents new starts but does not revoke accepted runs, and the caller must dispose every run it starts. `dispose()` cancels if needed and awaits script and child cleanup. The PTC engine aborts its managed process immediately; child disposal still follows each subagent provider's lifecycle contract.
 
-`workflow/start` and `workflow/end` pair the run; `workflow/phase` and `workflow/log` carry script narration; `workflow/agent-start` and `workflow/agent-end` pair each child call by `seq`. Every listener is independently contained: a throwing listener is logged without starving peers or changing execution, and each receives its own payload clone.
+`workflow/start` and `workflow/end` pair the run; `workflow/phase` and `workflow/log` carry script narration; `workflow/agent-start` and `workflow/agent-end` pair each child call by `seq`; `workflow/node-start` and `workflow/node-end` pair visual node execution by `nodeId`, including bounded summaries, retry count, duration, failure, cancellation, explicit skipped states, and dependency-blocked states. A `skipped` node was excluded by an inactive condition branch; a `blocked` node was not started because an upstream wave failed. Every listener is independently contained: a throwing listener is logged without starving peers or changing execution, and each receives its own payload clone.
 
 ### Failure discipline
 

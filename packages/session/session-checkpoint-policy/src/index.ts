@@ -67,6 +67,18 @@ export function apply(ctx: Context): void {
     return session === undefined ? next() : afterCheckpoint(ctx, session, next)
   })
 
+  // The provider-neutral runtime projection can append a final context audit
+  // after the request-prefix checkpoint. The awaited request-ready boundary
+  // gives that audit one last durability barrier before adapter dispatch.
+  ctx.on('llm/request-ready', async (options, projection): Promise<void> => {
+    if ((!projection.files && !projection.images) || options.sessionId === undefined) return
+    // Let synchronous audit listeners finish even when this listener was
+    // registered ahead of them in the host composition.
+    await Promise.resolve()
+    const session = ctx.sessions.get(options.sessionId)
+    if (session !== undefined) await ctx.sessions.flush(session)
+  }, { global: true })
+
   ctx.on('tools/execute', async (exec, next): Promise<ToolExecutionResult> => {
     if (exec.agent === undefined || exec.parent !== undefined) return next()
     await ctx.sessions.flush(exec.agent.session)

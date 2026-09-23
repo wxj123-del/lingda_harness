@@ -1,6 +1,6 @@
 {
   "name": "@deepseek-ai/dsh-client-ui-sidebar-terminal",
-  "description": "Interactive shell tabs for the right Sidebar",
+  "description": "Interactive shell tabs for Sessions and the right Sidebar",
   "version": "0.1.6-alpha.1",
   "publishConfig": {
     "access": "public"
@@ -29,6 +29,7 @@
     "client": {
       "inject": [
         "@deepseek-ai/dsh-api-terminal-controller",
+        "@deepseek-ai/dsh-client-ui-conversation",
         "@deepseek-ai/dsh-client-ui-sidebar-right",
         "@deepseek-ai/dsh-api-remotes",
         "@deepseek-ai/dsh-client-ui-theme"

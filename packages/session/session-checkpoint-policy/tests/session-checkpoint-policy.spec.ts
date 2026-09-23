@@ -2,7 +2,8 @@ import { afterEach, describe, expect, it } from 'vitest'
 import { Context } from '@deepseek-ai/cordis'
 import Loader from '@deepseek-ai/cordis-plugin-loader'
 import { agentEvents, type Agent } from '@deepseek-ai/dsh-agent'
-import LlmRuntime, { ToolCallId, type GenerateOptions, LlmAdapter, type StreamChunk } from '@deepseek-ai/dsh-llm'
+import { AttachmentId } from '@deepseek-ai/dsh-attachment'
+import LlmRuntime, { createUserMessage, ToolCallId, type GenerateOptions, LlmAdapter, type StreamChunk } from '@deepseek-ai/dsh-llm'
 import SessionStore, { SessionId } from '@deepseek-ai/dsh-session'
 import SessionPersistence, { type SessionHandle, type SessionPersistenceSnapshot } from '@deepseek-ai/dsh-session-persistence'
 import SystemPrompt from '@deepseek-ai/dsh-system-prompt'
@@ -103,6 +104,38 @@ describe('session-checkpoint-policy request boundary', () => {
       provider: 'mock', model: 'mock', messages: [], sessionId: session.id,
     }))).rejects.toThrow('disk unavailable')
     expect(order).toEqual([])
+  })
+
+  it('awaits request-ready durability observers before adapter dispatch', async () => {
+    const ctx = await setup()
+    const session = ctx.sessions.create(SessionId('request-ready-checkpoint'))
+    ctx.provide('attachments', { fileHostPath: () => '/host/notes.txt' } as never)
+    ctx.provide('fs', { processPathFromHostPath: () => '/sandbox/notes.txt' } as never)
+    const gate = Promise.withResolvers<undefined>()
+    const readyStarted = Promise.withResolvers<undefined>()
+    const order: string[] = []
+    ctx.on('session/flush', () => { order.push('flush') })
+    ctx.on('llm/request-ready', async () => {
+      order.push('ready:start')
+      readyStarted.resolve(undefined)
+      await gate.promise
+      order.push('ready:end')
+    })
+    ctx.llm.registerAdapter(['mock'], new RecordingAdapter(order))
+
+    const pending = drain(ctx.llm.stream({
+      provider: 'mock', model: 'mock', messages: [createUserMessage({
+        source: { kind: 'user' },
+        content: [{ type: 'file', attachment: {
+          attachmentId: AttachmentId(`sha256:${'ef'.repeat(32)}`), name: 'notes.txt', bytes: 3,
+        } }],
+      })], sessionId: session.id,
+    }))
+    await readyStarted.promise
+    expect(order.slice(0, 2)).toEqual(['flush', 'ready:start'])
+    gate.resolve(undefined)
+    await pending
+    expect(order.slice(-3)).toEqual(['flush', 'ready:end', 'adapter'])
   })
 })
 

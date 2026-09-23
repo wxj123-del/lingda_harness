@@ -4,6 +4,7 @@ import type { WebTerminalId } from '@deepseek-ai/dsh-api-terminal-controller/typ
 import type { SidebarRightTabParamsMap, TabId } from '@deepseek-ai/dsh-client-ui-sidebar-right/client'
 import type { SessionId } from '@deepseek-ai/dsh-session/types'
 import type {} from '@deepseek-ai/dsh-api-terminal-controller/client'
+import type {} from '@deepseek-ai/dsh-client-ui-conversation/client'
 import type {} from '@deepseek-ai/dsh-client-ui-sidebar-right/client'
 import type {} from '@deepseek-ai/dsh-client-ui-renderer/client'
 import type {} from '@deepseek-ai/dsh-client-locale/client'
@@ -15,10 +16,12 @@ import { TerminalBody } from './TerminalBody.tsx'
 import { TerminalTitle } from './TerminalTitle.tsx'
 import { TerminalRecovery, type TerminalRecoveryInjected } from './TerminalRecovery.tsx'
 import { TerminalCleanup, type TerminalCleanupInjected } from './TerminalCleanup.tsx'
-import type { TerminalBodyInjected, TerminalInjected } from './face.ts'
+import { ConversationTerminal } from './ConversationTerminal.tsx'
+import type { ConversationTerminalInjected, TerminalBodyInjected, TerminalInjected } from './face.ts'
+import { conversationTerminalId } from './terminal-id.ts'
 import { en, zh } from './locales.ts'
 
-/** Services needed by the terminal's two sidebar seats. */
+/** Services needed by the terminal's sidebar seats and Conversation View. */
 export const inject = ['slots', 'locale', 'sidebarRight', 'sidebarRightTabs', 'webTerminals', 'theme']
 
 /**
@@ -82,9 +85,10 @@ export function apply(ctx: Context): void {
         if (pending === undefined) {
           pending = ctx.webTerminals.recover(sessionId).then((terminals) => {
             if (disposed) return
-            for (const info of terminals) ctx.sidebarRight.openTabIn(sessionId, 'terminal', {
-              params: { terminalId: info.id },
-            })
+            for (const info of terminals) {
+              if (info.id === conversationTerminalId(sessionId)) continue
+              ctx.sidebarRight.openTabIn(sessionId, 'terminal', { params: { terminalId: info.id } })
+            }
           }).catch((error: unknown) => { recovered.delete(sessionId); throw error })
           recovered.set(sessionId, pending)
         }
@@ -99,4 +103,11 @@ export function apply(ctx: Context): void {
       retryClose: (terminalId) => { ctx.webTerminals.retryClose(terminalId) },
     }),
   }, TerminalCleanup)), 'ui-sidebar-terminal.cleanup')
+  ctx.effect(() => ctx.slots.inject('conversation.view', () => ctx.slots.register({
+    name: 'conversation.view', id: 'terminal', order: 30, label: () => t('title'), locale: namespace,
+    inject: (sessionId): ConversationTerminalInjected => ({
+      terminal: ctx.webTerminals.view(sessionId, 'conversation-terminal', conversationTerminalId(sessionId), undefined, true),
+      hooks: { theme },
+    }),
+  }, ConversationTerminal)), 'ui-sidebar-terminal.conversation-view')
 }

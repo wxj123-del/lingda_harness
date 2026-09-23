@@ -52,7 +52,8 @@ export function TerminalBody({ useTabInfo, useTerminal, useTheme, view, t }: Ter
 }
 
 /* oxlint-disable typescript/no-non-null-assertion -- React sets the DOM ref, then these effects initialize and use the emulator. */
-function TerminalScreen({ state, model, visible, label, theme }: {
+/** Render one xterm screen for either a Sidebar tab or a Conversation view. */
+export function TerminalScreen({ state, model, visible, label, theme }: {
   state: TerminalViewState
   model: TerminalView
   visible: boolean

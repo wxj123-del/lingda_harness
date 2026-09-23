@@ -5,6 +5,8 @@ import { WorkflowRunId } from '@deepseek-ai/dsh-workflow'
 import type {
   WorkflowAgentEndInfo,
   WorkflowAgentInfo,
+  WorkflowNodeEndInfo,
+  WorkflowNodeStartInfo,
   WorkflowResultInfo,
   WorkflowRunInfo,
 } from '@deepseek-ai/dsh-workflow'
@@ -43,6 +45,14 @@ const result = (overrides: Partial<WorkflowResultInfo> = {}): WorkflowResultInfo
   ...overrides,
 })
 
+const node = (overrides: Partial<WorkflowNodeStartInfo> = {}): WorkflowNodeStartInfo => ({
+  nodeId: 'fetch', label: 'Fetch', retryCount: 0, startedAt: 100, ...overrides,
+})
+
+const nodeEnd = (overrides: Partial<WorkflowNodeEndInfo> = {}): WorkflowNodeEndInfo => ({
+  ...node(), status: 'completed', durationMs: 5, endedAt: 105, ...overrides,
+})
+
 describe('workflow invariants', () => {
   it('accepts a complete workflow and child lifecycle', async () => {
     const ctx = await setup()
@@ -52,6 +62,8 @@ describe('workflow invariants', () => {
     ctx.emit('workflow/log', run, 'working')
     ctx.emit('workflow/agent-start', run, agent())
     ctx.emit('workflow/agent-end', run, agentEnd())
+    ctx.emit('workflow/node-start', run, node())
+    ctx.emit('workflow/node-end', run, nodeEnd())
     ctx.emit('workflow/end', run, result())
     ctx.emit('tools/change')
   })
@@ -104,5 +116,20 @@ describe('workflow invariants', () => {
     failed.emit('workflow/start', info())
     expect(() => { failed.emit('workflow/end', info(), result({ stopReason: 'error' })) })
       .toThrow(/absent exactly for completed/)
+
+    const nodeActive = await setup()
+    nodeActive.emit('workflow/start', info())
+    nodeActive.emit('workflow/node-start', info(), node())
+    expect(() => { nodeActive.emit('workflow/end', info(), result({ agentsStarted: 0 })) }).toThrow(/without workflow\/node-end/)
+  })
+
+  it('requires node starts for terminal nodes and permits explicit skips', async () => {
+    const ctx = await setup()
+    const run = info()
+    ctx.emit('workflow/start', run)
+    expect(() => { ctx.emit('workflow/node-end', run, nodeEnd({ nodeId: 'missing' })) }).toThrow(/no matching start/)
+    ctx.emit('workflow/node-end', run, nodeEnd({ nodeId: 'branch', status: 'skipped', startedAt: 200, endedAt: 200, durationMs: 0 }))
+    ctx.emit('workflow/node-end', run, nodeEnd({ nodeId: 'downstream', status: 'blocked', startedAt: 201, endedAt: 201, durationMs: 0 }))
+    ctx.emit('workflow/end', run, result())
   })
 })

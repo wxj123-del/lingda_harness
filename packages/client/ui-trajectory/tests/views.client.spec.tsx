@@ -554,15 +554,55 @@ describe('tab switching in ConversationRoot', () => {
 
     expect(screen.getAllByText('模型调用 #1')).toHaveLength(2)
     expect(screen.getByText('请求')).toBeTruthy()
-    const model = screen.getByRole('button', { name: /响应.*1 个工具调用/ })
-    expect(model.getAttribute('aria-expanded')).toBe('false')
-    expect(screen.queryByRole('button', { name: /^bash/ })).toBeNull()
-
-    fireEvent.click(model)
-    expect(model.getAttribute('aria-expanded')).toBe('true')
+    expect(screen.getByText(/工具调用 1/)).toBeTruthy()
     const tool = screen.getByRole('button', { name: /^bash/ })
     fireEvent.click(tool)
     expect(screen.getByRole('complementary', { name: '工作流节点详情' }).textContent).toContain('bash')
+  })
+
+  it('lays one model call out as a request, response, and tool row with usage', async () => {
+    const snapshot = historySnapshot([
+      { kind: 'user', seq: 1, time: 1_000, content: [{ type: 'text', text: '整理播放清单' }], source: null },
+      {
+        kind: 'assistant', seq: 2, time: 6_700, turn: 1, step: 1,
+        blocks: [
+          { kind: 'reasoning', text: '先搜索 UP 主' },
+          { kind: 'text', text: '我来整理播放清单' },
+          { kind: 'tool-call', callId: 'tool-1', name: 'web_search', argsRaw: '{"query":"B站"}' },
+        ],
+        usage: { inputTokens: 524, outputTokens: 539, cacheReadTokens: 10_057 },
+        providerMetadata: { provider: 'deepseek', model: 'deepseek-v4-flash' },
+        timing: { stepStartTime: 2_000, firstTokenTime: 2_400, completedTime: 6_700 },
+      },
+      {
+        kind: 'tool-result', seq: 3, time: 11_300, callId: 'tool-1', callTime: 6_700,
+        call: { name: 'web_search', argsRaw: '{"query":"B站"}' },
+        content: [{ type: 'text', text: 'Sources: 轩辕的编程宇宙' }], isError: false, subCalls: [],
+      },
+    ], {
+      requests: [{
+        purpose: 'assistant', startSeq: 2, startedAt: 2_000, completedAt: 6_700, status: 'complete',
+        turn: 1, step: 1, resultSeq: 2,
+        requestConfig: { provider: 'deepseek', model: 'deepseek-v4-flash' },
+        prompt: { config: { provider: 'deepseek', model: 'deepseek-v4-flash' }, system: '你是助手', tools: [{ name: 'web_search', description: '搜索网页', parameters: {} }] },
+        usage: { inputTokens: 524, outputTokens: 539, cacheReadTokens: 10_057 },
+      }] as TrajectorySnapshot['requests'],
+    })
+    const b = await bench(snapshot)
+    mount(b)
+    fireEvent.click(screen.getByRole('tab', { name: 'Workflow' }))
+
+    expect(screen.getByText(/deepseek-v4-flash/)).toBeTruthy()
+    expect(screen.getByText(/System 1 · 消息 1 · 工具定义 1/)).toBeTruthy()
+    expect(screen.getByText(/Reasoning 1 · Content 1 · 工具调用 1/)).toBeTruthy()
+    expect(screen.getByText(/输入 10581/)).toBeTruthy()
+    expect(screen.getByText(/未缓存 524/)).toBeTruthy()
+    expect(screen.getByText(/缓存命中 10057/)).toBeTruthy()
+    expect(screen.getByText(/输出 539/)).toBeTruthy()
+    const tool = screen.getByRole('button', { name: /^web_search/ })
+    const toolCard = tool.parentElement
+    expect(toolCard?.textContent).toContain('Sources: 轩辕的编程宇宙')
+    expect(toolCard?.textContent).toContain('4.6s')
   })
 
   it('collapses the workflow canvas and keeps the inspector synced to the clicked tool', async () => {

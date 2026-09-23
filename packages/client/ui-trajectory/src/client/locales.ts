@@ -238,6 +238,16 @@ export const zh = {
   'workflow.conversationSummary': '{models} 个模型调用 · {tools} 个工具调用',
   'workflow.collapseSidebar': '收起左侧栏',
   'workflow.expandSidebar': '展开左侧栏',
+  'workflow.inputTokens': '输入 {count}',
+  'workflow.uncachedTokens': '未缓存 {count}',
+  'workflow.cacheReadTokens': '缓存命中 {count}',
+  'workflow.outputTokens': '输出 {count}',
+  'workflow.systemCount': 'System {count}',
+  'workflow.messageCount': '消息 {count}',
+  'workflow.toolDefinitionCount': '工具定义 {count}',
+  'workflow.reasoningCount': 'Reasoning {count}',
+  'workflow.contentCount': 'Content {count}',
+  'workflow.toolCallCount': '工具调用 {count}',
 } as const
 
 /** The trajectory dictionary key union. */
@@ -489,4 +499,14 @@ export const en: Record<TrajectoryKey, string> = {
   'workflow.conversationSummary': '{models} model calls · {tools} tool calls',
   'workflow.collapseSidebar': 'Collapse sidebar',
   'workflow.expandSidebar': 'Expand sidebar',
+  'workflow.inputTokens': 'Input {count}',
+  'workflow.uncachedTokens': 'Uncached {count}',
+  'workflow.cacheReadTokens': 'Cache hit {count}',
+  'workflow.outputTokens': 'Output {count}',
+  'workflow.systemCount': 'System {count}',
+  'workflow.messageCount': 'Messages {count}',
+  'workflow.toolDefinitionCount': 'Tool definitions {count}',
+  'workflow.reasoningCount': 'Reasoning {count}',
+  'workflow.contentCount': 'Content {count}',
+  'workflow.toolCallCount': 'Tool calls {count}',
 }

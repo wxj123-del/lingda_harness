@@ -29,7 +29,8 @@ import { registerAuthoringSurface } from './authoring/register.tsx'
 export { LayoutController } from './service.ts'
 export type { ILayout, MainPanelId, PanelInfo } from './service.ts'
 export { AUTHORING_SETTINGS_NAMESPACE } from '../authoring-settings.ts'
-export type { AuthoringItem, AuthoringSettings } from '../authoring-settings.ts'
+export { isWorkflowPublished, latestWorkflowVersion, releasedWorkflow } from '../authoring-settings.ts'
+export type { AuthoringItem, AuthoringSettings, WorkflowVersion } from '../authoring-settings.ts'
 
 /** Selector hook over root-scoped panel selection. */
 export type UsePanelInfo = SnapshotSelectorHook<PanelInfo>

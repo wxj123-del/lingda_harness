@@ -35,6 +35,8 @@ Choose it when several plugins should agree on one replay-based measurement — 
 
 `ctx.tokenMeter` exposes two operations. `measure(session, requestHeader?)` returns a detached, deeply immutable snapshot at one consumed-log revision: `totalTokens` is request-and-response pressure, and `surfaceTokens` is the surface-only route-priced total equal to the sum of `nodes[].tokens`. An optional `requestHeader` override selects the priced route and pressure fields; the node set still describes the current session. `estimateMessage(message)` prices one message with the fixed heuristic. Every call clones the positional surface nodes, so measurement is O(surface).
 
+The package root also exports the pure `estimateMessage`, `estimateContent`, `estimateStructuralBlock`, `estimateToolsTokens`, and `ROLE_OVERHEAD` helpers. Context selection uses these helpers so request routing and UI accounting do not drift.
+
 ```text
 const { totalTokens, surfaceTokens, nodes } = ctx.tokenMeter.measure(session)
 const price = ctx.tokenMeter.estimateMessage(message)

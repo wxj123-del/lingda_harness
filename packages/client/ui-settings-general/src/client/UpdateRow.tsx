@@ -47,7 +47,7 @@ function desktopUpdates(): DesktopUpdatesApi | undefined {
 const SOURCE_REPOSITORY = 'XJ-Cyber/lingda-harness'
 const SOURCE_BRANCH = 'main'
 
-interface AtomGitCommitResponse {
+interface GitCodeCommitResponse {
   readonly sha?: unknown
 }
 
@@ -56,19 +56,19 @@ function currentBuildCommit(): string | undefined {
   return typeof value === 'string' && /^[0-9a-f]{7,40}$/iu.test(value) ? value.toLowerCase() : undefined
 }
 
-/** Check the canonical AtomGit source when no local Host updater is available. */
-async function checkSourceUpdate(): Promise<UpdateState> {
+/** Check the canonical GitCode source when no local Host updater is available. */
+async function checkSourceUpdate(t: (key: 'update.commitMissing' | 'update.invalidCommit') => string): Promise<UpdateState> {
   const response = await fetch(
-    `https://api.atomgit.com/api/v5/repos/${SOURCE_REPOSITORY}/commits/${SOURCE_BRANCH}`,
+    `https://gitcode.com/api/v5/repos/${SOURCE_REPOSITORY}/commits/${SOURCE_BRANCH}`,
     { headers: { Accept: 'application/json' } },
   )
   if (!response.ok) throw new Error(`HTTP ${response.status}`)
-  const payload = await response.json() as AtomGitCommitResponse
+  const payload = await response.json() as GitCodeCommitResponse
   if (typeof payload.sha !== 'string' || !/^[0-9a-f]{7,40}$/iu.test(payload.sha)) {
-    throw new Error('AtomGit 仓库返回了无效的提交信息')
+    throw new Error(t('update.invalidCommit'))
   }
   const current = currentBuildCommit()
-  if (current === undefined) return { phase: 'error', message: '当前构建缺少提交信息，无法比较源码版本' }
+  if (current === undefined) return { phase: 'error', message: t('update.commitMissing') }
   if (current !== undefined && payload.sha.toLowerCase().startsWith(current)) {
     return { phase: 'idle' }
   }
@@ -132,7 +132,7 @@ export function UpdateRow({ t, repository }: UpdateRowProps) {
       setRunning(true)
       setSourceState({ phase: 'checking' })
       try {
-        setSourceState(await checkSourceUpdate())
+        setSourceState(await checkSourceUpdate(t))
       } catch (error) {
         setSourceState({ phase: 'error', message: error instanceof Error ? error.message : String(error) })
       } finally {

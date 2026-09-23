@@ -50,7 +50,10 @@ const IMMUTABLE_LANGUAGE_TOKENS = new Set([
   'true',
   'undefined',
 ])
-const LOCALE_KEY = /^[a-z][a-zA-Z0-9]*(?:[._-][a-zA-Z0-9]+)+$/
+// Locale dictionaries in this workspace use both dotted keys and typed
+// camelCase keys. Keep identifiers such as `contextSignalExplicitFull` out
+// of the copy detector while still requiring more than one key segment.
+const LOCALE_KEY = /^(?:[a-z][a-zA-Z0-9]*(?:[._-][a-zA-Z0-9]+)+|[a-z]+(?:[A-Z][a-zA-Z0-9]*)+)$/
 
 /** One hard-coded product-copy occurrence. */
 export interface UiI18nViolation {

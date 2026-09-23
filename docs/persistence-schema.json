@@ -5434,11 +5434,11 @@
       }
     },
     {
-      "key": "event:context/router",
+      "key": "event:context/calibration",
       "kind": "event",
-      "event": "context/router",
+      "event": "context/calibration",
       "surface": false,
-      "digest": "19dc4f686c6af8db05f9e581d0f70cfef69f4b0e0b55a89a957c766416848412",
+      "digest": "49095060824d56fc0f640ea2c29ca9e43cc7b9c04deeadf1e179e7092e11fb1d",
       "schema": {
         "root": 0,
         "nodes": [
@@ -5452,22 +5452,22 @@
               },
               {
                 "name": "ignorable",
-                "type": 9,
+                "type": 5,
                 "optional": true
               },
               {
                 "name": "seq",
-                "type": 2,
+                "type": 3,
                 "optional": false
               },
               {
                 "name": "time",
-                "type": 2,
+                "type": 3,
                 "optional": false
               },
               {
                 "name": "type",
-                "type": 10,
+                "type": 6,
                 "optional": false
               }
             ],
@@ -5477,47 +5477,51 @@
             "kind": "object",
             "properties": [
               {
-                "name": "droppedMessages",
+                "name": "deltas",
                 "type": 2,
                 "optional": false
               },
               {
-                "name": "estimatedInputTokens",
-                "type": 2,
-                "optional": false
-              },
-              {
-                "name": "inputMessages",
-                "type": 2,
-                "optional": false
-              },
-              {
-                "name": "outputMessages",
-                "type": 2,
-                "optional": false
-              },
-              {
-                "name": "reason",
+                "name": "lastDeltaTokens",
                 "type": 3,
                 "optional": false
               },
               {
-                "name": "scope",
+                "name": "lastEstimatedRequestTokens",
+                "type": 3,
+                "optional": false
+              },
+              {
+                "name": "lastProviderInputTokens",
+                "type": 3,
+                "optional": false
+              },
+              {
+                "name": "model",
                 "type": 4,
                 "optional": false
               },
               {
-                "name": "step",
-                "type": 2,
+                "name": "provider",
+                "type": 4,
                 "optional": false
               },
               {
-                "name": "turn",
-                "type": 2,
+                "name": "reserveTokens",
+                "type": 3,
+                "optional": false
+              },
+              {
+                "name": "samplesSeen",
+                "type": 3,
                 "optional": false
               }
             ],
             "indices": []
+          },
+          {
+            "kind": "array",
+            "element": 3
           },
           {
             "kind": "primitive",
@@ -5528,17 +5532,277 @@
             "type": "string"
           },
           {
+            "kind": "literal",
+            "value": true
+          },
+          {
+            "kind": "literal",
+            "value": "context/calibration"
+          }
+        ]
+      }
+    },
+    {
+      "key": "event:context/router",
+      "kind": "event",
+      "event": "context/router",
+      "surface": false,
+      "digest": "384002eebcea45869d53e7f1bed56a84bea7a74e0024b9e8875d0d643c4f0c03",
+      "schema": {
+        "root": 0,
+        "nodes": [
+          {
+            "kind": "object",
+            "properties": [
+              {
+                "name": "data",
+                "type": 1,
+                "optional": false
+              },
+              {
+                "name": "ignorable",
+                "type": 34,
+                "optional": true
+              },
+              {
+                "name": "seq",
+                "type": 4,
+                "optional": false
+              },
+              {
+                "name": "time",
+                "type": 4,
+                "optional": false
+              },
+              {
+                "name": "type",
+                "type": 35,
+                "optional": false
+              }
+            ],
+            "indices": []
+          },
+          {
+            "kind": "object",
+            "properties": [
+              {
+                "name": "adapterProjection",
+                "type": 2,
+                "optional": true
+              },
+              {
+                "name": "budgetExceeded",
+                "type": 3,
+                "optional": false
+              },
+              {
+                "name": "calibrationDeltaTokens",
+                "type": 4,
+                "optional": true
+              },
+              {
+                "name": "calibrationSampleCount",
+                "type": 4,
+                "optional": true
+              },
+              {
+                "name": "contextWindow",
+                "type": 4,
+                "optional": true
+              },
+              {
+                "name": "droppedMessages",
+                "type": 4,
+                "optional": false
+              },
+              {
+                "name": "estimateBasis",
+                "type": 5,
+                "optional": true
+              },
+              {
+                "name": "estimatedInputTokens",
+                "type": 4,
+                "optional": false
+              },
+              {
+                "name": "estimatedRequestTokens",
+                "type": 4,
+                "optional": true
+              },
+              {
+                "name": "estimatedWindowTokens",
+                "type": 4,
+                "optional": true
+              },
+              {
+                "name": "finalPayload",
+                "type": 3,
+                "optional": true
+              },
+              {
+                "name": "inputMessages",
+                "type": 4,
+                "optional": false
+              },
+              {
+                "name": "maxInputTokens",
+                "type": 4,
+                "optional": true
+              },
+              {
+                "name": "model",
+                "type": 8,
+                "optional": true
+              },
+              {
+                "name": "outputBudgetTokens",
+                "type": 4,
+                "optional": true
+              },
+              {
+                "name": "outputMessages",
+                "type": 4,
+                "optional": false
+              },
+              {
+                "name": "overflowTokens",
+                "type": 4,
+                "optional": false
+              },
+              {
+                "name": "provider",
+                "type": 8,
+                "optional": true
+              },
+              {
+                "name": "providerReportedInputTokens",
+                "type": 4,
+                "optional": true
+              },
+              {
+                "name": "reason",
+                "type": 8,
+                "optional": false
+              },
+              {
+                "name": "requestOverflowTokens",
+                "type": 4,
+                "optional": true
+              },
+              {
+                "name": "safetyReserveTokens",
+                "type": 4,
+                "optional": true
+              },
+              {
+                "name": "scope",
+                "type": 9,
+                "optional": false
+              },
+              {
+                "name": "selectedMessageIds",
+                "type": 14,
+                "optional": false
+              },
+              {
+                "name": "selectedMessageMeta",
+                "type": 15,
+                "optional": true
+              },
+              {
+                "name": "selectedMessageMetaOmitted",
+                "type": 4,
+                "optional": true
+              },
+              {
+                "name": "signal",
+                "type": 24,
+                "optional": true
+              },
+              {
+                "name": "step",
+                "type": 4,
+                "optional": false
+              },
+              {
+                "name": "taskId",
+                "type": 8,
+                "optional": true
+              },
+              {
+                "name": "taskRecallMessages",
+                "type": 4,
+                "optional": true
+              },
+              {
+                "name": "toolSchemaTokens",
+                "type": 4,
+                "optional": true
+              },
+              {
+                "name": "turn",
+                "type": 4,
+                "optional": false
+              }
+            ],
+            "indices": []
+          },
+          {
+            "kind": "object",
+            "properties": [
+              {
+                "name": "files",
+                "type": 3,
+                "optional": false
+              },
+              {
+                "name": "images",
+                "type": 3,
+                "optional": false
+              }
+            ],
+            "indices": []
+          },
+          {
+            "kind": "primitive",
+            "type": "boolean"
+          },
+          {
+            "kind": "primitive",
+            "type": "number"
+          },
+          {
             "kind": "union",
             "types": [
-              5,
               6,
-              7,
-              8
+              7
             ]
           },
           {
             "kind": "literal",
-            "value": "fresh"
+            "value": "heuristic"
+          },
+          {
+            "kind": "literal",
+            "value": "heuristic+reserve"
+          },
+          {
+            "kind": "primitive",
+            "type": "string"
+          },
+          {
+            "kind": "union",
+            "types": [
+              10,
+              11,
+              12,
+              13
+            ]
+          },
+          {
+            "kind": "literal",
+            "value": "task"
           },
           {
             "kind": "literal",
@@ -5546,11 +5810,135 @@
           },
           {
             "kind": "literal",
-            "value": "recent"
+            "value": "fresh"
           },
           {
             "kind": "literal",
-            "value": "task"
+            "value": "recent"
+          },
+          {
+            "kind": "array",
+            "element": 8
+          },
+          {
+            "kind": "array",
+            "element": 16
+          },
+          {
+            "kind": "object",
+            "properties": [
+              {
+                "name": "estimatedTokens",
+                "type": 4,
+                "optional": false
+              },
+              {
+                "name": "id",
+                "type": 8,
+                "optional": false
+              },
+              {
+                "name": "kind",
+                "type": 17,
+                "optional": false
+              },
+              {
+                "name": "preview",
+                "type": 8,
+                "optional": false
+              },
+              {
+                "name": "sourceKind",
+                "type": 8,
+                "optional": false
+              }
+            ],
+            "indices": []
+          },
+          {
+            "kind": "union",
+            "types": [
+              18,
+              19,
+              20,
+              21,
+              22,
+              23
+            ]
+          },
+          {
+            "kind": "literal",
+            "value": "tool"
+          },
+          {
+            "kind": "literal",
+            "value": "assistant"
+          },
+          {
+            "kind": "literal",
+            "value": "unknown"
+          },
+          {
+            "kind": "literal",
+            "value": "user"
+          },
+          {
+            "kind": "literal",
+            "value": "context"
+          },
+          {
+            "kind": "literal",
+            "value": "system"
+          },
+          {
+            "kind": "union",
+            "types": [
+              25,
+              26,
+              27,
+              28,
+              29,
+              30,
+              31,
+              32,
+              33
+            ]
+          },
+          {
+            "kind": "literal",
+            "value": "task-reference"
+          },
+          {
+            "kind": "literal",
+            "value": "unrelated"
+          },
+          {
+            "kind": "literal",
+            "value": "acknowledgement"
+          },
+          {
+            "kind": "literal",
+            "value": "co-reference"
+          },
+          {
+            "kind": "literal",
+            "value": "explicit-fresh"
+          },
+          {
+            "kind": "literal",
+            "value": "explicit-full"
+          },
+          {
+            "kind": "literal",
+            "value": "follow-up"
+          },
+          {
+            "kind": "literal",
+            "value": "lexical-match"
+          },
+          {
+            "kind": "literal",
+            "value": "open-turn"
           },
           {
             "kind": "literal",
@@ -16086,6 +16474,451 @@
       }
     },
     {
+      "key": "event:visual-workflow/node",
+      "kind": "event",
+      "event": "visual-workflow/node",
+      "surface": false,
+      "digest": "ff2ee66479a0a60bd141972b78adf9c8bfca4b36d262ca17c8c234f15d78dc76",
+      "schema": {
+        "root": 0,
+        "nodes": [
+          {
+            "kind": "object",
+            "properties": [
+              {
+                "name": "data",
+                "type": 1,
+                "optional": false
+              },
+              {
+                "name": "ignorable",
+                "type": 11,
+                "optional": true
+              },
+              {
+                "name": "seq",
+                "type": 3,
+                "optional": false
+              },
+              {
+                "name": "time",
+                "type": 3,
+                "optional": false
+              },
+              {
+                "name": "type",
+                "type": 12,
+                "optional": false
+              }
+            ],
+            "indices": []
+          },
+          {
+            "kind": "object",
+            "properties": [
+              {
+                "name": "correlationId",
+                "type": 2,
+                "optional": false
+              },
+              {
+                "name": "durationMs",
+                "type": 3,
+                "optional": true
+              },
+              {
+                "name": "endedAt",
+                "type": 3,
+                "optional": true
+              },
+              {
+                "name": "error",
+                "type": 2,
+                "optional": true
+              },
+              {
+                "name": "inputSummary",
+                "type": 2,
+                "optional": true
+              },
+              {
+                "name": "label",
+                "type": 2,
+                "optional": false
+              },
+              {
+                "name": "nodeId",
+                "type": 2,
+                "optional": false
+              },
+              {
+                "name": "outputSummary",
+                "type": 2,
+                "optional": true
+              },
+              {
+                "name": "retryCount",
+                "type": 3,
+                "optional": false
+              },
+              {
+                "name": "startedAt",
+                "type": 3,
+                "optional": false
+              },
+              {
+                "name": "status",
+                "type": 4,
+                "optional": false
+              }
+            ],
+            "indices": []
+          },
+          {
+            "kind": "primitive",
+            "type": "string"
+          },
+          {
+            "kind": "primitive",
+            "type": "number"
+          },
+          {
+            "kind": "union",
+            "types": [
+              5,
+              6,
+              7,
+              8,
+              9,
+              10
+            ]
+          },
+          {
+            "kind": "literal",
+            "value": "blocked"
+          },
+          {
+            "kind": "literal",
+            "value": "cancelled"
+          },
+          {
+            "kind": "literal",
+            "value": "completed"
+          },
+          {
+            "kind": "literal",
+            "value": "failed"
+          },
+          {
+            "kind": "literal",
+            "value": "running"
+          },
+          {
+            "kind": "literal",
+            "value": "skipped"
+          },
+          {
+            "kind": "literal",
+            "value": true
+          },
+          {
+            "kind": "literal",
+            "value": "visual-workflow/node"
+          }
+        ]
+      }
+    },
+    {
+      "key": "event:visual-workflow/run",
+      "kind": "event",
+      "event": "visual-workflow/run",
+      "surface": false,
+      "digest": "cb09a795adca8a7463c0222634d4758ca2bc173809c97de75fa08b37d1001bde",
+      "schema": {
+        "root": 0,
+        "nodes": [
+          {
+            "kind": "object",
+            "properties": [
+              {
+                "name": "data",
+                "type": 1,
+                "optional": false
+              },
+              {
+                "name": "ignorable",
+                "type": 21,
+                "optional": true
+              },
+              {
+                "name": "seq",
+                "type": 2,
+                "optional": false
+              },
+              {
+                "name": "time",
+                "type": 2,
+                "optional": false
+              },
+              {
+                "name": "type",
+                "type": 22,
+                "optional": false
+              }
+            ],
+            "indices": []
+          },
+          {
+            "kind": "object",
+            "properties": [
+              {
+                "name": "agentsStarted",
+                "type": 2,
+                "optional": false
+              },
+              {
+                "name": "audit",
+                "type": 3,
+                "optional": true
+              },
+              {
+                "name": "endedAt",
+                "type": 2,
+                "optional": true
+              },
+              {
+                "name": "error",
+                "type": 5,
+                "optional": true
+              },
+              {
+                "name": "inputBytes",
+                "type": 2,
+                "optional": true
+              },
+              {
+                "name": "name",
+                "type": 5,
+                "optional": false
+              },
+              {
+                "name": "runId",
+                "type": 5,
+                "optional": false
+              },
+              {
+                "name": "source",
+                "type": 13,
+                "optional": false
+              },
+              {
+                "name": "startedAt",
+                "type": 2,
+                "optional": false
+              },
+              {
+                "name": "status",
+                "type": 14,
+                "optional": false
+              },
+              {
+                "name": "timedOut",
+                "type": 16,
+                "optional": true
+              },
+              {
+                "name": "timeoutMs",
+                "type": 2,
+                "optional": true
+              },
+              {
+                "name": "value",
+                "type": 17,
+                "optional": true
+              },
+              {
+                "name": "workflowId",
+                "type": 5,
+                "optional": false
+              },
+              {
+                "name": "workflowVersion",
+                "type": 2,
+                "optional": true
+              }
+            ],
+            "indices": []
+          },
+          {
+            "kind": "primitive",
+            "type": "number"
+          },
+          {
+            "kind": "array",
+            "element": 4
+          },
+          {
+            "kind": "object",
+            "properties": [
+              {
+                "name": "correlationId",
+                "type": 5,
+                "optional": false
+              },
+              {
+                "name": "durationMs",
+                "type": 2,
+                "optional": true
+              },
+              {
+                "name": "endedAt",
+                "type": 2,
+                "optional": true
+              },
+              {
+                "name": "error",
+                "type": 5,
+                "optional": true
+              },
+              {
+                "name": "inputSummary",
+                "type": 5,
+                "optional": true
+              },
+              {
+                "name": "label",
+                "type": 5,
+                "optional": false
+              },
+              {
+                "name": "nodeId",
+                "type": 5,
+                "optional": false
+              },
+              {
+                "name": "outputSummary",
+                "type": 5,
+                "optional": true
+              },
+              {
+                "name": "retryCount",
+                "type": 2,
+                "optional": false
+              },
+              {
+                "name": "startedAt",
+                "type": 2,
+                "optional": false
+              },
+              {
+                "name": "status",
+                "type": 6,
+                "optional": false
+              }
+            ],
+            "indices": []
+          },
+          {
+            "kind": "primitive",
+            "type": "string"
+          },
+          {
+            "kind": "union",
+            "types": [
+              7,
+              8,
+              9,
+              10,
+              11,
+              12
+            ]
+          },
+          {
+            "kind": "literal",
+            "value": "cancelled"
+          },
+          {
+            "kind": "literal",
+            "value": "completed"
+          },
+          {
+            "kind": "literal",
+            "value": "failed"
+          },
+          {
+            "kind": "literal",
+            "value": "running"
+          },
+          {
+            "kind": "literal",
+            "value": "blocked"
+          },
+          {
+            "kind": "literal",
+            "value": "skipped"
+          },
+          {
+            "kind": "literal",
+            "value": "visual-editor"
+          },
+          {
+            "kind": "union",
+            "types": [
+              7,
+              8,
+              10,
+              15
+            ]
+          },
+          {
+            "kind": "literal",
+            "value": "error"
+          },
+          {
+            "kind": "primitive",
+            "type": "boolean"
+          },
+          {
+            "kind": "union",
+            "types": [
+              2,
+              5,
+              16,
+              18,
+              19,
+              20
+            ]
+          },
+          {
+            "kind": "array",
+            "element": 17
+          },
+          {
+            "kind": "object",
+            "properties": [],
+            "indices": [
+              {
+                "key": 5,
+                "value": 17
+              }
+            ]
+          },
+          {
+            "kind": "primitive",
+            "type": "null"
+          },
+          {
+            "kind": "literal",
+            "value": true
+          },
+          {
+            "kind": "literal",
+            "value": "visual-workflow/run"
+          }
+        ]
+      }
+    },
+    {
       "key": "event:web/deepseek-search-llm-request",
       "kind": "event",
       "event": "web/deepseek-search-llm-request",
@@ -16292,6 +17125,55 @@
     }
   ],
   "types": [
+    {
+      "digest": "00fa33056b536e104cc671226da945a8241f713259a181f776a47727ad415100",
+      "schema": {
+        "root": 0,
+        "nodes": [
+          {
+            "kind": "union",
+            "types": [
+              1,
+              2,
+              3,
+              4,
+              5,
+              6
+            ]
+          },
+          {
+            "kind": "literal",
+            "value": "assistant"
+          },
+          {
+            "kind": "literal",
+            "value": "context"
+          },
+          {
+            "kind": "literal",
+            "value": "system"
+          },
+          {
+            "kind": "literal",
+            "value": "tool"
+          },
+          {
+            "kind": "literal",
+            "value": "unknown"
+          },
+          {
+            "kind": "literal",
+            "value": "user"
+          }
+        ]
+      },
+      "names": [
+        "packages/context/context-router/src/router.ts#ContextMessageKind"
+      ],
+      "sources": [
+        "packages/context/context-router/src/router.ts:10"
+      ]
+    },
     {
       "digest": "0116b1f89c05221d56b0ba35c83d302bf4857bc7277d247e9bbaf74b27d2c66e",
       "schema": {
@@ -22808,6 +23690,20 @@
       ]
     },
     {
+      "digest": "1212d8414633c6c92ed17e2953c1b2e944841e35fc1c629a894fe0378a0ec8f0",
+      "schema": {
+        "root": 0,
+        "nodes": [
+          {
+            "kind": "literal",
+            "value": "unrelated"
+          }
+        ]
+      },
+      "names": [],
+      "sources": []
+    },
+    {
       "digest": "1243bd4f09ad34eeafae4e3e85d74021be3cee9cc00c185fb110193dbf61bd7b",
       "schema": {
         "root": 0,
@@ -23302,6 +24198,20 @@
       "sources": []
     },
     {
+      "digest": "159d7964195323bc7605bfcc9e2a20493807c225577d70e47b7f9ddd9030fcc6",
+      "schema": {
+        "root": 0,
+        "nodes": [
+          {
+            "kind": "literal",
+            "value": "follow-up"
+          }
+        ]
+      },
+      "names": [],
+      "sources": []
+    },
+    {
       "digest": "15ac07832a5517f27b7a69eebcac01f2f53f64b3609e4d0cb58765f70566d233",
       "schema": {
         "root": 0,
@@ -23763,136 +24673,6 @@
         ]
       },
       "names": [],
-      "sources": []
-    },
-    {
-      "digest": "19dc4f686c6af8db05f9e581d0f70cfef69f4b0e0b55a89a957c766416848412",
-      "schema": {
-        "root": 0,
-        "nodes": [
-          {
-            "kind": "object",
-            "properties": [
-              {
-                "name": "data",
-                "type": 1,
-                "optional": false
-              },
-              {
-                "name": "ignorable",
-                "type": 9,
-                "optional": true
-              },
-              {
-                "name": "seq",
-                "type": 2,
-                "optional": false
-              },
-              {
-                "name": "time",
-                "type": 2,
-                "optional": false
-              },
-              {
-                "name": "type",
-                "type": 10,
-                "optional": false
-              }
-            ],
-            "indices": []
-          },
-          {
-            "kind": "object",
-            "properties": [
-              {
-                "name": "droppedMessages",
-                "type": 2,
-                "optional": false
-              },
-              {
-                "name": "estimatedInputTokens",
-                "type": 2,
-                "optional": false
-              },
-              {
-                "name": "inputMessages",
-                "type": 2,
-                "optional": false
-              },
-              {
-                "name": "outputMessages",
-                "type": 2,
-                "optional": false
-              },
-              {
-                "name": "reason",
-                "type": 3,
-                "optional": false
-              },
-              {
-                "name": "scope",
-                "type": 4,
-                "optional": false
-              },
-              {
-                "name": "step",
-                "type": 2,
-                "optional": false
-              },
-              {
-                "name": "turn",
-                "type": 2,
-                "optional": false
-              }
-            ],
-            "indices": []
-          },
-          {
-            "kind": "primitive",
-            "type": "number"
-          },
-          {
-            "kind": "primitive",
-            "type": "string"
-          },
-          {
-            "kind": "union",
-            "types": [
-              5,
-              6,
-              7,
-              8
-            ]
-          },
-          {
-            "kind": "literal",
-            "value": "fresh"
-          },
-          {
-            "kind": "literal",
-            "value": "full"
-          },
-          {
-            "kind": "literal",
-            "value": "recent"
-          },
-          {
-            "kind": "literal",
-            "value": "task"
-          },
-          {
-            "kind": "literal",
-            "value": true
-          },
-          {
-            "kind": "literal",
-            "value": "context/router"
-          }
-        ]
-      },
-      "names": [
-        "event:context/router"
-      ],
       "sources": []
     },
     {
@@ -25569,6 +26349,20 @@
       ]
     },
     {
+      "digest": "2127d022e608c0f9e99d5d459898e0b99a814e192647f58291faed6f6cb8dbec",
+      "schema": {
+        "root": 0,
+        "nodes": [
+          {
+            "kind": "literal",
+            "value": "lexical-match"
+          }
+        ]
+      },
+      "names": [],
+      "sources": []
+    },
+    {
       "digest": "2142e391b9ccb60d487afcf373ce74db98d952f69e8289eddb352a7e16e996c5",
       "schema": {
         "root": 0,
@@ -25800,8 +26594,84 @@
         "event:agent/request-context.data"
       ],
       "sources": [
-        "packages/interaction/personal-agent/src/index.ts:117"
+        "packages/interaction/personal-agent/src/index.ts:118"
       ]
+    },
+    {
+      "digest": "22d8254cbc8f187652c9a3120980f0e94610ab061ace04b5db2823d3d578445a",
+      "schema": {
+        "root": 0,
+        "nodes": [
+          {
+            "kind": "literal",
+            "value": "explicit-full"
+          }
+        ]
+      },
+      "names": [],
+      "sources": []
+    },
+    {
+      "digest": "22e240f16737ae6c474c948863768ded8c12c6a3b59a697dddb943f80846e058",
+      "schema": {
+        "root": 0,
+        "nodes": [
+          {
+            "kind": "union",
+            "types": [
+              1,
+              2,
+              3,
+              4,
+              5,
+              6,
+              7,
+              8,
+              9
+            ]
+          },
+          {
+            "kind": "literal",
+            "value": "acknowledgement"
+          },
+          {
+            "kind": "literal",
+            "value": "co-reference"
+          },
+          {
+            "kind": "literal",
+            "value": "explicit-fresh"
+          },
+          {
+            "kind": "literal",
+            "value": "explicit-full"
+          },
+          {
+            "kind": "literal",
+            "value": "follow-up"
+          },
+          {
+            "kind": "literal",
+            "value": "lexical-match"
+          },
+          {
+            "kind": "literal",
+            "value": "open-turn"
+          },
+          {
+            "kind": "literal",
+            "value": "task-reference"
+          },
+          {
+            "kind": "literal",
+            "value": "unrelated"
+          }
+        ]
+      },
+      "names": [
+        "event:context/router.data.signal"
+      ],
+      "sources": []
     },
     {
       "digest": "234142ee4f996f38cc9fa3b8b3e3de29b03c9aefe5ebf6c224eddd564505aa85",
@@ -27285,6 +28155,20 @@
           {
             "kind": "literal",
             "value": "created"
+          }
+        ]
+      },
+      "names": [],
+      "sources": []
+    },
+    {
+      "digest": "28008d4f0f7176db8245ca593f18ce444263ad0f495e17b3d017e4bff2d028b5",
+      "schema": {
+        "root": 0,
+        "nodes": [
+          {
+            "kind": "literal",
+            "value": "task-reference"
           }
         ]
       },
@@ -29554,6 +30438,40 @@
       ],
       "sources": [
         "packages/web/web-search-deepseek/src/provider.ts:71"
+      ]
+    },
+    {
+      "digest": "2d70007abcb616dbe2178bf3c4dd87688cc1f455bd8a9ae1bf62b15c62c698d9",
+      "schema": {
+        "root": 0,
+        "nodes": [
+          {
+            "kind": "object",
+            "properties": [
+              {
+                "name": "files",
+                "type": 1,
+                "optional": false
+              },
+              {
+                "name": "images",
+                "type": 1,
+                "optional": false
+              }
+            ],
+            "indices": []
+          },
+          {
+            "kind": "primitive",
+            "type": "boolean"
+          }
+        ]
+      },
+      "names": [
+        "event:context/router.data.adapterProjection"
+      ],
+      "sources": [
+        "packages/context/context-router/src/index.ts:409"
       ]
     },
     {
@@ -31878,6 +32796,124 @@
       ]
     },
     {
+      "digest": "316798a9443e50a4003111240c0801ea4499fc7ffa75320cac9d63e22c2304f3",
+      "schema": {
+        "root": 0,
+        "nodes": [
+          {
+            "kind": "object",
+            "properties": [
+              {
+                "name": "correlationId",
+                "type": 1,
+                "optional": false
+              },
+              {
+                "name": "durationMs",
+                "type": 2,
+                "optional": true
+              },
+              {
+                "name": "endedAt",
+                "type": 2,
+                "optional": true
+              },
+              {
+                "name": "error",
+                "type": 1,
+                "optional": true
+              },
+              {
+                "name": "inputSummary",
+                "type": 1,
+                "optional": true
+              },
+              {
+                "name": "label",
+                "type": 1,
+                "optional": false
+              },
+              {
+                "name": "nodeId",
+                "type": 1,
+                "optional": false
+              },
+              {
+                "name": "outputSummary",
+                "type": 1,
+                "optional": true
+              },
+              {
+                "name": "retryCount",
+                "type": 2,
+                "optional": false
+              },
+              {
+                "name": "startedAt",
+                "type": 2,
+                "optional": false
+              },
+              {
+                "name": "status",
+                "type": 3,
+                "optional": false
+              }
+            ],
+            "indices": []
+          },
+          {
+            "kind": "primitive",
+            "type": "string"
+          },
+          {
+            "kind": "primitive",
+            "type": "number"
+          },
+          {
+            "kind": "union",
+            "types": [
+              4,
+              5,
+              6,
+              7,
+              8,
+              9
+            ]
+          },
+          {
+            "kind": "literal",
+            "value": "blocked"
+          },
+          {
+            "kind": "literal",
+            "value": "cancelled"
+          },
+          {
+            "kind": "literal",
+            "value": "completed"
+          },
+          {
+            "kind": "literal",
+            "value": "failed"
+          },
+          {
+            "kind": "literal",
+            "value": "running"
+          },
+          {
+            "kind": "literal",
+            "value": "skipped"
+          }
+        ]
+      },
+      "names": [
+        "packages/api/session-controller/src/types.ts#WorkflowNodeAudit"
+      ],
+      "sources": [
+        "packages/api/session-controller/src/types.ts:47"
+      ]
+    },
+    {
       "digest": "326a9bfda27dda5882fb3cbe6e715df41dae2298fdae3d66437457268a665693",
       "schema": {
         "root": 0,
@@ -31961,6 +32997,96 @@
       "names": [
         "event:feedback/message-put.data.item.category",
         "event:feedback/record.data.category"
+      ],
+      "sources": []
+    },
+    {
+      "digest": "335b34d591761f09d817a55358bc95f48822240df22b30bfc86355e38d51fa85",
+      "schema": {
+        "root": 0,
+        "nodes": [
+          {
+            "kind": "array",
+            "element": 1
+          },
+          {
+            "kind": "object",
+            "properties": [
+              {
+                "name": "estimatedTokens",
+                "type": 2,
+                "optional": false
+              },
+              {
+                "name": "id",
+                "type": 3,
+                "optional": false
+              },
+              {
+                "name": "kind",
+                "type": 4,
+                "optional": false
+              },
+              {
+                "name": "preview",
+                "type": 3,
+                "optional": false
+              },
+              {
+                "name": "sourceKind",
+                "type": 3,
+                "optional": false
+              }
+            ],
+            "indices": []
+          },
+          {
+            "kind": "primitive",
+            "type": "number"
+          },
+          {
+            "kind": "primitive",
+            "type": "string"
+          },
+          {
+            "kind": "union",
+            "types": [
+              5,
+              6,
+              7,
+              8,
+              9,
+              10
+            ]
+          },
+          {
+            "kind": "literal",
+            "value": "assistant"
+          },
+          {
+            "kind": "literal",
+            "value": "context"
+          },
+          {
+            "kind": "literal",
+            "value": "system"
+          },
+          {
+            "kind": "literal",
+            "value": "tool"
+          },
+          {
+            "kind": "literal",
+            "value": "unknown"
+          },
+          {
+            "kind": "literal",
+            "value": "user"
+          }
+        ]
+      },
+      "names": [
+        "event:context/router.data.selectedMessageMeta"
       ],
       "sources": []
     },
@@ -34089,6 +35215,415 @@
       "sources": []
     },
     {
+      "digest": "384002eebcea45869d53e7f1bed56a84bea7a74e0024b9e8875d0d643c4f0c03",
+      "schema": {
+        "root": 0,
+        "nodes": [
+          {
+            "kind": "object",
+            "properties": [
+              {
+                "name": "data",
+                "type": 1,
+                "optional": false
+              },
+              {
+                "name": "ignorable",
+                "type": 34,
+                "optional": true
+              },
+              {
+                "name": "seq",
+                "type": 4,
+                "optional": false
+              },
+              {
+                "name": "time",
+                "type": 4,
+                "optional": false
+              },
+              {
+                "name": "type",
+                "type": 35,
+                "optional": false
+              }
+            ],
+            "indices": []
+          },
+          {
+            "kind": "object",
+            "properties": [
+              {
+                "name": "adapterProjection",
+                "type": 2,
+                "optional": true
+              },
+              {
+                "name": "budgetExceeded",
+                "type": 3,
+                "optional": false
+              },
+              {
+                "name": "calibrationDeltaTokens",
+                "type": 4,
+                "optional": true
+              },
+              {
+                "name": "calibrationSampleCount",
+                "type": 4,
+                "optional": true
+              },
+              {
+                "name": "contextWindow",
+                "type": 4,
+                "optional": true
+              },
+              {
+                "name": "droppedMessages",
+                "type": 4,
+                "optional": false
+              },
+              {
+                "name": "estimateBasis",
+                "type": 5,
+                "optional": true
+              },
+              {
+                "name": "estimatedInputTokens",
+                "type": 4,
+                "optional": false
+              },
+              {
+                "name": "estimatedRequestTokens",
+                "type": 4,
+                "optional": true
+              },
+              {
+                "name": "estimatedWindowTokens",
+                "type": 4,
+                "optional": true
+              },
+              {
+                "name": "finalPayload",
+                "type": 3,
+                "optional": true
+              },
+              {
+                "name": "inputMessages",
+                "type": 4,
+                "optional": false
+              },
+              {
+                "name": "maxInputTokens",
+                "type": 4,
+                "optional": true
+              },
+              {
+                "name": "model",
+                "type": 8,
+                "optional": true
+              },
+              {
+                "name": "outputBudgetTokens",
+                "type": 4,
+                "optional": true
+              },
+              {
+                "name": "outputMessages",
+                "type": 4,
+                "optional": false
+              },
+              {
+                "name": "overflowTokens",
+                "type": 4,
+                "optional": false
+              },
+              {
+                "name": "provider",
+                "type": 8,
+                "optional": true
+              },
+              {
+                "name": "providerReportedInputTokens",
+                "type": 4,
+                "optional": true
+              },
+              {
+                "name": "reason",
+                "type": 8,
+                "optional": false
+              },
+              {
+                "name": "requestOverflowTokens",
+                "type": 4,
+                "optional": true
+              },
+              {
+                "name": "safetyReserveTokens",
+                "type": 4,
+                "optional": true
+              },
+              {
+                "name": "scope",
+                "type": 9,
+                "optional": false
+              },
+              {
+                "name": "selectedMessageIds",
+                "type": 14,
+                "optional": false
+              },
+              {
+                "name": "selectedMessageMeta",
+                "type": 15,
+                "optional": true
+              },
+              {
+                "name": "selectedMessageMetaOmitted",
+                "type": 4,
+                "optional": true
+              },
+              {
+                "name": "signal",
+                "type": 24,
+                "optional": true
+              },
+              {
+                "name": "step",
+                "type": 4,
+                "optional": false
+              },
+              {
+                "name": "taskId",
+                "type": 8,
+                "optional": true
+              },
+              {
+                "name": "taskRecallMessages",
+                "type": 4,
+                "optional": true
+              },
+              {
+                "name": "toolSchemaTokens",
+                "type": 4,
+                "optional": true
+              },
+              {
+                "name": "turn",
+                "type": 4,
+                "optional": false
+              }
+            ],
+            "indices": []
+          },
+          {
+            "kind": "object",
+            "properties": [
+              {
+                "name": "files",
+                "type": 3,
+                "optional": false
+              },
+              {
+                "name": "images",
+                "type": 3,
+                "optional": false
+              }
+            ],
+            "indices": []
+          },
+          {
+            "kind": "primitive",
+            "type": "boolean"
+          },
+          {
+            "kind": "primitive",
+            "type": "number"
+          },
+          {
+            "kind": "union",
+            "types": [
+              6,
+              7
+            ]
+          },
+          {
+            "kind": "literal",
+            "value": "heuristic"
+          },
+          {
+            "kind": "literal",
+            "value": "heuristic+reserve"
+          },
+          {
+            "kind": "primitive",
+            "type": "string"
+          },
+          {
+            "kind": "union",
+            "types": [
+              10,
+              11,
+              12,
+              13
+            ]
+          },
+          {
+            "kind": "literal",
+            "value": "task"
+          },
+          {
+            "kind": "literal",
+            "value": "full"
+          },
+          {
+            "kind": "literal",
+            "value": "fresh"
+          },
+          {
+            "kind": "literal",
+            "value": "recent"
+          },
+          {
+            "kind": "array",
+            "element": 8
+          },
+          {
+            "kind": "array",
+            "element": 16
+          },
+          {
+            "kind": "object",
+            "properties": [
+              {
+                "name": "estimatedTokens",
+                "type": 4,
+                "optional": false
+              },
+              {
+                "name": "id",
+                "type": 8,
+                "optional": false
+              },
+              {
+                "name": "kind",
+                "type": 17,
+                "optional": false
+              },
+              {
+                "name": "preview",
+                "type": 8,
+                "optional": false
+              },
+              {
+                "name": "sourceKind",
+                "type": 8,
+                "optional": false
+              }
+            ],
+            "indices": []
+          },
+          {
+            "kind": "union",
+            "types": [
+              18,
+              19,
+              20,
+              21,
+              22,
+              23
+            ]
+          },
+          {
+            "kind": "literal",
+            "value": "tool"
+          },
+          {
+            "kind": "literal",
+            "value": "assistant"
+          },
+          {
+            "kind": "literal",
+            "value": "unknown"
+          },
+          {
+            "kind": "literal",
+            "value": "user"
+          },
+          {
+            "kind": "literal",
+            "value": "context"
+          },
+          {
+            "kind": "literal",
+            "value": "system"
+          },
+          {
+            "kind": "union",
+            "types": [
+              25,
+              26,
+              27,
+              28,
+              29,
+              30,
+              31,
+              32,
+              33
+            ]
+          },
+          {
+            "kind": "literal",
+            "value": "task-reference"
+          },
+          {
+            "kind": "literal",
+            "value": "unrelated"
+          },
+          {
+            "kind": "literal",
+            "value": "acknowledgement"
+          },
+          {
+            "kind": "literal",
+            "value": "co-reference"
+          },
+          {
+            "kind": "literal",
+            "value": "explicit-fresh"
+          },
+          {
+            "kind": "literal",
+            "value": "explicit-full"
+          },
+          {
+            "kind": "literal",
+            "value": "follow-up"
+          },
+          {
+            "kind": "literal",
+            "value": "lexical-match"
+          },
+          {
+            "kind": "literal",
+            "value": "open-turn"
+          },
+          {
+            "kind": "literal",
+            "value": true
+          },
+          {
+            "kind": "literal",
+            "value": "context/router"
+          }
+        ]
+      },
+      "names": [
+        "event:context/router"
+      ],
+      "sources": []
+    },
+    {
       "digest": "3860b4757d512a2869be833acb0faf834335b1b056bf3f83df5474dce95f8fa6",
       "schema": {
         "root": 0,
@@ -35278,6 +36813,126 @@
       "sources": []
     },
     {
+      "digest": "3f4bf37da1779de68bb056a7e3098cca1e7b012b98b17f411a651b42cd2fd820",
+      "schema": {
+        "root": 0,
+        "nodes": [
+          {
+            "kind": "array",
+            "element": 1
+          },
+          {
+            "kind": "object",
+            "properties": [
+              {
+                "name": "correlationId",
+                "type": 2,
+                "optional": false
+              },
+              {
+                "name": "durationMs",
+                "type": 3,
+                "optional": true
+              },
+              {
+                "name": "endedAt",
+                "type": 3,
+                "optional": true
+              },
+              {
+                "name": "error",
+                "type": 2,
+                "optional": true
+              },
+              {
+                "name": "inputSummary",
+                "type": 2,
+                "optional": true
+              },
+              {
+                "name": "label",
+                "type": 2,
+                "optional": false
+              },
+              {
+                "name": "nodeId",
+                "type": 2,
+                "optional": false
+              },
+              {
+                "name": "outputSummary",
+                "type": 2,
+                "optional": true
+              },
+              {
+                "name": "retryCount",
+                "type": 3,
+                "optional": false
+              },
+              {
+                "name": "startedAt",
+                "type": 3,
+                "optional": false
+              },
+              {
+                "name": "status",
+                "type": 4,
+                "optional": false
+              }
+            ],
+            "indices": []
+          },
+          {
+            "kind": "primitive",
+            "type": "string"
+          },
+          {
+            "kind": "primitive",
+            "type": "number"
+          },
+          {
+            "kind": "union",
+            "types": [
+              5,
+              6,
+              7,
+              8,
+              9,
+              10
+            ]
+          },
+          {
+            "kind": "literal",
+            "value": "blocked"
+          },
+          {
+            "kind": "literal",
+            "value": "cancelled"
+          },
+          {
+            "kind": "literal",
+            "value": "completed"
+          },
+          {
+            "kind": "literal",
+            "value": "failed"
+          },
+          {
+            "kind": "literal",
+            "value": "running"
+          },
+          {
+            "kind": "literal",
+            "value": "skipped"
+          }
+        ]
+      },
+      "names": [
+        "event:visual-workflow/run.data.audit"
+      ],
+      "sources": []
+    },
+    {
       "digest": "3f74ba74acd10644c1ed6947a411d8088bd2cfac74f61bb8540f96d68e31f004",
       "schema": {
         "root": 0,
@@ -35285,6 +36940,20 @@
           {
             "kind": "literal",
             "value": "image/jpeg"
+          }
+        ]
+      },
+      "names": [],
+      "sources": []
+    },
+    {
+      "digest": "4237d5cf0b0e130b3cc6d2c149aa2fe83bb77600ab762a7a1eba629139ede944",
+      "schema": {
+        "root": 0,
+        "nodes": [
+          {
+            "kind": "literal",
+            "value": "heuristic+reserve"
           }
         ]
       },
@@ -36460,6 +38129,55 @@
       "sources": []
     },
     {
+      "digest": "47f235d7f16c2f2d345dc32583ac015c29f189fed064afa9b95ccf341412de96",
+      "schema": {
+        "root": 0,
+        "nodes": [
+          {
+            "kind": "union",
+            "types": [
+              1,
+              2,
+              3,
+              4,
+              5,
+              6
+            ]
+          },
+          {
+            "kind": "literal",
+            "value": "blocked"
+          },
+          {
+            "kind": "literal",
+            "value": "cancelled"
+          },
+          {
+            "kind": "literal",
+            "value": "completed"
+          },
+          {
+            "kind": "literal",
+            "value": "failed"
+          },
+          {
+            "kind": "literal",
+            "value": "running"
+          },
+          {
+            "kind": "literal",
+            "value": "skipped"
+          }
+        ]
+      },
+      "names": [
+        "packages/workflow/workflow/src/types.ts#WorkflowNodeAuditStatus"
+      ],
+      "sources": [
+        "packages/workflow/workflow/src/types.ts:119"
+      ]
+    },
+    {
       "digest": "48e5c9861f16ac07e78cb7b5ae9dabdf7bb85c58baed5a51b4ad275050ea58e3",
       "schema": {
         "root": 0,
@@ -36630,6 +38348,115 @@
       },
       "names": [
         "event:team/message/delivered"
+      ],
+      "sources": []
+    },
+    {
+      "digest": "49095060824d56fc0f640ea2c29ca9e43cc7b9c04deeadf1e179e7092e11fb1d",
+      "schema": {
+        "root": 0,
+        "nodes": [
+          {
+            "kind": "object",
+            "properties": [
+              {
+                "name": "data",
+                "type": 1,
+                "optional": false
+              },
+              {
+                "name": "ignorable",
+                "type": 5,
+                "optional": true
+              },
+              {
+                "name": "seq",
+                "type": 3,
+                "optional": false
+              },
+              {
+                "name": "time",
+                "type": 3,
+                "optional": false
+              },
+              {
+                "name": "type",
+                "type": 6,
+                "optional": false
+              }
+            ],
+            "indices": []
+          },
+          {
+            "kind": "object",
+            "properties": [
+              {
+                "name": "deltas",
+                "type": 2,
+                "optional": false
+              },
+              {
+                "name": "lastDeltaTokens",
+                "type": 3,
+                "optional": false
+              },
+              {
+                "name": "lastEstimatedRequestTokens",
+                "type": 3,
+                "optional": false
+              },
+              {
+                "name": "lastProviderInputTokens",
+                "type": 3,
+                "optional": false
+              },
+              {
+                "name": "model",
+                "type": 4,
+                "optional": false
+              },
+              {
+                "name": "provider",
+                "type": 4,
+                "optional": false
+              },
+              {
+                "name": "reserveTokens",
+                "type": 3,
+                "optional": false
+              },
+              {
+                "name": "samplesSeen",
+                "type": 3,
+                "optional": false
+              }
+            ],
+            "indices": []
+          },
+          {
+            "kind": "array",
+            "element": 3
+          },
+          {
+            "kind": "primitive",
+            "type": "number"
+          },
+          {
+            "kind": "primitive",
+            "type": "string"
+          },
+          {
+            "kind": "literal",
+            "value": true
+          },
+          {
+            "kind": "literal",
+            "value": "context/calibration"
+          }
+        ]
+      },
+      "names": [
+        "event:context/calibration"
       ],
       "sources": []
     },
@@ -37087,7 +38914,7 @@
         "packages/workflow/workflow/src/types.ts#WorkflowRunId"
       ],
       "sources": [
-        "packages/api/session-controller/src/types.ts:375",
+        "packages/api/session-controller/src/types.ts:460",
         "packages/attachment/attachment/src/brand.ts:6",
         "packages/compaction/compaction/src/brand.ts:4",
         "packages/core/session/src/types.ts:19",
@@ -37113,6 +38940,20 @@
         "packages/webhook/webhook/src/brand.ts:9",
         "packages/workflow/workflow/src/types.ts:13"
       ]
+    },
+    {
+      "digest": "4dd963858783d8a719c13f5386bedec7ea56509b9fb6ea774d0d102fe68c78be",
+      "schema": {
+        "root": 0,
+        "nodes": [
+          {
+            "kind": "literal",
+            "value": "heuristic"
+          }
+        ]
+      },
+      "names": [],
+      "sources": []
     },
     {
       "digest": "4e011753f8263f436efaabfbb3b4db53a98fc55342c5ded2daf7208b217be159",
@@ -38006,7 +39847,8 @@
       },
       "names": [
         "event:tool/result.data.meta[5][0][6]",
-        "event:tool/result.data.meta[6]"
+        "event:tool/result.data.meta[6]",
+        "event:visual-workflow/run.data.value[6]"
       ],
       "sources": [
         "packages/util/values/src/index.ts:4"
@@ -38059,7 +39901,7 @@
         "event:agent/mode.data"
       ],
       "sources": [
-        "packages/interaction/personal-agent/src/index.ts:115"
+        "packages/interaction/personal-agent/src/index.ts:116"
       ]
     },
     {
@@ -41404,15 +43246,16 @@
         ]
       },
       "names": [
-        "SessionEventEnvelope[46].sourceEventSeqs",
-        "SessionEventEnvelope[66].sourceEventSeqs",
-        "SessionEventEnvelope[69].sourceEventSeqs",
+        "SessionEventEnvelope[47].sourceEventSeqs",
+        "SessionEventEnvelope[67].sourceEventSeqs",
+        "SessionEventEnvelope[70].sourceEventSeqs",
         "event:assistant/attempt.data.stream[0][0].dt",
         "event:assistant/attempt.data.stream[0][1].dt",
         "event:assistant/attempt.data.stream[0][2].dt",
         "event:compaction/prune.data.shadowedSeqs",
         "event:compaction/summary.data[0].shadowedSeqs",
         "event:compaction/summary.data[1].shadowedSeqs",
+        "event:context/calibration.data.deltas",
         "event:image/offload.data.targets[0].imageIndexes",
         "event:session/title-llm-request.data.messageSeqs",
         "event:session/title.data.messageSeqs",
@@ -42499,7 +44342,7 @@
         "packages/interaction/personal-agent/src/index.ts#AgentTaskStatus"
       ],
       "sources": [
-        "packages/interaction/personal-agent/src/index.ts:63"
+        "packages/interaction/personal-agent/src/index.ts:64"
       ]
     },
     {
@@ -43287,7 +45130,7 @@
         "event:agent/inbox/spliced.data.inserted[0].source[10]"
       ],
       "sources": [
-        "packages/api/session-controller/src/types.ts:380"
+        "packages/api/session-controller/src/types.ts:465"
       ]
     },
     {
@@ -46327,7 +48170,8 @@
       },
       "names": [
         "event:tool/result.data.meta[5]",
-        "event:tool/result.data.meta[5][0][5]"
+        "event:tool/result.data.meta[5][0][5]",
+        "event:visual-workflow/run.data.value[5]"
       ],
       "sources": []
     },
@@ -48739,7 +50583,7 @@
         "event:agent/tool-denied.data"
       ],
       "sources": [
-        "packages/interaction/personal-agent/src/index.ts:140"
+        "packages/interaction/personal-agent/src/index.ts:141"
       ]
     },
     {
@@ -48866,6 +50710,45 @@
       ],
       "sources": [
         "packages/context/agent-instructions/src/render.ts:47"
+      ]
+    },
+    {
+      "digest": "844625e467bdf49d9cfd0662c4984b54bf56220ca0e6338db4fc02d7c74af346",
+      "schema": {
+        "root": 0,
+        "nodes": [
+          {
+            "kind": "union",
+            "types": [
+              1,
+              2,
+              3,
+              4
+            ]
+          },
+          {
+            "kind": "literal",
+            "value": "cancelled"
+          },
+          {
+            "kind": "literal",
+            "value": "completed"
+          },
+          {
+            "kind": "literal",
+            "value": "error"
+          },
+          {
+            "kind": "literal",
+            "value": "running"
+          }
+        ]
+      },
+      "names": [
+        "packages/api/session-controller/src/types.ts#WorkflowRemoteRunStatus"
+      ],
+      "sources": [
+        "packages/api/session-controller/src/types.ts:44"
       ]
     },
     {
@@ -52016,6 +53899,7 @@
         "event:assistant/attempt.data.stream[0][0].texts",
         "event:assistant/attempt.data.stream[0][1].texts",
         "event:assistant/attempt.data.stream[0][2].args",
+        "event:context/router.data.selectedMessageIds",
         "event:knowledge/retrieval.data.baseIds",
         "event:knowledge/retrieval.data.skippedBases",
         "event:knowledge/selection.data.baseIds",
@@ -52487,9 +54371,9 @@
         ]
       },
       "names": [
-        "SessionEventEnvelope[46]",
-        "SessionEventEnvelope[66]",
-        "SessionEventEnvelope[69]"
+        "SessionEventEnvelope[47]",
+        "SessionEventEnvelope[67]",
+        "SessionEventEnvelope[70]"
       ],
       "sources": []
     },
@@ -52672,6 +54556,20 @@
           {
             "kind": "literal",
             "value": "tool-call-delta"
+          }
+        ]
+      },
+      "names": [],
+      "sources": []
+    },
+    {
+      "digest": "9c7bba70285d8ec5a756bd25ac81724bfad7bd4fe5627bf73a281c4f041e0ede",
+      "schema": {
+        "root": 0,
+        "nodes": [
+          {
+            "kind": "literal",
+            "value": "context"
           }
         ]
       },
@@ -53360,6 +55258,78 @@
       },
       "names": [],
       "sources": []
+    },
+    {
+      "digest": "a18cd0f5e8cb00d3218bcdfbe87a59b76532a3e448d1a23f6c2ea99e09882869",
+      "schema": {
+        "root": 0,
+        "nodes": [
+          {
+            "kind": "object",
+            "properties": [
+              {
+                "name": "deltas",
+                "type": 1,
+                "optional": false
+              },
+              {
+                "name": "lastDeltaTokens",
+                "type": 2,
+                "optional": false
+              },
+              {
+                "name": "lastEstimatedRequestTokens",
+                "type": 2,
+                "optional": false
+              },
+              {
+                "name": "lastProviderInputTokens",
+                "type": 2,
+                "optional": false
+              },
+              {
+                "name": "model",
+                "type": 3,
+                "optional": false
+              },
+              {
+                "name": "provider",
+                "type": 3,
+                "optional": false
+              },
+              {
+                "name": "reserveTokens",
+                "type": 2,
+                "optional": false
+              },
+              {
+                "name": "samplesSeen",
+                "type": 2,
+                "optional": false
+              }
+            ],
+            "indices": []
+          },
+          {
+            "kind": "array",
+            "element": 2
+          },
+          {
+            "kind": "primitive",
+            "type": "number"
+          },
+          {
+            "kind": "primitive",
+            "type": "string"
+          }
+        ]
+      },
+      "names": [
+        "event:context/calibration.data"
+      ],
+      "sources": [
+        "packages/context/context-router/src/index.ts:428"
+      ]
     },
     {
       "digest": "a2b49331716ba0a7078b026d145306a70eae64b7313c3e6204bd931e75ec3bb1",
@@ -54792,6 +56762,259 @@
       ]
     },
     {
+      "digest": "a9f21da6f264e30628e926424fb203e0260368beacfedd43bcbdc902b5810c2f",
+      "schema": {
+        "root": 0,
+        "nodes": [
+          {
+            "kind": "object",
+            "properties": [
+              {
+                "name": "agentsStarted",
+                "type": 1,
+                "optional": false
+              },
+              {
+                "name": "audit",
+                "type": 2,
+                "optional": true
+              },
+              {
+                "name": "endedAt",
+                "type": 1,
+                "optional": true
+              },
+              {
+                "name": "error",
+                "type": 4,
+                "optional": true
+              },
+              {
+                "name": "inputBytes",
+                "type": 1,
+                "optional": true
+              },
+              {
+                "name": "name",
+                "type": 4,
+                "optional": false
+              },
+              {
+                "name": "runId",
+                "type": 4,
+                "optional": false
+              },
+              {
+                "name": "source",
+                "type": 12,
+                "optional": false
+              },
+              {
+                "name": "startedAt",
+                "type": 1,
+                "optional": false
+              },
+              {
+                "name": "status",
+                "type": 13,
+                "optional": false
+              },
+              {
+                "name": "timedOut",
+                "type": 15,
+                "optional": true
+              },
+              {
+                "name": "timeoutMs",
+                "type": 1,
+                "optional": true
+              },
+              {
+                "name": "value",
+                "type": 16,
+                "optional": true
+              },
+              {
+                "name": "workflowId",
+                "type": 4,
+                "optional": false
+              },
+              {
+                "name": "workflowVersion",
+                "type": 1,
+                "optional": true
+              }
+            ],
+            "indices": []
+          },
+          {
+            "kind": "primitive",
+            "type": "number"
+          },
+          {
+            "kind": "array",
+            "element": 3
+          },
+          {
+            "kind": "object",
+            "properties": [
+              {
+                "name": "correlationId",
+                "type": 4,
+                "optional": false
+              },
+              {
+                "name": "durationMs",
+                "type": 1,
+                "optional": true
+              },
+              {
+                "name": "endedAt",
+                "type": 1,
+                "optional": true
+              },
+              {
+                "name": "error",
+                "type": 4,
+                "optional": true
+              },
+              {
+                "name": "inputSummary",
+                "type": 4,
+                "optional": true
+              },
+              {
+                "name": "label",
+                "type": 4,
+                "optional": false
+              },
+              {
+                "name": "nodeId",
+                "type": 4,
+                "optional": false
+              },
+              {
+                "name": "outputSummary",
+                "type": 4,
+                "optional": true
+              },
+              {
+                "name": "retryCount",
+                "type": 1,
+                "optional": false
+              },
+              {
+                "name": "startedAt",
+                "type": 1,
+                "optional": false
+              },
+              {
+                "name": "status",
+                "type": 5,
+                "optional": false
+              }
+            ],
+            "indices": []
+          },
+          {
+            "kind": "primitive",
+            "type": "string"
+          },
+          {
+            "kind": "union",
+            "types": [
+              6,
+              7,
+              8,
+              9,
+              10,
+              11
+            ]
+          },
+          {
+            "kind": "literal",
+            "value": "cancelled"
+          },
+          {
+            "kind": "literal",
+            "value": "completed"
+          },
+          {
+            "kind": "literal",
+            "value": "failed"
+          },
+          {
+            "kind": "literal",
+            "value": "running"
+          },
+          {
+            "kind": "literal",
+            "value": "skipped"
+          },
+          {
+            "kind": "literal",
+            "value": "blocked"
+          },
+          {
+            "kind": "literal",
+            "value": "visual-editor"
+          },
+          {
+            "kind": "union",
+            "types": [
+              6,
+              7,
+              9,
+              14
+            ]
+          },
+          {
+            "kind": "literal",
+            "value": "error"
+          },
+          {
+            "kind": "primitive",
+            "type": "boolean"
+          },
+          {
+            "kind": "union",
+            "types": [
+              1,
+              4,
+              15,
+              17,
+              18,
+              19
+            ]
+          },
+          {
+            "kind": "array",
+            "element": 16
+          },
+          {
+            "kind": "object",
+            "properties": [],
+            "indices": [
+              {
+                "key": 4,
+                "value": 16
+              }
+            ]
+          },
+          {
+            "kind": "primitive",
+            "type": "null"
+          }
+        ]
+      },
+      "names": [
+        "packages/api/session-controller/src/types.ts#WorkflowRemoteRunView"
+      ],
+      "sources": [
+        "packages/api/session-controller/src/types.ts:62"
+      ]
+    },
+    {
       "digest": "aa0957eca50aeb28bcd2e6930b95809926edacb550c8c340ba526ba6b861b3d8",
       "schema": {
         "root": 0,
@@ -55351,6 +57574,20 @@
       "sources": []
     },
     {
+      "digest": "ae399710308d9b521ece740820ef70822aaa286728d61e5219a125651491269e",
+      "schema": {
+        "root": 0,
+        "nodes": [
+          {
+            "kind": "literal",
+            "value": "visual-editor"
+          }
+        ]
+      },
+      "names": [],
+      "sources": []
+    },
+    {
       "digest": "ae63d9d1080ed8945031594d93f8d96651d7101b848719cc3e1475875cd3d649",
       "schema": {
         "root": 0,
@@ -55372,6 +57609,20 @@
           {
             "kind": "literal",
             "value": "catalog"
+          }
+        ]
+      },
+      "names": [],
+      "sources": []
+    },
+    {
+      "digest": "aef84cbfe211e03b7021bdddf5774c00da16763c24cd98110d93cafb71977f6e",
+      "schema": {
+        "root": 0,
+        "nodes": [
+          {
+            "kind": "literal",
+            "value": "acknowledgement"
           }
         ]
       },
@@ -55755,8 +58006,22 @@
         "event:agent/inbox/spliced.data.inserted[0].source[20]"
       ],
       "sources": [
-        "packages/webhook/webhook-feishu/src/index.ts:26"
+        "packages/webhook/webhook-feishu/src/index.ts:28"
       ]
+    },
+    {
+      "digest": "b14aff04e60b5ecb65370ac6896f442c7f7578f67bcede6cf172881979ce4697",
+      "schema": {
+        "root": 0,
+        "nodes": [
+          {
+            "kind": "literal",
+            "value": "context/calibration"
+          }
+        ]
+      },
+      "names": [],
+      "sources": []
     },
     {
       "digest": "b158f3ff6923714807c0d73882f0b05dc87f8fa85c9e90814852d48bbc866081",
@@ -57145,7 +59410,7 @@
         "packages/interaction/personal-agent/src/index.ts#AgentTaskBudget"
       ],
       "sources": [
-        "packages/interaction/personal-agent/src/index.ts:65"
+        "packages/interaction/personal-agent/src/index.ts:66"
       ]
     },
     {
@@ -59976,6 +62241,7 @@
       },
       "names": [
         "event:tool/result.data.meta",
+        "event:visual-workflow/run.data.value",
         "packages/util/values/src/index.ts#JsonValue"
       ],
       "sources": [
@@ -62200,6 +64466,296 @@
       ]
     },
     {
+      "digest": "cb09a795adca8a7463c0222634d4758ca2bc173809c97de75fa08b37d1001bde",
+      "schema": {
+        "root": 0,
+        "nodes": [
+          {
+            "kind": "object",
+            "properties": [
+              {
+                "name": "data",
+                "type": 1,
+                "optional": false
+              },
+              {
+                "name": "ignorable",
+                "type": 21,
+                "optional": true
+              },
+              {
+                "name": "seq",
+                "type": 2,
+                "optional": false
+              },
+              {
+                "name": "time",
+                "type": 2,
+                "optional": false
+              },
+              {
+                "name": "type",
+                "type": 22,
+                "optional": false
+              }
+            ],
+            "indices": []
+          },
+          {
+            "kind": "object",
+            "properties": [
+              {
+                "name": "agentsStarted",
+                "type": 2,
+                "optional": false
+              },
+              {
+                "name": "audit",
+                "type": 3,
+                "optional": true
+              },
+              {
+                "name": "endedAt",
+                "type": 2,
+                "optional": true
+              },
+              {
+                "name": "error",
+                "type": 5,
+                "optional": true
+              },
+              {
+                "name": "inputBytes",
+                "type": 2,
+                "optional": true
+              },
+              {
+                "name": "name",
+                "type": 5,
+                "optional": false
+              },
+              {
+                "name": "runId",
+                "type": 5,
+                "optional": false
+              },
+              {
+                "name": "source",
+                "type": 13,
+                "optional": false
+              },
+              {
+                "name": "startedAt",
+                "type": 2,
+                "optional": false
+              },
+              {
+                "name": "status",
+                "type": 14,
+                "optional": false
+              },
+              {
+                "name": "timedOut",
+                "type": 16,
+                "optional": true
+              },
+              {
+                "name": "timeoutMs",
+                "type": 2,
+                "optional": true
+              },
+              {
+                "name": "value",
+                "type": 17,
+                "optional": true
+              },
+              {
+                "name": "workflowId",
+                "type": 5,
+                "optional": false
+              },
+              {
+                "name": "workflowVersion",
+                "type": 2,
+                "optional": true
+              }
+            ],
+            "indices": []
+          },
+          {
+            "kind": "primitive",
+            "type": "number"
+          },
+          {
+            "kind": "array",
+            "element": 4
+          },
+          {
+            "kind": "object",
+            "properties": [
+              {
+                "name": "correlationId",
+                "type": 5,
+                "optional": false
+              },
+              {
+                "name": "durationMs",
+                "type": 2,
+                "optional": true
+              },
+              {
+                "name": "endedAt",
+                "type": 2,
+                "optional": true
+              },
+              {
+                "name": "error",
+                "type": 5,
+                "optional": true
+              },
+              {
+                "name": "inputSummary",
+                "type": 5,
+                "optional": true
+              },
+              {
+                "name": "label",
+                "type": 5,
+                "optional": false
+              },
+              {
+                "name": "nodeId",
+                "type": 5,
+                "optional": false
+              },
+              {
+                "name": "outputSummary",
+                "type": 5,
+                "optional": true
+              },
+              {
+                "name": "retryCount",
+                "type": 2,
+                "optional": false
+              },
+              {
+                "name": "startedAt",
+                "type": 2,
+                "optional": false
+              },
+              {
+                "name": "status",
+                "type": 6,
+                "optional": false
+              }
+            ],
+            "indices": []
+          },
+          {
+            "kind": "primitive",
+            "type": "string"
+          },
+          {
+            "kind": "union",
+            "types": [
+              7,
+              8,
+              9,
+              10,
+              11,
+              12
+            ]
+          },
+          {
+            "kind": "literal",
+            "value": "cancelled"
+          },
+          {
+            "kind": "literal",
+            "value": "completed"
+          },
+          {
+            "kind": "literal",
+            "value": "failed"
+          },
+          {
+            "kind": "literal",
+            "value": "running"
+          },
+          {
+            "kind": "literal",
+            "value": "blocked"
+          },
+          {
+            "kind": "literal",
+            "value": "skipped"
+          },
+          {
+            "kind": "literal",
+            "value": "visual-editor"
+          },
+          {
+            "kind": "union",
+            "types": [
+              7,
+              8,
+              10,
+              15
+            ]
+          },
+          {
+            "kind": "literal",
+            "value": "error"
+          },
+          {
+            "kind": "primitive",
+            "type": "boolean"
+          },
+          {
+            "kind": "union",
+            "types": [
+              2,
+              5,
+              16,
+              18,
+              19,
+              20
+            ]
+          },
+          {
+            "kind": "array",
+            "element": 17
+          },
+          {
+            "kind": "object",
+            "properties": [],
+            "indices": [
+              {
+                "key": 5,
+                "value": 17
+              }
+            ]
+          },
+          {
+            "kind": "primitive",
+            "type": "null"
+          },
+          {
+            "kind": "literal",
+            "value": true
+          },
+          {
+            "kind": "literal",
+            "value": "visual-workflow/run"
+          }
+        ]
+      },
+      "names": [
+        "event:visual-workflow/run"
+      ],
+      "sources": []
+    },
+    {
       "digest": "cbca49bde16b656d5b8fbe4a8a507769f7b594c6287782b809c03814941bc5e3",
       "schema": {
         "root": 0,
@@ -62373,7 +64929,7 @@
         "packages/interaction/personal-agent/src/index.ts#AgentTaskSnapshot"
       ],
       "sources": [
-        "packages/interaction/personal-agent/src/index.ts:73"
+        "packages/interaction/personal-agent/src/index.ts:74"
       ]
     },
     {
@@ -62388,6 +64944,33 @@
         ]
       },
       "names": [],
+      "sources": []
+    },
+    {
+      "digest": "cd0008f13ed649384a73926eb5d228aa245c9c3f3d3ec99b1b2e8acf5036cfbe",
+      "schema": {
+        "root": 0,
+        "nodes": [
+          {
+            "kind": "union",
+            "types": [
+              1,
+              2
+            ]
+          },
+          {
+            "kind": "literal",
+            "value": "heuristic"
+          },
+          {
+            "kind": "literal",
+            "value": "heuristic+reserve"
+          }
+        ]
+      },
+      "names": [
+        "event:context/router.data.estimateBasis"
+      ],
       "sources": []
     },
     {
@@ -62549,6 +65132,20 @@
       "sources": [
         "packages/llm/llm-retry/src/types.ts:17"
       ]
+    },
+    {
+      "digest": "ce3d7a227b0b144c5844430463a79f8f821390cb6caf8e3fffba37141287e7e7",
+      "schema": {
+        "root": 0,
+        "nodes": [
+          {
+            "kind": "literal",
+            "value": "co-reference"
+          }
+        ]
+      },
+      "names": [],
+      "sources": []
     },
     {
       "digest": "cf2e46d6bd37ead0246a9276ca8f1cd3ebf60b12bc7d33752e86c217cc9f7add",
@@ -64752,7 +67349,7 @@
         "SessionEventEnvelope[43]",
         "SessionEventEnvelope[44]",
         "SessionEventEnvelope[45]",
-        "SessionEventEnvelope[47]",
+        "SessionEventEnvelope[46]",
         "SessionEventEnvelope[48]",
         "SessionEventEnvelope[49]",
         "SessionEventEnvelope[4]",
@@ -64773,10 +67370,13 @@
         "SessionEventEnvelope[63]",
         "SessionEventEnvelope[64]",
         "SessionEventEnvelope[65]",
-        "SessionEventEnvelope[67]",
+        "SessionEventEnvelope[66]",
         "SessionEventEnvelope[68]",
+        "SessionEventEnvelope[69]",
         "SessionEventEnvelope[6]",
-        "SessionEventEnvelope[70]",
+        "SessionEventEnvelope[71]",
+        "SessionEventEnvelope[72]",
+        "SessionEventEnvelope[73]",
         "SessionEventEnvelope[7]",
         "SessionEventEnvelope[8]",
         "SessionEventEnvelope[9]"
@@ -65642,6 +68242,378 @@
       "sources": []
     },
     {
+      "digest": "e462f5e40f8316e81fc80f970ff6a786b80ac7084fe56dcb157332b57eec557a",
+      "schema": {
+        "root": 0,
+        "nodes": [
+          {
+            "kind": "object",
+            "properties": [
+              {
+                "name": "adapterProjection",
+                "type": 1,
+                "optional": true
+              },
+              {
+                "name": "budgetExceeded",
+                "type": 2,
+                "optional": false
+              },
+              {
+                "name": "calibrationDeltaTokens",
+                "type": 3,
+                "optional": true
+              },
+              {
+                "name": "calibrationSampleCount",
+                "type": 3,
+                "optional": true
+              },
+              {
+                "name": "contextWindow",
+                "type": 3,
+                "optional": true
+              },
+              {
+                "name": "droppedMessages",
+                "type": 3,
+                "optional": false
+              },
+              {
+                "name": "estimateBasis",
+                "type": 4,
+                "optional": true
+              },
+              {
+                "name": "estimatedInputTokens",
+                "type": 3,
+                "optional": false
+              },
+              {
+                "name": "estimatedRequestTokens",
+                "type": 3,
+                "optional": true
+              },
+              {
+                "name": "estimatedWindowTokens",
+                "type": 3,
+                "optional": true
+              },
+              {
+                "name": "finalPayload",
+                "type": 2,
+                "optional": true
+              },
+              {
+                "name": "inputMessages",
+                "type": 3,
+                "optional": false
+              },
+              {
+                "name": "maxInputTokens",
+                "type": 3,
+                "optional": true
+              },
+              {
+                "name": "model",
+                "type": 7,
+                "optional": true
+              },
+              {
+                "name": "outputBudgetTokens",
+                "type": 3,
+                "optional": true
+              },
+              {
+                "name": "outputMessages",
+                "type": 3,
+                "optional": false
+              },
+              {
+                "name": "overflowTokens",
+                "type": 3,
+                "optional": false
+              },
+              {
+                "name": "provider",
+                "type": 7,
+                "optional": true
+              },
+              {
+                "name": "providerReportedInputTokens",
+                "type": 3,
+                "optional": true
+              },
+              {
+                "name": "reason",
+                "type": 7,
+                "optional": false
+              },
+              {
+                "name": "requestOverflowTokens",
+                "type": 3,
+                "optional": true
+              },
+              {
+                "name": "safetyReserveTokens",
+                "type": 3,
+                "optional": true
+              },
+              {
+                "name": "scope",
+                "type": 8,
+                "optional": false
+              },
+              {
+                "name": "selectedMessageIds",
+                "type": 13,
+                "optional": false
+              },
+              {
+                "name": "selectedMessageMeta",
+                "type": 14,
+                "optional": true
+              },
+              {
+                "name": "selectedMessageMetaOmitted",
+                "type": 3,
+                "optional": true
+              },
+              {
+                "name": "signal",
+                "type": 23,
+                "optional": true
+              },
+              {
+                "name": "step",
+                "type": 3,
+                "optional": false
+              },
+              {
+                "name": "taskId",
+                "type": 7,
+                "optional": true
+              },
+              {
+                "name": "taskRecallMessages",
+                "type": 3,
+                "optional": true
+              },
+              {
+                "name": "toolSchemaTokens",
+                "type": 3,
+                "optional": true
+              },
+              {
+                "name": "turn",
+                "type": 3,
+                "optional": false
+              }
+            ],
+            "indices": []
+          },
+          {
+            "kind": "object",
+            "properties": [
+              {
+                "name": "files",
+                "type": 2,
+                "optional": false
+              },
+              {
+                "name": "images",
+                "type": 2,
+                "optional": false
+              }
+            ],
+            "indices": []
+          },
+          {
+            "kind": "primitive",
+            "type": "boolean"
+          },
+          {
+            "kind": "primitive",
+            "type": "number"
+          },
+          {
+            "kind": "union",
+            "types": [
+              5,
+              6
+            ]
+          },
+          {
+            "kind": "literal",
+            "value": "heuristic"
+          },
+          {
+            "kind": "literal",
+            "value": "heuristic+reserve"
+          },
+          {
+            "kind": "primitive",
+            "type": "string"
+          },
+          {
+            "kind": "union",
+            "types": [
+              9,
+              10,
+              11,
+              12
+            ]
+          },
+          {
+            "kind": "literal",
+            "value": "fresh"
+          },
+          {
+            "kind": "literal",
+            "value": "full"
+          },
+          {
+            "kind": "literal",
+            "value": "recent"
+          },
+          {
+            "kind": "literal",
+            "value": "task"
+          },
+          {
+            "kind": "array",
+            "element": 7
+          },
+          {
+            "kind": "array",
+            "element": 15
+          },
+          {
+            "kind": "object",
+            "properties": [
+              {
+                "name": "estimatedTokens",
+                "type": 3,
+                "optional": false
+              },
+              {
+                "name": "id",
+                "type": 7,
+                "optional": false
+              },
+              {
+                "name": "kind",
+                "type": 16,
+                "optional": false
+              },
+              {
+                "name": "preview",
+                "type": 7,
+                "optional": false
+              },
+              {
+                "name": "sourceKind",
+                "type": 7,
+                "optional": false
+              }
+            ],
+            "indices": []
+          },
+          {
+            "kind": "union",
+            "types": [
+              17,
+              18,
+              19,
+              20,
+              21,
+              22
+            ]
+          },
+          {
+            "kind": "literal",
+            "value": "tool"
+          },
+          {
+            "kind": "literal",
+            "value": "unknown"
+          },
+          {
+            "kind": "literal",
+            "value": "assistant"
+          },
+          {
+            "kind": "literal",
+            "value": "user"
+          },
+          {
+            "kind": "literal",
+            "value": "context"
+          },
+          {
+            "kind": "literal",
+            "value": "system"
+          },
+          {
+            "kind": "union",
+            "types": [
+              24,
+              25,
+              26,
+              27,
+              28,
+              29,
+              30,
+              31,
+              32
+            ]
+          },
+          {
+            "kind": "literal",
+            "value": "task-reference"
+          },
+          {
+            "kind": "literal",
+            "value": "unrelated"
+          },
+          {
+            "kind": "literal",
+            "value": "acknowledgement"
+          },
+          {
+            "kind": "literal",
+            "value": "co-reference"
+          },
+          {
+            "kind": "literal",
+            "value": "explicit-fresh"
+          },
+          {
+            "kind": "literal",
+            "value": "explicit-full"
+          },
+          {
+            "kind": "literal",
+            "value": "follow-up"
+          },
+          {
+            "kind": "literal",
+            "value": "lexical-match"
+          },
+          {
+            "kind": "literal",
+            "value": "open-turn"
+          }
+        ]
+      },
+      "names": [
+        "event:context/router.data"
+      ],
+      "sources": [
+        "packages/context/context-router/src/index.ts:386"
+      ]
+    },
+    {
       "digest": "e4c18e294232c3ba6c9f1999f168263cc55956147cfe4121720899be8e52edd1",
       "schema": {
         "root": 0,
@@ -66388,7 +69360,7 @@
         "packages/interaction/personal-agent/src/index.ts#AgentMode"
       ],
       "sources": [
-        "packages/interaction/personal-agent/src/index.ts:36"
+        "packages/interaction/personal-agent/src/index.ts:37"
       ]
     },
     {
@@ -66432,6 +69404,94 @@
       },
       "names": [],
       "sources": []
+    },
+    {
+      "digest": "e8c10f93bcdc3a2e527daa497a408f7e29d465babf32cd00590c0ecadc938854",
+      "schema": {
+        "root": 0,
+        "nodes": [
+          {
+            "kind": "object",
+            "properties": [
+              {
+                "name": "estimatedTokens",
+                "type": 1,
+                "optional": false
+              },
+              {
+                "name": "id",
+                "type": 2,
+                "optional": false
+              },
+              {
+                "name": "kind",
+                "type": 3,
+                "optional": false
+              },
+              {
+                "name": "preview",
+                "type": 2,
+                "optional": false
+              },
+              {
+                "name": "sourceKind",
+                "type": 2,
+                "optional": false
+              }
+            ],
+            "indices": []
+          },
+          {
+            "kind": "primitive",
+            "type": "number"
+          },
+          {
+            "kind": "primitive",
+            "type": "string"
+          },
+          {
+            "kind": "union",
+            "types": [
+              4,
+              5,
+              6,
+              7,
+              8,
+              9
+            ]
+          },
+          {
+            "kind": "literal",
+            "value": "assistant"
+          },
+          {
+            "kind": "literal",
+            "value": "context"
+          },
+          {
+            "kind": "literal",
+            "value": "system"
+          },
+          {
+            "kind": "literal",
+            "value": "tool"
+          },
+          {
+            "kind": "literal",
+            "value": "unknown"
+          },
+          {
+            "kind": "literal",
+            "value": "user"
+          }
+        ]
+      },
+      "names": [
+        "packages/context/context-router/src/router.ts#ContextMessageAudit"
+      ],
+      "sources": [
+        "packages/context/context-router/src/router.ts:84"
+      ]
     },
     {
       "digest": "e8d26e6993445743e6c4342c31b284c7d8f5574369abdd6021183af1a6b3538f",
@@ -66670,6 +69730,20 @@
       "sources": []
     },
     {
+      "digest": "ecd57da5a153a4376e0493417d33b8bf655a1fc9c97777fcaf8e552c8a2137bc",
+      "schema": {
+        "root": 0,
+        "nodes": [
+          {
+            "kind": "literal",
+            "value": "visual-workflow/run"
+          }
+        ]
+      },
+      "names": [],
+      "sources": []
+    },
+    {
       "digest": "ed13878d0599759e40cd7ed480cb67053fa38b36f4c22f882850d4f87196f139",
       "schema": {
         "root": 0,
@@ -66767,99 +69841,6 @@
       "sources": []
     },
     {
-      "digest": "ef8f9cce2fdfa3230a890304d8090f4243d880d31a19830193cc24459c47922b",
-      "schema": {
-        "root": 0,
-        "nodes": [
-          {
-            "kind": "object",
-            "properties": [
-              {
-                "name": "droppedMessages",
-                "type": 1,
-                "optional": false
-              },
-              {
-                "name": "estimatedInputTokens",
-                "type": 1,
-                "optional": false
-              },
-              {
-                "name": "inputMessages",
-                "type": 1,
-                "optional": false
-              },
-              {
-                "name": "outputMessages",
-                "type": 1,
-                "optional": false
-              },
-              {
-                "name": "reason",
-                "type": 2,
-                "optional": false
-              },
-              {
-                "name": "scope",
-                "type": 3,
-                "optional": false
-              },
-              {
-                "name": "step",
-                "type": 1,
-                "optional": false
-              },
-              {
-                "name": "turn",
-                "type": 1,
-                "optional": false
-              }
-            ],
-            "indices": []
-          },
-          {
-            "kind": "primitive",
-            "type": "number"
-          },
-          {
-            "kind": "primitive",
-            "type": "string"
-          },
-          {
-            "kind": "union",
-            "types": [
-              4,
-              5,
-              6,
-              7
-            ]
-          },
-          {
-            "kind": "literal",
-            "value": "fresh"
-          },
-          {
-            "kind": "literal",
-            "value": "full"
-          },
-          {
-            "kind": "literal",
-            "value": "recent"
-          },
-          {
-            "kind": "literal",
-            "value": "task"
-          }
-        ]
-      },
-      "names": [
-        "event:context/router.data"
-      ],
-      "sources": [
-        "packages/context/context-router/src/index.ts:38"
-      ]
-    },
-    {
       "digest": "ef9859ec120ef6b1a0867f6d95e4734c3f4f4c38b15b432ddd54488d37a73618",
       "schema": {
         "root": 0,
@@ -66923,7 +69904,7 @@
         "packages/api/session-controller/src/types.ts#ModelSelection"
       ],
       "sources": [
-        "packages/api/session-controller/src/types.ts:86"
+        "packages/api/session-controller/src/types.ts:170"
       ]
     },
     {
@@ -67058,6 +70039,34 @@
       ]
     },
     {
+      "digest": "f1d59acdc87c8ec1f32639a2a48714a316524f8c1f69faa322514360144fa7d5",
+      "schema": {
+        "root": 0,
+        "nodes": [
+          {
+            "kind": "literal",
+            "value": "explicit-fresh"
+          }
+        ]
+      },
+      "names": [],
+      "sources": []
+    },
+    {
+      "digest": "f2511d79be05bc19fa8c960ef480056a2bbc8b7cf4911dca388173d51ea0d63f",
+      "schema": {
+        "root": 0,
+        "nodes": [
+          {
+            "kind": "literal",
+            "value": "skipped"
+          }
+        ]
+      },
+      "names": [],
+      "sources": []
+    },
+    {
       "digest": "f2da0f27c1e6add59982c37b15e4a4912c5b33466859cce3b13d503600e24aef",
       "schema": {
         "root": 0,
@@ -67137,6 +70146,20 @@
       "sources": [
         "packages/llm/llm/src/types.ts:383"
       ]
+    },
+    {
+      "digest": "f3e9e86542d2800f3b07ec0642e3e931c384cfd1a49fbd8efe30f337e2dec0a1",
+      "schema": {
+        "root": 0,
+        "nodes": [
+          {
+            "kind": "literal",
+            "value": "visual-workflow/node"
+          }
+        ]
+      },
+      "names": [],
+      "sources": []
     },
     {
       "digest": "f56c5b59ca0161310c338d31dd16cf14287ccd602ff4181058df178c1c286d7f",
@@ -67823,6 +70846,20 @@
       "sources": []
     },
     {
+      "digest": "f74364fd4640e69850bd9987b20245e0377b60b82ba254e3e5b307d969367ba0",
+      "schema": {
+        "root": 0,
+        "nodes": [
+          {
+            "kind": "literal",
+            "value": "open-turn"
+          }
+        ]
+      },
+      "names": [],
+      "sources": []
+    },
+    {
       "digest": "f789af5ab844827eb5a4f357c0afae1eeed108c6c22d8ca1a56e586b349a7c85",
       "schema": {
         "root": 0,
@@ -67910,7 +70947,7 @@
         "packages/interaction/personal-agent/src/index.ts#ToolPolicyAudit"
       ],
       "sources": [
-        "packages/interaction/personal-agent/src/index.ts:88"
+        "packages/interaction/personal-agent/src/index.ts:89"
       ]
     },
     {
@@ -68788,6 +71825,161 @@
         ]
       },
       "names": [],
+      "sources": []
+    },
+    {
+      "digest": "ff2ee66479a0a60bd141972b78adf9c8bfca4b36d262ca17c8c234f15d78dc76",
+      "schema": {
+        "root": 0,
+        "nodes": [
+          {
+            "kind": "object",
+            "properties": [
+              {
+                "name": "data",
+                "type": 1,
+                "optional": false
+              },
+              {
+                "name": "ignorable",
+                "type": 11,
+                "optional": true
+              },
+              {
+                "name": "seq",
+                "type": 3,
+                "optional": false
+              },
+              {
+                "name": "time",
+                "type": 3,
+                "optional": false
+              },
+              {
+                "name": "type",
+                "type": 12,
+                "optional": false
+              }
+            ],
+            "indices": []
+          },
+          {
+            "kind": "object",
+            "properties": [
+              {
+                "name": "correlationId",
+                "type": 2,
+                "optional": false
+              },
+              {
+                "name": "durationMs",
+                "type": 3,
+                "optional": true
+              },
+              {
+                "name": "endedAt",
+                "type": 3,
+                "optional": true
+              },
+              {
+                "name": "error",
+                "type": 2,
+                "optional": true
+              },
+              {
+                "name": "inputSummary",
+                "type": 2,
+                "optional": true
+              },
+              {
+                "name": "label",
+                "type": 2,
+                "optional": false
+              },
+              {
+                "name": "nodeId",
+                "type": 2,
+                "optional": false
+              },
+              {
+                "name": "outputSummary",
+                "type": 2,
+                "optional": true
+              },
+              {
+                "name": "retryCount",
+                "type": 3,
+                "optional": false
+              },
+              {
+                "name": "startedAt",
+                "type": 3,
+                "optional": false
+              },
+              {
+                "name": "status",
+                "type": 4,
+                "optional": false
+              }
+            ],
+            "indices": []
+          },
+          {
+            "kind": "primitive",
+            "type": "string"
+          },
+          {
+            "kind": "primitive",
+            "type": "number"
+          },
+          {
+            "kind": "union",
+            "types": [
+              5,
+              6,
+              7,
+              8,
+              9,
+              10
+            ]
+          },
+          {
+            "kind": "literal",
+            "value": "blocked"
+          },
+          {
+            "kind": "literal",
+            "value": "cancelled"
+          },
+          {
+            "kind": "literal",
+            "value": "completed"
+          },
+          {
+            "kind": "literal",
+            "value": "failed"
+          },
+          {
+            "kind": "literal",
+            "value": "running"
+          },
+          {
+            "kind": "literal",
+            "value": "skipped"
+          },
+          {
+            "kind": "literal",
+            "value": true
+          },
+          {
+            "kind": "literal",
+            "value": "visual-workflow/node"
+          }
+        ]
+      },
+      "names": [
+        "event:visual-workflow/node"
+      ],
       "sources": []
     }
   ]

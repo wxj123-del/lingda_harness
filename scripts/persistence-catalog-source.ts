@@ -13,6 +13,14 @@ const SESSION_PACKAGE = '@deepseek-ai/dsh-session'
 /** The type-only module that plugin declaration merges augment. */
 const SESSION_TYPES_MODULE = '@deepseek-ai/dsh-session/types'
 
+/** Only authored TypeScript sources participate in catalog discovery. Emitted declaration files are typecheck inputs, not event owners. */
+function sourceFiles(scanRoot: string): string[] {
+  return globSync('packages/*/*/src/**/*.{ts,tsx}', { cwd: scanRoot })
+    .filter(file => !file.endsWith('.d.ts'))
+    .map(file => file.split(sep).join('/'))
+    .sort()
+}
+
 /** Event-envelope declarations rendered before the per-event vocabulary. */
 const EVENT_ENVELOPE_TYPE_NAMES = [
   'SessionEventType',
@@ -139,7 +147,7 @@ export function collectLogEvents(scanRoot: string = root): LogEventEntry[] {
   const violations: string[] = []
   const seen = new Map<string, string>()
   let owningDecl: string | null = null
-  for (const rel of globSync('packages/*/*/src/**/*.{ts,tsx}', { cwd: scanRoot }).map(s => s.split(sep).join('/')).sort()) {
+  for (const rel of sourceFiles(scanRoot)) {
     const abs = resolve(scanRoot, rel)
     const text = readFileSync(abs, 'utf8')
     if (!text.includes('SessionEventMap')) continue
@@ -217,7 +225,7 @@ export function collectEventEnvelopeTypes(scanRoot: string = root): EventEnvelop
   const found = new Map<EventEnvelopeTypeName, EventEnvelopeTypeEntry>()
   const violations: string[] = []
   const wanted = new Set<string>(EVENT_ENVELOPE_TYPE_NAMES)
-  for (const rel of globSync('packages/*/*/src/**/*.{ts,tsx}', { cwd: scanRoot }).map(s => s.split(sep).join('/')).sort()) {
+  for (const rel of sourceFiles(scanRoot)) {
     const abs = resolve(scanRoot, rel)
     const text = readFileSync(abs, 'utf8')
     if (!EVENT_ENVELOPE_TYPE_NAMES.some(name => text.includes(name))) continue
@@ -263,7 +271,7 @@ export function collectEventEnvelopeTypes(scanRoot: string = root): EventEnvelop
  */
 export function collectSurfaceEventTypes(scanRoot: string = root): string[] {
   const found: { names: string[]; source: string }[] = []
-  for (const rel of globSync('packages/*/*/src/**/*.{ts,tsx}', { cwd: scanRoot }).map(s => s.split(sep).join('/')).sort()) {
+  for (const rel of sourceFiles(scanRoot)) {
     const abs = resolve(scanRoot, rel)
     const text = readFileSync(abs, 'utf8')
     if (!text.includes('SurfaceEventType')) continue

@@ -2,11 +2,14 @@ import { Context } from '@deepseek-ai/cordis'
 import AgentRegistry from '@deepseek-ai/dsh-agent'
 import type { Agent } from '@deepseek-ai/dsh-agent'
 import { createUserMessage } from '@deepseek-ai/dsh-llm'
-import SessionStore, { SESSION_FORMAT_VERSION, SessionId, SessionLogOffset } from '@deepseek-ai/dsh-session'
+import SessionStore, { SESSION_FORMAT_VERSION, Session, SessionId, SessionLogOffset } from '@deepseek-ai/dsh-session'
 import type { SessionEvent, SessionHeader } from '@deepseek-ai/dsh-session'
 import { RemoteError } from '@deepseek-ai/dsh-typert-protocol'
+import { WorkflowRunId } from '@deepseek-ai/dsh-workflow'
+import type { WorkflowMeta, WorkflowNodeEndInfo, WorkflowNodeStartInfo, WorkflowResult } from '@deepseek-ai/dsh-workflow'
 import { describe, expect, it, vi } from 'vitest'
 import SessionController from '../src/index.ts'
+import type { WorkflowNodeAudit, WorkflowRemoteRunView } from '../src/types.ts'
 import type { ApiSessionAgentController } from '../src/agent.ts'
 import { createSessionTestController, testSessionPersistence } from './test-remote.ts'
 
@@ -137,6 +140,247 @@ describe('SessionController facade', () => {
     })
     abort.abort()
     await expect(iterator.next()).resolves.toEqual({ done: true, value: undefined })
+  })
+
+  it('reads visual workflow run history from the Session event log', async () => {
+    const ctx = new Context()
+    await ctx.plugin(SessionStore)
+    await ctx.plugin(AgentRegistry)
+    const sessionId = SessionId('workflow-history-session')
+    const header: SessionHeader = {
+      version: SESSION_FORMAT_VERSION,
+      id: sessionId,
+      createdAt: 1,
+      cwd: '/workspace',
+      isSeeded: false,
+    }
+    ctx.provide('sessionPersistence', testSessionPersistence(ctx, {
+      list: () => Promise.resolve([header]),
+      inspect: () => Promise.resolve({ meta: header, events: [] }),
+    }) as never)
+    const controller = createSessionTestController(ctx, defaults)
+    const session = ctx.sessions.create(sessionId, { meta: header })
+    const view: WorkflowRemoteRunView = {
+      runId: WorkflowRunId('persisted-run'),
+      workflowId: 'fixture-workflow',
+      name: 'Fixture workflow',
+      status: 'completed',
+      startedAt: 10,
+      endedAt: 20,
+      agentsStarted: 1,
+      source: 'visual-editor',
+      value: { ok: true },
+    }
+    session.append('visual-workflow/run', view)
+
+    await expect(controller.workflowList(sessionId, { limit: 10 })).resolves.toEqual({ runs: [view] })
+    await expect(controller.workflowStatus({ sessionId, runId: view.runId })).resolves.toEqual(view)
+    await expect(controller.workflowCancel({ sessionId, runId: view.runId }))
+      .rejects.toThrow('is no longer running')
+  })
+
+  it('recovers visual workflow history from a cold persisted Session', async () => {
+    const ctx = new Context()
+    await ctx.plugin(SessionStore)
+    await ctx.plugin(AgentRegistry)
+    const sessionId = SessionId('cold-workflow-history-session')
+    const header: SessionHeader = {
+      version: SESSION_FORMAT_VERSION,
+      id: sessionId,
+      createdAt: 1,
+      cwd: '/workspace',
+      isSeeded: false,
+    }
+    const persisted = Session.create(sessionId, [], header)
+    const view: WorkflowRemoteRunView = {
+      runId: WorkflowRunId('cold-persisted-run'),
+      workflowId: 'fixture-workflow',
+      name: 'Fixture workflow',
+      status: 'completed',
+      startedAt: 30,
+      endedAt: 40,
+      agentsStarted: 0,
+      source: 'visual-editor',
+    }
+    persisted.append('visual-workflow/run', view)
+    ctx.provide('sessionPersistence', testSessionPersistence(ctx, {
+      list: () => Promise.resolve([header]),
+      inspect: () => Promise.resolve({ meta: header, events: persisted.snapshotEvents() }),
+    }) as never)
+    const controller = createSessionTestController(ctx, defaults)
+
+    await expect(controller.workflowList(sessionId, { workflowId: 'fixture-workflow' }))
+      .resolves.toEqual({ runs: [view] })
+    await expect(controller.workflowStatus({ sessionId, runId: view.runId })).resolves.toEqual(view)
+  })
+
+  it('folds incremental node audit events into the latest run checkpoint', async () => {
+    const ctx = new Context()
+    await ctx.plugin(SessionStore)
+    await ctx.plugin(AgentRegistry)
+    const sessionId = SessionId('incremental-workflow-history-session')
+    const header: SessionHeader = {
+      version: SESSION_FORMAT_VERSION,
+      id: sessionId,
+      createdAt: 1,
+      cwd: '/workspace',
+      isSeeded: false,
+    }
+    const persisted = Session.create(sessionId, [], header)
+    const runId = WorkflowRunId('incremental-run')
+    const start: WorkflowNodeAudit = {
+      correlationId: runId,
+      nodeId: 'input',
+      label: 'Input',
+      status: 'running',
+      startedAt: 50,
+      retryCount: 0,
+      inputSummary: '{"value":1}',
+    }
+    const end: WorkflowNodeAudit = {
+      ...start,
+      status: 'completed',
+      endedAt: 55,
+      durationMs: 5,
+      outputSummary: '{"value":2}',
+    }
+    const initial: WorkflowRemoteRunView = {
+      runId,
+      workflowId: 'fixture-workflow',
+      name: 'Fixture workflow',
+      status: 'running',
+      startedAt: 40,
+      agentsStarted: 0,
+      source: 'visual-editor',
+      audit: [],
+    }
+    const terminal: WorkflowRemoteRunView = { ...initial, status: 'completed', endedAt: 60, audit: [end] }
+    persisted.append('visual-workflow/run', initial)
+    persisted.append('visual-workflow/node', start)
+    persisted.append('visual-workflow/node', end)
+    persisted.append('visual-workflow/run', terminal)
+    ctx.provide('sessionPersistence', testSessionPersistence(ctx, {
+      list: () => Promise.resolve([header]),
+      inspect: () => Promise.resolve({ meta: header, events: persisted.snapshotEvents() }),
+    }) as never)
+    const controller = createSessionTestController(ctx, defaults)
+
+    await expect(controller.workflowStatus({ sessionId, runId })).resolves.toEqual({
+      ...terminal,
+      audit: [end],
+    })
+  })
+
+  it('marks an orphaned persisted running workflow as interrupted after restart', async () => {
+    const ctx = new Context()
+    await ctx.plugin(SessionStore)
+    await ctx.plugin(AgentRegistry)
+    const sessionId = SessionId('orphaned-workflow-session')
+    const header: SessionHeader = {
+      version: SESSION_FORMAT_VERSION,
+      id: sessionId,
+      createdAt: 1,
+      cwd: '/workspace',
+      isSeeded: false,
+    }
+    const persisted = Session.create(sessionId, [], header)
+    const running: WorkflowRemoteRunView = {
+      runId: WorkflowRunId('orphaned-run'),
+      workflowId: 'fixture-workflow',
+      name: 'Fixture workflow',
+      status: 'running',
+      startedAt: 50,
+      agentsStarted: 1,
+      source: 'visual-editor',
+    }
+    persisted.append('visual-workflow/run', running)
+    ctx.provide('sessionPersistence', testSessionPersistence(ctx, {
+      list: () => Promise.resolve([header]),
+      inspect: () => Promise.resolve({ meta: header, events: persisted.snapshotEvents() }),
+    }) as never)
+    const controller = createSessionTestController(ctx, defaults)
+
+    await expect(controller.workflowStatus({ sessionId, runId: running.runId })).resolves.toMatchObject({
+      runId: running.runId,
+      status: 'error',
+      error: 'Host restarted before this workflow run completed',
+    })
+  })
+
+  it('writes start and terminal checkpoints for a live workflow run', async () => {
+    const ctx = new Context()
+    await ctx.plugin(SessionStore)
+    await ctx.plugin(AgentRegistry)
+    const sessionId = SessionId('workflow-checkpoint-session')
+    const header: SessionHeader = {
+      version: SESSION_FORMAT_VERSION,
+      id: sessionId,
+      createdAt: 1,
+      cwd: '/workspace',
+      isSeeded: false,
+    }
+    ctx.provide('sessionPersistence', testSessionPersistence(ctx, {
+      list: () => Promise.resolve([header]),
+      inspect: () => Promise.resolve({ meta: header, events: [] }),
+    }) as never)
+    const controller = createSessionTestController(ctx, defaults)
+    const session = ctx.sessions.create(sessionId, { meta: header })
+    let settle!: (result: WorkflowResult) => void
+    const result = new Promise<WorkflowResult>((resolve) => { settle = resolve })
+    const meta: WorkflowMeta = { name: 'fixture-workflow', description: 'Fixture workflow' }
+    const run = {
+      id: WorkflowRunId('checkpoint-run'),
+      meta,
+      result,
+      cancel: vi.fn(),
+      dispose: vi.fn(async () => {}),
+    }
+    ctx.provide('workflowEngine', { start: vi.fn(() => run) } as never)
+    await ctx.agents.register({ id: sessionId, session, status: 'idle', ctx } as Agent)
+
+    await expect(controller.workflowStart({
+      sessionId,
+      workflowId: 'fixture-workflow',
+      script: 'return null',
+      nodeIds: ['input', 'input'],
+      meta,
+    })).rejects.toMatchObject({ code: 'gateway/bad-request' })
+
+    await expect(controller.workflowStart({
+      sessionId,
+      workflowId: 'fixture-workflow',
+      script: 'return null',
+      nodeIds: ['input', 'downstream'],
+      workflowVersion: 2,
+      meta,
+    })).resolves.toMatchObject({ runId: run.id, status: 'running' })
+    expect(session.snapshotEvents().filter(event => event.type === 'visual-workflow/run')).toHaveLength(1)
+    expect(session.snapshotEvents().find(event => event.type === 'visual-workflow/run')?.data).toMatchObject({ workflowVersion: 2 })
+
+    const nodeStart: WorkflowNodeStartInfo = {
+      nodeId: 'input', label: 'Input', retryCount: 0, startedAt: 10,
+    }
+    const nodeEnd: WorkflowNodeEndInfo = {
+      ...nodeStart, status: 'completed', endedAt: 12, durationMs: 2, outputSummary: 'ok',
+    }
+    ctx.emit('workflow/node-start', { id: run.id, meta }, nodeStart)
+    ctx.emit('workflow/node-end', { id: run.id, meta }, nodeEnd)
+    ctx.emit('workflow/node-end', { id: run.id, meta }, {
+      nodeId: 'downstream', label: 'Downstream', status: 'blocked', retryCount: 0, startedAt: 13, endedAt: 13, durationMs: 0,
+    })
+    ctx.emit('workflow/node-start', { id: run.id, meta }, {
+      nodeId: 'forged', label: 'Forged', retryCount: 0, startedAt: 14,
+    })
+    expect(session.snapshotEvents().filter(event => event.type === 'visual-workflow/node')).toHaveLength(3)
+    expect(session.snapshotEvents().filter(event => event.type === 'visual-workflow/run')).toHaveLength(1)
+    await expect(controller.workflowList(sessionId, { limit: 10 })).resolves.toMatchObject({ runs: [{ runId: run.id }] })
+
+    settle({ value: { ok: true }, stopReason: 'completed', agentsStarted: 0 })
+    await vi.waitFor(() => {
+      const checkpoints = session.snapshotEvents().filter(event => event.type === 'visual-workflow/run')
+      expect(checkpoints).toHaveLength(2)
+      expect(checkpoints.at(-1)?.data).toMatchObject({ runId: run.id, status: 'completed', value: { ok: true } })
+    })
   })
 
   it.each(['success', 'domain-error', 'throw'] as const)(

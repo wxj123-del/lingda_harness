@@ -55,6 +55,17 @@ function event(inventory: PersistenceSchemaInventory, name = 'test/record'): str
 }
 
 describe('persistent source type extraction', () => {
+  it('ignores emitted declaration files when discovering event owners', () => {
+    const root = fixture('export interface Payload { id: string }')
+    put(root, 'packages/domain/payload/src/index.d.ts', `declare module '@deepseek-ai/dsh-session/types' {
+  interface SessionEventMap {
+    /** Emitted duplicate that must not become a catalog event. */
+    'test/emitted': { value: string }
+  }
+}`)
+    expect(collectLogEvents(root).map(entry => entry.name)).toEqual(['test/record'])
+  })
+
   it('ignores alias names, files, documentation, readonly, brands and property order', () => {
     const left = fixture('declare const brand: unique symbol; type Id = string & {readonly [brand]: "Id"}; export interface Payload { readonly id: Id; value?: number }')
     const right = fixture('type Renamed = string; /** Different documentation. */ export type Payload = {value?: number; id: Renamed}')

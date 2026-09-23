@@ -47,9 +47,25 @@ export function ContextPreview({ row, window, t }: ContextPreviewProps) {
   const routedParts = selectedIds === undefined
     ? input.parts
     : input.parts.filter(part => part.kind === 'schema' || (part.messageId !== undefined && selectedIds.has(part.messageId)))
-  const totalTokens = routedParts.reduce((sum, part) => sum + part.tokens, 0)
+  const auditedParts = row.contextRoute?.selectedMessageMeta?.map((message, index) => ({
+    id: `audit:${message.id}`,
+    messageId: message.id,
+    seq: index,
+    kind: message.kind,
+    source: message.sourceKind,
+    text: message.preview,
+    tokens: message.estimatedTokens,
+    media: false,
+  } satisfies InputPart))
+  const finalParts = auditedParts === undefined
+    ? routedParts
+    : [...auditedParts, ...routedParts.filter(part => part.kind === 'schema')]
+  const transformed = row.context !== undefined && (row.context.clippedToolResults > 0 || (row.context.deduplicatedMessages ?? 0) > 0)
+  const omittedMetadata = row.contextRoute?.selectedMessageMetaOmitted ?? 0
+  const totalTokens = row.contextRoute?.estimatedRequestTokens
+    ?? finalParts.reduce((sum, part) => sum + part.tokens, 0)
   const grouped = KIND_ORDER.map((kind) => {
-    const parts = routedParts.filter(part => part.kind === kind)
+    const parts = finalParts.filter(part => part.kind === kind)
     return { kind, count: parts.length, tokens: parts.reduce((sum, part) => sum + part.tokens, 0) }
   }).filter(group => group.count > 0)
 
@@ -61,7 +77,7 @@ export function ContextPreview({ row, window, t }: ContextPreviewProps) {
       <span className={css.contextPreviewLive}>{t('contextPreviewLive')}</span>
     </header>
     <div className={css.contextPreviewMap} role="img" aria-label={`${t('contextPreviewTotal')} ~${number(totalTokens)} ${t('token')}`}>
-      {routedParts.map(part => <span
+      {finalParts.map(part => <span
         key={part.id}
         className={css.contextPreviewSegment}
         data-kind={part.kind}
@@ -77,8 +93,10 @@ export function ContextPreview({ row, window, t }: ContextPreviewProps) {
       <strong>~{number(totalTokens)} {t('token')}</strong>
     </div>
     {(input.incomplete || input.unsupported) && <p className={css.contextPreviewNotice}>{t('contextPreviewIncomplete')}</p>}
+    {omittedMetadata > 0 && <p className={css.contextPreviewNotice}>{t('contextPreviewMetadataTruncated')} {omittedMetadata}.</p>}
+    {transformed && <p className={css.contextPreviewNotice}>{t('contextPreviewTransformed')}</p>}
     <div className={css.contextPreviewList}>
-      {routedParts.map((part) => {
+      {finalParts.map((part) => {
         const source = sourceText(part)
         return <div className={css.contextPreviewItem} key={part.id}>
           <span className={css.contextPreviewKind} data-kind={part.kind}>{t(part.kind)}</span>

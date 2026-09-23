@@ -12,7 +12,7 @@ import type { MessageId } from '@deepseek-ai/dsh-llm/brand'
 import type { SessionId, SessionSeq } from '@deepseek-ai/dsh-session/types'
 import type { RemoteResult } from '@deepseek-ai/dsh-typert-protocol'
 import type { ObservableSnapshot } from '@deepseek-ai/dsh-client-store'
-import type { PromptContentPart, QueueAction, SessionRequestId } from '../../types.ts'
+import type { PromptContentPart, QueueAction, SessionRequestId, WorkflowRemoteRunListValue, WorkflowRemoteRunRequest, WorkflowRemoteRunView, WorkflowRemoteRunsRequest, WorkflowRemoteStartRequest, WorkflowRemoteStartValue } from '../../types.ts'
 import type { PendingSubmissionAttachment, SessionSnapshot } from './snapshot.ts'
 
 /**
@@ -63,6 +63,14 @@ export interface ProjectionsFace {
 export interface ISession {
   /** The session's host identity (agent id — same axis). */
   readonly sessionId: SessionId
+  /** Direct workflow execution controls for the visual editor. */
+  workflowStart(request: Omit<WorkflowRemoteStartRequest, 'sessionId'>): Promise<RemoteResult<WorkflowRemoteStartValue>>
+  /** Request cancellation of one Host-owned workflow run. */
+  workflowCancel(runId: WorkflowRemoteRunRequest['runId']): Promise<RemoteResult<{ runId: WorkflowRemoteRunRequest['runId']; status: 'cancelling' }>>
+  /** Read one Host-owned workflow run view. */
+  workflowStatus(runId: WorkflowRemoteRunRequest['runId']): Promise<RemoteResult<WorkflowRemoteRunView>>
+  /** List recent Host-owned workflow runs for this Session. */
+  workflowList(request?: WorkflowRemoteRunsRequest): Promise<RemoteResult<WorkflowRemoteRunListValue>>
   /** Host-computed projection values by key (the useProjection seat). */
   readonly projections: ProjectionsFace
   /**

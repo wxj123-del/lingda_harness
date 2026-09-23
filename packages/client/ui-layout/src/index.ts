@@ -7,7 +7,7 @@ import type {} from '@deepseek-ai/dsh-tools'
 import type { ToolDefinition, ToolRunContext } from '@deepseek-ai/dsh-tools'
 import type { WorkflowEngine, WorkflowResult } from '@deepseek-ai/dsh-workflow'
 import { AUTHORING_SETTINGS_NAMESPACE, AuthoringSettingsSchema } from './authoring-settings.ts'
-import type { AuthoringItem, AuthoringSettings } from './authoring-settings.ts'
+import { releasedWorkflow, type AuthoringItem, type AuthoringSettings } from './authoring-settings.ts'
 import { BUILTIN_SKILLS, userSkillName } from './builtin-skills.ts'
 import { en } from './client/locales.ts'
 import { dirname, join } from 'node:path'
@@ -15,192 +15,21 @@ import { tmpdir } from 'node:os'
 import { randomUUID } from 'node:crypto'
 import { materializeSkillArchive } from './skill-archive-resources.ts'
 import { runtimeToolName } from './runtime-tool-name.ts'
+import { compileWorkflow } from './workflow-compile.ts'
 
 export { AUTHORING_SETTINGS_NAMESPACE, AuthoringSettingsSchema }
-export type { AuthoringItem, AuthoringSettings } from './authoring-settings.ts'
+export { isWorkflowPublished, latestWorkflowVersion, releasedWorkflow } from './authoring-settings.ts'
+export type { AuthoringItem, AuthoringSettings, WorkflowVersion } from './authoring-settings.ts'
 
 function runtimeSkillContent(item: AuthoringItem): string {
   const steps = item.steps.filter(step => step.trim() !== '').map((step, index) => `${index + 1}. ${step.trim()}`)
   return [item.body.trim(), steps.join('\n')].filter(Boolean).join('\n\n') || item.description.trim()
 }
 
-interface CompiledWorkflow {
-  script: string
-  meta: {
-    name: string
-    description: string
-    whenToUse?: string
-    phases?: { title: string }[]
-  }
-}
-
 function instructionValue(item: AuthoringItem, input: unknown): { instructions: string } {
   return {
     instructions: [item.body.trim(), ...item.steps.filter(step => step.trim() !== '').map((step, index) => `${index + 1}. ${step.trim()}`), String(input ?? '').trim()]
       .filter(Boolean).join('\n'),
-  }
-}
-
-function json(value: unknown): string {
-  return (JSON.stringify(value) ?? 'null').replace(/\u2028/g, '\\u2028').replace(/\u2029/g, '\\u2029')
-}
-
-function workflowPrompt(node: NonNullable<AuthoringItem['nodes']>[number]): string {
-  const config = node.config ?? {}
-  const instruction = node.instructions.trim() || node.title.trim() || node.kind
-  switch (node.kind) {
-    case 'llm': return `Execute this workflow model node.\nInstruction: ${instruction}`
-    case 'tool': return `Execute this workflow tool node using the available tools.\nTool: ${config.tool?.trim() || 'unspecified'}\nInstruction: ${instruction}`
-    case 'knowledge': return `Execute this workflow knowledge-base node. Use the referenced knowledge when useful.\nKnowledge: ${config.knowledge?.trim() || 'unspecified'}\nInstruction: ${instruction}`
-    case 'code': return `Execute this workflow code node as a controlled transformation. Do not claim execution if it cannot be completed.\nLanguage: ${config.language?.trim() || 'unspecified'}\nInstruction: ${instruction}`
-    case 'http': return `Execute this workflow HTTP node using available network tools when possible.\nMethod: ${config.method?.trim() || 'GET'}\nURL: ${config.url?.trim() || 'unspecified'}\nInstruction: ${instruction}`
-    default: return `Execute this workflow node.\nInstruction: ${instruction}`
-  }
-}
-
-function compileWorkflow(item: AuthoringItem): CompiledWorkflow | undefined {
-  const nodes = item.nodes
-  const edges = item.edges ?? []
-  if (nodes === undefined || nodes.length === 0) return undefined
-  const ids = new Set<string>()
-  for (const node of nodes) {
-    if (!node.id || ids.has(node.id)) return undefined
-    ids.add(node.id)
-  }
-  const start = nodes.find(node => node.kind === 'start')
-  if (start === undefined) return undefined
-  const edgeIds = new Set<string>()
-  for (const edge of edges) {
-    if (!edge.id || edgeIds.has(edge.id) || !ids.has(edge.source) || !ids.has(edge.target)) return undefined
-    edgeIds.add(edge.id)
-  }
-  const outgoing = new Map<string, typeof edges>()
-  const incoming = new Map<string, typeof edges>()
-  for (const edge of edges) {
-    outgoing.set(edge.source, [...(outgoing.get(edge.source) ?? []), edge])
-    incoming.set(edge.target, [...(incoming.get(edge.target) ?? []), edge])
-  }
-  const reachable = new Set<string>([start.id])
-  const visitQueue = [start.id]
-  for (const id of visitQueue) {
-    for (const edge of outgoing.get(id) ?? []) {
-      if (!reachable.has(edge.target)) {
-        reachable.add(edge.target)
-        visitQueue.push(edge.target)
-      }
-    }
-  }
-  const indegree = new Map<string, number>([...reachable].map(id => [id, 0]))
-  for (const edge of edges) {
-    if (reachable.has(edge.source) && reachable.has(edge.target)) indegree.set(edge.target, (indegree.get(edge.target) ?? 0) + 1)
-  }
-  const byId = new Map(nodes.map(node => [node.id, node]))
-  const order: string[] = []
-  const ready = [start.id]
-  while (ready.length > 0) {
-    const id = ready.shift()
-    if (id === undefined) break
-    if (order.includes(id)) continue
-    order.push(id)
-    for (const edge of outgoing.get(id) ?? []) {
-      if (!reachable.has(edge.target)) continue
-      const next = (indegree.get(edge.target) ?? 0) - 1
-      indegree.set(edge.target, next)
-      if (next === 0) ready.push(edge.target)
-    }
-  }
-  if (order.length !== reachable.size) return undefined
-
-  const phases: { title: string }[] = []
-  const phaseTitles = new Set<string>()
-  for (const id of order) {
-    const node = byId.get(id)
-    if (node === undefined || ['start', 'input', 'output', 'end', 'template'].includes(node.kind)) continue
-    const title = node.title.trim() || node.kind
-    if (!phaseTitles.has(title)) {
-      phaseTitles.add(title)
-      phases.push({ title })
-    }
-  }
-  const lines = [
-    'let value = args?.input ?? null',
-    'let output = value',
-    'const activeEdges = new Set()',
-    'const nodeValues = Object.create(null)',
-    `nodeValues[${json(start.id)}] = value`,
-    ...(outgoing.get(start.id) ?? []).filter(edge => reachable.has(edge.target)).map(edge => `activeEdges.add(${json(edge.id)})`),
-  ]
-  for (const id of order) {
-    const node = byId.get(id)
-    if (node === undefined || node.id === start.id) continue
-    const nodeIncoming = (incoming.get(id) ?? []).filter(edge => reachable.has(edge.source))
-    const nodeOutgoing = (outgoing.get(id) ?? []).filter(edge => reachable.has(edge.target))
-    const condition = nodeIncoming.map(edge => `activeEdges.has(${json(edge.id)})`).join(' || ') || 'false'
-    lines.push(`if (${condition}) {`)
-    lines.push(`  const nodeInputs = [${nodeIncoming.map(edge => `nodeValues[${json(edge.source)}]`).join(', ')}].filter(entry => entry !== undefined)`)
-    lines.push('  const nodeInput = nodeInputs.length === 1 ? nodeInputs[0] : nodeInputs')
-    switch (node.kind) {
-      case 'input': {
-        const variable = node.config?.variable?.trim()
-        lines.push(`  value = ${variable ? `args?.variables?.[${json(variable)}] ??` : ''} args?.input ?? nodeInput ?? null`)
-        break
-      }
-      case 'condition': {
-        const options: Record<string, unknown> = {
-          label: node.title.trim() || 'Condition',
-          schema: { type: 'object', properties: { match: { type: 'boolean' } }, required: ['match'] },
-        }
-        const model = node.config?.model?.trim()
-        if (model) options.model = model
-        const conditionText = node.config?.condition?.trim() || node.instructions.trim() || 'Determine whether the input satisfies the condition.'
-        lines.push(`  phase(${json(node.title.trim() || 'Condition')})`)
-        lines.push(`  const decision = await agent(${json(`Determine whether this workflow input satisfies the condition.\nCondition: ${conditionText}`)} + ${json('\nInput: ')} + JSON.stringify(nodeInput), ${json(options)})`)
-        lines.push("  const branch = decision !== null && typeof decision === 'object' && decision.match === true")
-        lines.push('  value = nodeInput')
-        break
-      }
-      case 'template': {
-        const template = node.config?.template?.trim() || node.instructions.trim()
-        lines.push(`  value = ${json(template)}.replace(/\\{\\{\\s*(?:value|input)\\s*\\}\\}/g, String(nodeInput ?? ''))`)
-        break
-      }
-      case 'output':
-      case 'end':
-        lines.push('  value = nodeInput')
-        break
-      default: {
-        const options: Record<string, unknown> = { label: node.title.trim() || node.kind }
-        const model = node.config?.model?.trim()
-        if (model) options.model = model
-        const title = node.title.trim() || node.kind
-        lines.push(`  phase(${json(title)})`)
-        lines.push(`  value = await agent(${json(workflowPrompt(node))} + ${json('\nInput: ')} + JSON.stringify(nodeInput), ${json(options)})`)
-        break
-      }
-    }
-    lines.push(`  nodeValues[${json(node.id)}] = value`)
-    lines.push('  output = value')
-    if (node.kind === 'condition') {
-      const trueEdge = nodeOutgoing.find(edge => edge.sourceHandle === 'true') ?? nodeOutgoing[0]
-      const falseEdge = nodeOutgoing.find(edge => edge.sourceHandle === 'false') ?? nodeOutgoing.find(edge => edge !== trueEdge)
-      if (trueEdge !== undefined) lines.push(`  if (branch) activeEdges.add(${json(trueEdge.id)})`)
-      if (falseEdge !== undefined) lines.push(`  if (!branch) activeEdges.add(${json(falseEdge.id)})`)
-    } else {
-      for (const edge of nodeOutgoing) lines.push(`  activeEdges.add(${json(edge.id)})`)
-    }
-    lines.push('}')
-  }
-  lines.push('return output')
-  const stableName = item.id.toLowerCase().replace(/[^a-z0-9-]+/g, '-').replace(/^-+|-+$/g, '') || 'custom-workflow'
-  const description = item.description.trim() || item.title.trim() || 'User-created workflow'
-  return {
-    script: lines.join('\n'),
-    meta: {
-      name: `ui-${stableName}`,
-      description,
-      ...description ? { whenToUse: description } : {},
-      ...phases.length > 0 ? { phases } : {},
-    },
   }
 }
 
@@ -227,6 +56,7 @@ async function executeWorkflow(
     meta: compiled.meta,
     args: { input },
     parent: exec.agent,
+    nodeAudit: true,
     signal: exec.signal,
   })
   const onAbort = (): void => { run.cancel('parent step aborted') }
@@ -328,7 +158,12 @@ export function apply(ctx?: Context): void {
         for (const dispose of disposers) dispose()
         const workflowEngine = (): WorkflowEngine | undefined => runtimeCtx.get('workflowEngine')
         disposers = [
-          ...value.workflows.filter(item => item.enabled).map(item => runtimeCtx.tools.register(instructionTool('workflow', item, workflowEngine))),
+          // Drafts remain registered so the editor's "Save and test" path can execute them;
+          // the catalog keeps draft workflows out of the normal "Use in chat" action.
+          ...value.workflows.flatMap((item) => {
+            const release = item.enabled ? releasedWorkflow(item) : undefined
+            return release === undefined ? [] : [runtimeCtx.tools.register(instructionTool('workflow', release, workflowEngine))]
+          }),
           ...value.tools.filter(item => item.enabled).map(item => runtimeCtx.tools.register(instructionTool('tool', item, workflowEngine))),
         ]
       }

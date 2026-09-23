@@ -29,9 +29,9 @@ kind: "package-reference"
 
 ### 「通用」分区
 
-「通用」分区承载由功能包注册进 `settings.general.item` 的行。功能插件拥有行文案与行为；外壳只提供分区及其 slot。例如「外观」行位于 ui-theme。本包还会提供软件更新行：Electron 检查签名发布流，浏览器源码版检查 AtomGit 源码提交。
+「通用」分区承载由功能包注册进 `settings.general.item` 的行。功能插件拥有行文案与行为；外壳只提供分区及其 slot。例如「外观」行位于 ui-theme。本包还会提供软件更新行：Electron 检查签名发布流，浏览器源码版检查 GitCode 源码提交。
 
-Desktop 更新行会检查 Electron 配置的签名发布流，并在确认有可用版本后提供安装并重启。浏览器源码版会检查 `https://atomgit.com/XJ-Cyber/lingda-harness`、报告是否有新提交，并提供仅快进的更新操作；即使 checkout 没有配置 `atomgit` 远程也可以工作。更新会安装锁定依赖、重新构建并重启 Host。存在未提交修改、分叉、detached HEAD 或本地领先时会拒绝自动更新。
+Desktop 更新行会检查 Electron 配置的签名发布流，并在确认有可用版本后提供安装并重启。浏览器源码版会检查 `https://gitcode.com/XJ-Cyber/lingda-harness`、报告是否有新提交，并提供仅快进的更新操作；即使 checkout 没有配置 `gitcode` 远程也可以工作。更新会安装锁定依赖、重新构建并重启 Host。存在未提交修改、分叉、detached HEAD 或本地领先时会拒绝自动更新。
 
 ### 打开配置文件
 

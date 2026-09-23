@@ -5,7 +5,7 @@
  */
 
 import type { ContentBlock } from '@deepseek-ai/dsh-llm'
-import type { ObjectJsonSchema } from '@deepseek-ai/dsh-tools'
+import type { ObjectJsonSchema, ToolRestriction } from '@deepseek-ai/dsh-tools'
 import type { WorkflowMeta } from '@deepseek-ai/dsh-workflow'
 
 /**
@@ -32,6 +32,35 @@ export interface WorkerInit {
   args?: unknown
   /** The guest helper limits. */
   limits: WorkerLimits
+  /** Whether compiler-generated visual node audit hooks are enabled. */
+  nodeAudit?: boolean
+}
+
+/** A bounded host-side HTTP request issued by a workflow node or script. */
+export interface WorkflowHttpRequest {
+  /** HTTP(S) URL without embedded user credentials. */
+  url: string
+  /** Uppercase HTTP method. */
+  method: string
+  /** JSON data or a plain text request body. */
+  body?: unknown
+  /** Optional credential reference resolved by the host credential plane. */
+  credential?: string
+}
+
+/** Redacted, size-bounded HTTP response returned through the PTC JSON channel. */
+export interface WorkflowHttpResponse {
+  url: string
+  status: number
+  headers: Record<string, string>
+  body: string
+  truncated: boolean
+  json?: unknown
+}
+
+/** Host-owned HTTP operation used by the guest's `httpRequest()` helper. */
+export interface WorkflowHttpPort {
+  request(request: WorkflowHttpRequest): Promise<WorkflowHttpResponse>
 }
 
 /** One `agent()` child request after the guest validates script options. */
@@ -44,6 +73,8 @@ export interface ChildStartRequest {
   provider?: string
   /** The per-child model override, if the call passed one. */
   model?: string
+  /** Tool visibility enforced for this child, if the call passed one. */
+  toolFilter?: ToolRestriction
 }
 
 /**

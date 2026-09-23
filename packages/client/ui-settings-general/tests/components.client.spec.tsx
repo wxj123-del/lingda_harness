@@ -82,11 +82,11 @@ describe('UpdateRow', () => {
   it('renders a source checkout row outside the Electron application bridge', () => {
     render(<UpdateRow {...kit} t={t} />)
     expect(screen.getByText('Software updates')).toBeTruthy()
-    expect(screen.getByText('Source checkout: check AtomGit commits')).toBeTruthy()
+    expect(screen.getByText('Source checkout: check GitCode commits')).toBeTruthy()
     expect(screen.getByRole('button', { name: 'Check for updates' })).toBeTruthy()
   })
 
-  it('checks the AtomGit source commit outside Electron', async () => {
+  it('checks the GitCode source commit outside Electron', async () => {
     vi.stubEnv('DSH_CLIENT_COMMIT_HASH', '1234567')
     const fetch = vi.fn(() => Promise.resolve(new Response(
       JSON.stringify({ sha: 'abcdef0123456789' }),
@@ -97,18 +97,18 @@ describe('UpdateRow', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Check for updates' }))
     expect(await screen.findByText('Update available · abcdef0')).toBeTruthy()
     expect(fetch).toHaveBeenCalledWith(
-      'https://api.atomgit.com/api/v5/repos/XJ-Cyber/lingda-harness/commits/main',
+      'https://gitcode.com/api/v5/repos/XJ-Cyber/lingda-harness/commits/main',
       { headers: { Accept: 'application/json' } },
     )
   })
 
   it('checks the Host checkout on mount and offers an in-app fast-forward update', async () => {
     const check = vi.fn(() => Promise.resolve({ ok: true as const, value: {
-      repositoryRoot: '/tmp/project', remote: 'atomgit', branch: 'main', remoteBranch: 'main',
+      repositoryRoot: '/tmp/project', remote: 'gitcode', branch: 'main', remoteBranch: 'main',
       localHead: '1234567', remoteHead: 'abcdef0123456789', ahead: 0, behind: 1, state: 'available' as const,
     } }))
     const update = vi.fn(() => Promise.resolve({ ok: true as const, value: {
-      repositoryRoot: '/tmp/project', remote: 'atomgit', branch: 'main', remoteBranch: 'main',
+      repositoryRoot: '/tmp/project', remote: 'gitcode', branch: 'main', remoteBranch: 'main',
       localHead: 'abcdef0123456789', remoteHead: 'abcdef0123456789', ahead: 0, behind: 0, state: 'current' as const,
       updated: true, restartScheduled: false,
     } }))

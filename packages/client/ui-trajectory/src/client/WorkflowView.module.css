@@ -452,11 +452,12 @@
 .laneBody {
   position: relative;
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   align-items: flex-start;
   gap: 12px;
   min-width: 0;
   padding-top: 14px;
+  overflow-x: auto;
 }
 
 .laneBody::before {
@@ -465,9 +466,10 @@
 
 .step {
   position: relative;
+  flex: 0 0 250px;
   min-width: 0;
-  width: auto;
-  max-width: 100%;
+  width: 250px;
+  max-width: 250px;
 }
 
 .step + .step {
@@ -479,46 +481,8 @@
   min-width: 0;
 }
 
-.nodeGroup[data-kind='model'] {
-  width: min(100%, 300px);
-}
-
 .nodeGroup[data-kind='model'] > .node {
   width: 100%;
-}
-
-.nodeGroup[data-kind='model'][data-expanded='true'] {
-  display: grid;
-  grid-template-columns: minmax(280px, 0.9fr) minmax(260px, 1.1fr);
-  gap: 12px;
-  width: min(100%, 920px);
-}
-
-.nodeGroup[data-kind='model'][data-expanded='true'] > .childNodes {
-  grid-column: 2;
-  grid-row: 1;
-  display: flex;
-  flex-wrap: wrap;
-  align-content: start;
-  gap: 10px;
-  width: 100%;
-  margin: 0;
-  padding: 0;
-}
-
-.nodeGroup[data-kind='model'][data-expanded='true'] > .childNodes::before {
-  top: 30px;
-  right: 0;
-  bottom: auto;
-  left: -12px;
-  width: auto;
-  height: 1px;
-}
-
-.nodeGroup[data-kind='model'][data-expanded='true'] > .childNodes > .nodeGroup::before {
-  top: 30px;
-  left: -12px;
-  width: 12px;
 }
 
 .childNodes {
@@ -552,8 +516,7 @@
 }
 
 .nodeGroup[data-kind='tool'] {
-  flex: 1 1 240px;
-  min-width: min(100%, 240px);
+  min-width: 0;
 }
 
 .nodeGroup[data-kind='tool'] > .childNodes {
@@ -659,7 +622,7 @@ button.node:hover {
 .node[data-kind='result'][data-error='true'] { background: color-mix(in srgb, #c65757 7%, var(--dsw-alias-bg-layer-2)); }
 
 .node[data-kind='input'] {
-  width: min(100%, 270px);
+  width: 100%;
 }
 
 .node[data-kind='tool'],
@@ -714,8 +677,33 @@ button.node:hover {
   line-height: 1.45;
   display: -webkit-box;
   -webkit-box-orient: vertical;
-  -webkit-line-clamp: 1;
+  -webkit-line-clamp: 3;
+  white-space: pre-line;
   overflow-wrap: anywhere;
+}
+
+.nodeOutcome {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 6px;
+  padding: 3px 8px;
+  border-radius: 6px;
+  color: #2f7d52;
+  background: color-mix(in srgb, #4b9a72 14%, var(--dsw-alias-bg-layer-2));
+  font: var(--dsw-font-xxs-12);
+  line-height: 1.4;
+}
+
+.nodeOutcome > span:last-child {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.nodeOutcome[data-error='true'] {
+  color: #a33d3d;
+  background: color-mix(in srgb, #c65757 14%, var(--dsw-alias-bg-layer-2));
 }
 
 .nodeStatus {

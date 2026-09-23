@@ -5,6 +5,8 @@ import type { InvariantFailure, InvariantInstaller } from '@deepseek-ai/dsh-inva
 import type {
   WorkflowAgentEndInfo,
   WorkflowAgentInfo,
+  WorkflowNodeEndInfo,
+  WorkflowNodeStartInfo,
   WorkflowResultInfo,
   WorkflowRunInfo,
 } from './types.ts'
@@ -19,6 +21,7 @@ export const inject = ['invariants']
 interface WorkflowTrace {
   meta: string
   agents: Map<number, WorkflowAgentInfo>
+  nodes: Map<string, WorkflowNodeStartInfo>
   starts: number
 }
 
@@ -50,6 +53,7 @@ function validateAgentEnd(start: WorkflowAgentInfo, end: WorkflowAgentEndInfo, f
 /** Validate a terminal result against the accumulated run trace. */
 function validateWorkflowEnd(trace: WorkflowTrace, result: WorkflowResultInfo, fail: InvariantFailure): void {
   if (trace.agents.size > 0) fail(`workflow/end has ${trace.agents.size} agent call(s) without workflow/agent-end`)
+  if (trace.nodes.size > 0) fail(`workflow/end has ${trace.nodes.size} node(s) without workflow/node-end`)
   if (!Number.isSafeInteger(result.agentsStarted) || result.agentsStarted < trace.starts) {
     fail('workflow/end agentsStarted must be a safe integer covering every observed agent start')
   }
@@ -58,12 +62,28 @@ function validateWorkflowEnd(trace: WorkflowTrace, result: WorkflowResultInfo, f
   }
 }
 
+function validateNodeStart(node: WorkflowNodeStartInfo, fail: InvariantFailure): void {
+  if (node.nodeId.trim() === '' || node.label.trim() === '') fail('workflow/node-start nodeId and label must be non-empty')
+  if (!Number.isSafeInteger(node.retryCount) || node.retryCount < 0 || node.retryCount > 5) fail('workflow/node-start retryCount is invalid')
+  if (!Number.isSafeInteger(node.startedAt) || node.startedAt < 0) fail('workflow/node-start startedAt is invalid')
+}
+
+function validateNodeEnd(node: WorkflowNodeEndInfo, fail: InvariantFailure): void {
+  validateNodeStart(node, fail)
+  if (node.status !== 'completed' && node.status !== 'failed' && node.status !== 'skipped' && node.status !== 'blocked' && node.status !== 'cancelled') fail('workflow/node-end status is invalid')
+  if (!Number.isSafeInteger(node.durationMs) || node.durationMs < 0) fail('workflow/node-end durationMs is invalid')
+  if (!Number.isSafeInteger(node.endedAt) || node.endedAt < node.startedAt) fail('workflow/node-end endedAt is invalid')
+  if ((node.status === 'failed' || node.status === 'cancelled') !== (node.error !== undefined)) fail('workflow/node-end error must match failed/cancelled status')
+}
+
 /** Install workflow start/end and child-call pairing checks. */
 const install: InvariantInstaller = (ctx, fail) => {
   const traces = new Map<string, WorkflowTrace>()
   const stagedStarts = new WeakSet<WorkflowRunInfo>()
   const stagedAgentStarts = new WeakSet<WorkflowAgentInfo>()
   const stagedAgentEnds = new WeakSet<WorkflowAgentEndInfo>()
+  const stagedNodeStarts = new WeakSet<WorkflowNodeStartInfo>()
+  const stagedNodeEnds = new WeakSet<WorkflowNodeEndInfo>()
   const stagedEnds = new WeakSet<WorkflowResultInfo>()
 
   ctx.on('internal/dispatch', (_mode, eventName, args) => {
@@ -96,6 +116,21 @@ const install: InvariantInstaller = (ctx, fail) => {
       stagedAgentEnds.add(agent)
       return
     }
+    if (eventName === 'workflow/node-start') {
+      const node = args[1] as WorkflowNodeStartInfo
+      validateNodeStart(node, fail)
+      if (trace.nodes.has(node.nodeId)) fail(`workflow/node-start repeats node ${JSON.stringify(node.nodeId)}`)
+      stagedNodeStarts.add(node)
+      return
+    }
+    if (eventName === 'workflow/node-end') {
+      const node = args[1] as WorkflowNodeEndInfo
+      validateNodeEnd(node, fail)
+      if (node.status !== 'skipped' && node.status !== 'blocked' && !trace.nodes.has(node.nodeId)) fail(`workflow/node-end has no matching start for node ${JSON.stringify(node.nodeId)}`)
+      if ((node.status === 'skipped' || node.status === 'blocked') && trace.nodes.has(node.nodeId)) fail(`workflow/node-end ${node.status} an active node ${JSON.stringify(node.nodeId)}`)
+      stagedNodeEnds.add(node)
+      return
+    }
     if (eventName === 'workflow/end') {
       const result = args[1] as WorkflowResultInfo
       validateWorkflowEnd(trace, result, fail)
@@ -106,7 +141,7 @@ const install: InvariantInstaller = (ctx, fail) => {
   ctx.on('workflow/start', (info) => {
     /* v8 ignore next -- internal/dispatch stages the same run-info object */
     if (!stagedStarts.delete(info)) return
-    traces.set(info.id, { meta: JSON.stringify(info.meta), agents: new Map(), starts: 0 })
+    traces.set(info.id, { meta: JSON.stringify(info.meta), agents: new Map(), nodes: new Map(), starts: 0 })
   }, { global: true })
   ctx.on('workflow/agent-start', (info, agent) => {
     /* v8 ignore next -- internal/dispatch stages the same agent object */
@@ -119,6 +154,16 @@ const install: InvariantInstaller = (ctx, fail) => {
     /* v8 ignore next -- internal/dispatch stages the same agent object */
     if (!stagedAgentEnds.delete(agent)) return
     traceFor(traces, info, fail).agents.delete(agent.seq)
+  }, { global: true })
+  ctx.on('workflow/node-start', (info, node) => {
+    /* v8 ignore next -- internal/dispatch stages the same node object */
+    if (!stagedNodeStarts.delete(node)) return
+    traceFor(traces, info, fail).nodes.set(node.nodeId, node)
+  }, { global: true })
+  ctx.on('workflow/node-end', (info, node) => {
+    /* v8 ignore next -- internal/dispatch stages the same node object */
+    if (!stagedNodeEnds.delete(node)) return
+    if (node.status !== 'skipped' && node.status !== 'blocked') traceFor(traces, info, fail).nodes.delete(node.nodeId)
   }, { global: true })
   ctx.on('workflow/end', (info, result) => {
     /* v8 ignore next -- internal/dispatch stages the same result object */

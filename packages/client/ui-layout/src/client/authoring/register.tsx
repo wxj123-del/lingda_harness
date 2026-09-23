@@ -1,6 +1,7 @@
 import { useEffect, useState, useSyncExternalStore, type ChangeEvent } from 'react'
 import type { Context } from '@deepseek-ai/cordis'
-import type { ISessions } from '@deepseek-ai/dsh-api-session-controller/client'
+import type {} from '@deepseek-ai/dsh-api-remotes/client'
+import type { ISession, ISessions } from '@deepseek-ai/dsh-api-session-controller/client'
 import type { SessionId } from '@deepseek-ai/dsh-session/types'
 import type { SettingsScope } from '@deepseek-ai/dsh-client-ui-settings/client'
 import type { MainPanelId } from '../service.ts'
@@ -24,7 +25,8 @@ import {
   type PersonalModeConversationControlInjected,
 } from './PersonalModeConversationControl.tsx'
 import { runtimeToolName } from '../../runtime-tool-name.ts'
-import type { SubscribeWorkflowDebug } from './workflow-debug.ts'
+import type { SubscribeWorkflowDebug, WorkflowRunControls, WorkflowRunInput, WorkflowRunStart, WorkflowRunStartHandler, WorkflowRunView } from './workflow-debug.ts'
+import { compileWorkflow } from '../../workflow-compile.ts'
 
 declare module '@deepseek-ai/dsh-client-ui-slots' {
   interface SlotMap {
@@ -55,12 +57,14 @@ function blankItem(): AuthoringItem {
 function createWorkflowDebugSubscription(ctx: Context): SubscribeWorkflowDebug {
   return (listener) => {
     const disposers = [
-      ctx.on('workflow/start', (info) => { listener({ kind: 'start', runId: String(info.id), workflowName: info.meta.name, at: Date.now() }) }),
-      ctx.on('workflow/phase', (info, title) => { listener({ kind: 'phase', runId: String(info.id), workflowName: info.meta.name, title, at: Date.now() }) }),
-      ctx.on('workflow/log', (info, message) => { listener({ kind: 'log', runId: String(info.id), workflowName: info.meta.name, message, at: Date.now() }) }),
-      ctx.on('workflow/agent-start', (info, agent) => { listener({ kind: 'agent-start', runId: String(info.id), workflowName: info.meta.name, seq: agent.seq, label: agent.label, ...(agent.phase === undefined ? {} : { phase: agent.phase }), at: Date.now() }) }),
-      ctx.on('workflow/agent-end', (info, agent) => { listener({ kind: 'agent-end', runId: String(info.id), workflowName: info.meta.name, seq: agent.seq, label: agent.label, outcome: agent.outcome, at: Date.now() }) }),
-      ctx.on('workflow/end', (info, result) => { listener({ kind: 'end', runId: String(info.id), workflowName: info.meta.name, stopReason: result.stopReason, ...(result.error === undefined ? {} : { error: result.error }), agentsStarted: result.agentsStarted, at: Date.now() }) }),
+      ctx.remote.$on('workflow/start', (info) => { listener({ kind: 'start', runId: String(info.id), workflowName: info.meta.name, at: Date.now() }) }),
+      ctx.remote.$on('workflow/phase', (info, title) => { listener({ kind: 'phase', runId: String(info.id), workflowName: info.meta.name, title, at: Date.now() }) }),
+      ctx.remote.$on('workflow/log', (info, message) => { listener({ kind: 'log', runId: String(info.id), workflowName: info.meta.name, message, at: Date.now() }) }),
+      ctx.remote.$on('workflow/agent-start', (info, agent) => { listener({ kind: 'agent-start', runId: String(info.id), workflowName: info.meta.name, seq: agent.seq, label: agent.label, ...(agent.phase === undefined ? {} : { phase: agent.phase }), at: Date.now() }) }),
+      ctx.remote.$on('workflow/agent-end', (info, agent) => { listener({ kind: 'agent-end', runId: String(info.id), workflowName: info.meta.name, seq: agent.seq, label: agent.label, outcome: agent.outcome, at: Date.now() }) }),
+      ctx.remote.$on('workflow/node-start', (info, node) => { listener({ kind: 'node-start', runId: String(info.id), workflowName: info.meta.name, nodeId: node.nodeId, label: node.label, retryCount: node.retryCount, at: Date.now() }) }),
+      ctx.remote.$on('workflow/node-end', (info, node) => { listener({ kind: 'node-end', runId: String(info.id), workflowName: info.meta.name, nodeId: node.nodeId, label: node.label, status: node.status, durationMs: node.durationMs, ...(node.error === undefined ? {} : { error: node.error }), at: Date.now() }) }),
+      ctx.remote.$on('workflow/end', (info, result) => { listener({ kind: 'end', runId: String(info.id), workflowName: info.meta.name, stopReason: result.stopReason, ...(result.error === undefined ? {} : { error: result.error }), agentsStarted: result.agentsStarted, at: Date.now() }) }),
     ]
     return () => { for (const dispose of disposers) dispose() }
   }
@@ -356,6 +360,75 @@ export function registerAuthoringSurface(
     if (item === undefined) throw new Error('Workflow unavailable')
     await openConversationDraft(`请调用工作流工具 ${runtimeToolName('workflow', item)} 执行“${title}”。\n\n`)
   }
+  let workflowSession: ISession | undefined
+  const resolveWorkflowSession = async (): Promise<{ session: ISession; id: SessionId; openSession: (id: string) => void }> => {
+    const sessions = ctx.get('sessions') as unknown as ISessions | undefined
+    const workspaces = ctx.get('workspaces') as { list: { getSnapshot(): { items: readonly { workspaceId: string }[] } } } | undefined
+    const uiWorkspace = ctx.get('uiWorkspace') as { connectWorkspace(id: string): Promise<string>; openSession(id: string): void } | undefined
+    if (sessions === undefined || workspaces === undefined || uiWorkspace === undefined) throw new Error('Conversation unavailable')
+    const navigation = ctx.layout.beginNavigation()
+    const current = sessions.list.getSnapshot().current
+    const firstWorkspace = workspaces.list.getSnapshot().items[0]
+    const id = current ?? (firstWorkspace === undefined
+      ? await sessions.create()
+      : await uiWorkspace.connectWorkspace(firstWorkspace.workspaceId))
+    if (navigation.aborted) throw new Error('Navigation aborted')
+    const session = sessions.binding(id as SessionId)?.session
+    if (session === undefined) throw new Error('Session unavailable')
+    workflowSession = session
+    return { session, id: id as SessionId, openSession: uiWorkspace.openSession }
+  }
+  const workflowSessionOrResolve = async (): Promise<ISession> => workflowSession ?? (await resolveWorkflowSession()).session
+  const runWorkflow: WorkflowRunStartHandler = async (item: AuthoringItem, input: WorkflowRunInput = { text: '', mode: 'text' }): Promise<WorkflowRunStart> => {
+    const resolved = await resolveWorkflowSession()
+    const compiled = compileWorkflow(item)
+    if (compiled === undefined) throw new Error('Workflow graph is invalid')
+    let args: unknown = { input: input.text }
+    if (input.mode === 'json') {
+      let parsed: unknown
+      try { parsed = JSON.parse(input.text.trim() === '' ? 'null' : input.text) }
+      catch { throw new Error('Test input must be valid JSON') }
+      args = parsed !== null && typeof parsed === 'object' && !Array.isArray(parsed) && ('input' in parsed || 'variables' in parsed)
+        ? parsed
+        : { input: parsed }
+    }
+    const result = await resolved.session.workflowStart({
+      workflowId: item.id,
+      script: compiled.script,
+      nodeIds: compiled.nodeIds,
+      ...(item.workflowStatus === 'published' && item.version !== undefined && item.version !== null ? { workflowVersion: item.version } : {}),
+      meta: compiled.meta,
+      args: args as never,
+      ...(input.timeoutMs === undefined ? {} : { timeoutMs: input.timeoutMs }),
+    })
+    if (!result.ok) throw new Error(result.error.message)
+    resolved.openSession(resolved.id)
+    return result.value
+  }
+  const cancelWorkflow = async (runId: string): Promise<void> => {
+    const result = await workflowSessionOrResolve().then(session => session.workflowCancel(runId as never))
+    if (!result.ok) throw new Error(result.error.message)
+  }
+  const statusWorkflow = async (runId: string): Promise<WorkflowRunView | undefined> => {
+    const result = await workflowSessionOrResolve().then(session => session.workflowStatus(runId as never))
+    if (!result.ok) throw new Error(result.error.message)
+    return result.value
+  }
+  const listWorkflowRuns = async (workflowId: string): Promise<readonly WorkflowRunView[]> => {
+    let session = workflowSession
+    if (session === undefined) {
+      const sessions = ctx.get('sessions') as unknown as ISessions | undefined
+      if (sessions === undefined) return []
+      const current = sessions.list.getSnapshot().current
+      session = current === null || current === undefined ? undefined : sessions.binding(current)?.session
+      if (session !== undefined) workflowSession = session
+    }
+    if (session === undefined) return []
+    const result = await session.workflowList({ workflowId, limit: 30 })
+    if (!result.ok) throw new Error(result.error.message)
+    return result.value.runs
+  }
+  const workflowRunControls: WorkflowRunControls = { cancel: cancelWorkflow, status: statusWorkflow, list: listWorkflowRuns }
   const saveWorkflow = async (item: AuthoringItem): Promise<void> => {
     const snapshot = scope.getSnapshot()
     if (!snapshot.writable || snapshot.value === undefined) throw new Error('Workflow storage unavailable')
@@ -420,13 +493,13 @@ export function registerAuthoringSurface(
     if (kind === 'workflow') {
       ctx.slots.inject('main', () => ctx.slots.register({
         name: 'main', key, locale: 'layout',
-        inject: () => ({ hooks: { authoring: scope }, saveWorkflow, removeWorkflow, invokeWorkflow,
+        inject: () => ({ hooks: { authoring: scope }, saveWorkflow, removeWorkflow, invokeWorkflow, runWorkflow, workflowRunControls,
           subscribeWorkflowDebug: createWorkflowDebugSubscription(ctx) }),
       }, (props) => {
         const snapshot = props.useAuthoring(value => value)
         return <WorkflowPanel items={snapshot.value?.workflows ?? []} writable={snapshot.writable}
           save={props.saveWorkflow} remove={props.removeWorkflow} invoke={props.invokeWorkflow}
-          {...props.subscribeWorkflowDebug === undefined ? {} : { subscribeDebug: props.subscribeWorkflowDebug }} t={t} />
+          {...props.subscribeWorkflowDebug === undefined ? {} : { subscribeDebug: props.subscribeWorkflowDebug }} run={props.runWorkflow} runControls={props.workflowRunControls} t={t} />
       }))
       continue
     }

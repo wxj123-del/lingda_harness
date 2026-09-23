@@ -56,6 +56,13 @@ describe('Client UI i18n source check', () => {
     `)).toEqual([])
   })
 
+  it('accepts camelCase locale keys used by typed translation maps', () => {
+    expect(messages(`
+      const routeSignalLabels = [['explicit-full', 'contextSignalExplicitFull']]
+      const View = ({ t }: { t: (key: string) => string }) => <span>{t(routeSignalLabels[0]![1])}</span>
+    `)).toEqual([])
+  })
+
   it('does not inspect locale dictionary owners', () => {
     expect(findUiI18nViolations(
       'packages/client/ui-example/src/client/locales.ts',

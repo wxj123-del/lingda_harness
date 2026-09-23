@@ -277,6 +277,31 @@ describe('LlmRuntime', () => {
     }
   })
 
+  it('emits the adapter-ready payload after provider-neutral projection', async () => {
+    const ctx = new Context()
+    ctx.provide('attachments', { fileHostPath: () => '/host/notes.txt' } as never)
+    ctx.provide('fs', { processPathFromHostPath: () => '/sandbox/notes.txt' } as never)
+    await ctx.plugin(LlmRuntime)
+    ctx.llm.registerAdapter(['test-provider'], new RecordingAdapter(SCRIPT))
+    let ready: { options: GenerateOptions; projection: { files: boolean; images: boolean } } | undefined
+    ctx.on('llm/request-ready', (options, projection) => { ready = { options, projection } })
+    const attachment = {
+      attachmentId: AttachmentId(`sha256:${'cd'.repeat(32)}`),
+      name: 'notes.txt', bytes: 3,
+    }
+
+    await collect(ctx.llm.stream({
+      provider: 'test-provider',
+      model: 'test-model',
+      messages: [createUserMessage({ content: [{ type: 'file', attachment }], source: { kind: 'user' } })],
+    }))
+
+    expect(ready?.projection).toEqual({ files: true, images: false })
+    expect(ready?.options.messages[0]?.content[0]).toMatchObject({ type: 'text' })
+    expect(ready?.options.messages[0]?.content[0]?.type === 'text'
+      && ready.options.messages[0].content[0].text).toContain('/sandbox/notes.txt')
+  })
+
   it('captures provider-owned retry policy at registration and defaults omission', async () => {
     const configured = resolveRetryPolicy({ mode: 'always' }, 'test retryPolicy')
     const adapter = new class extends ScriptedAdapter {

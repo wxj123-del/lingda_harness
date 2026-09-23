@@ -35,6 +35,8 @@ kind: "package-reference"
 
 `ctx.tokenMeter` 暴露两个操作。`measure(session, requestHeader?)` 在同一个已消费日志 revision 上返回独立、深度不可变的快照：`totalTokens` 是请求与响应压力，`surfaceTokens` 是仅表面的路由定价总量，等于 `nodes[].tokens` 之和。可选 `requestHeader` 覆盖会选择计价路由与压力字段；节点集合仍描述当前会话。`estimateMessage(message)` 用固定启发式规则为一条消息计价。每次调用都会克隆带位置的表面节点，因此测量是 O(surface)。
 
+包根入口还导出纯函数 `estimateMessage`、`estimateContent`、`estimateStructuralBlock`、`estimateToolsTokens` 和 `ROLE_OVERHEAD`。上下文选择复用这些函数，避免请求路由与 UI 计量规则漂移。
+
 ```text
 const { totalTokens, surfaceTokens, nodes } = ctx.tokenMeter.measure(session)
 const price = ctx.tokenMeter.estimateMessage(message)

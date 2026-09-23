@@ -1,9 +1,11 @@
 /** Visual workflow editor with a draggable node canvas and a property inspector. */
 import { useEffect, useMemo, useRef, useState, type DragEvent as ReactDragEvent, type PointerEvent as ReactPointerEvent, type WheelEvent as ReactWheelEvent } from 'react'
-import { Button, IconCheckOutline16, IconChevronLeftOutline14, IconCloseOutline16, IconNewChatOutline16, IconPlusOutline16, IconSearchOutline16 } from '@deepseek-ai/dsh-client-ui-primitives'
-import type { AuthoringItem, WorkflowEdge, WorkflowNode, WorkflowNodeKind, WorkflowViewport } from '../../authoring-settings.ts'
+import { Button, IconCheckOutline16, IconChevronLeftOutline14, IconCloseOutline16, IconDownloadOutline16, IconNewChatOutline16, IconPlusOutline16, IconSearchOutline16 } from '@deepseek-ai/dsh-client-ui-primitives'
+import type { AuthoringItem, WorkflowEdge, WorkflowNode, WorkflowNodeKind, WorkflowVersion, WorkflowViewport } from '../../authoring-settings.ts'
 import type { LayoutKey } from '../locales.ts'
-import { workflowRuntimeName, type SubscribeWorkflowDebug, type WorkflowDebugEvent } from './workflow-debug.ts'
+import { workflowRuntimeName, type SubscribeWorkflowDebug, type WorkflowDebugEvent, type WorkflowRunControls, type WorkflowRunInput, type WorkflowRunStartHandler, type WorkflowRunView } from './workflow-debug.ts'
+import { downloadWorkflow } from '../../workflow-io.ts'
+import { analyzeWorkflowGraph, type WorkflowGraphIssue } from '../../workflow-graph.ts'
 import css from './WorkflowPanel.module.css'
 
 const NODE_WIDTH = 190
@@ -40,6 +42,21 @@ function nodeLabel(kind: WorkflowNodeKind, t: (key: LayoutKey) => string): strin
   }
 }
 
+function debugEventText(event: WorkflowDebugEvent, t: (key: LayoutKey) => string): string {
+  const runStatus = (status: 'completed' | 'cancelled' | 'failed' | 'error'): string => t(`workflow.runStatus.${status === 'failed' ? 'error' : status}` as LayoutKey)
+  const nodeStatus = (status: 'completed' | 'failed' | 'skipped' | 'blocked' | 'cancelled'): string => t(`workflow.nodeStatus.${status}` as LayoutKey)
+  switch (event.kind) {
+    case 'phase': return event.title
+    case 'log': return event.message
+    case 'agent-start': return event.label
+    case 'agent-end': return t('workflow.debugAgentEnd').replace('{label}', event.label).replace('{outcome}', runStatus(event.outcome))
+    case 'node-start': return t('workflow.debugNodeStart').replace('{label}', event.label).replace('{status}', t('workflow.nodeStarted'))
+    case 'node-end': return t('workflow.debugNodeEnd').replace('{label}', event.label).replace('{status}', nodeStatus(event.status)).replace('{duration}', String(event.durationMs))
+    case 'end': return t('workflow.debugRunEnd').replace('{status}', runStatus(event.stopReason))
+    case 'start': return t('workflow.debugStarted')
+  }
+}
+
 function nodeId(): string { return `node-${Date.now()}-${Math.random().toString(36).slice(2, 7)}` }
 
 function graphFromSteps(item: AuthoringItem, t: (key: LayoutKey) => string): { nodes: WorkflowNode[]; edges: WorkflowEdge[] } {
@@ -70,63 +87,86 @@ function orderedSteps(nodes: readonly WorkflowNode[]): string[] {
                   : node.kind === 'code' && config.language !== undefined ? `language=${config.language.trim()}`
                     : node.kind === 'http' && config.url !== undefined ? `url=${config.url.trim()}`
                       : node.kind === 'template' && config.template !== undefined ? `template=${config.template.trim()}` : ''
-      return [node.title.trim(), node.instructions.trim(), metadata].filter(Boolean).join(': ')
+      const credential = (node.kind === 'tool' || node.kind === 'http') && config.credential !== undefined ? `credential=${config.credential.trim()}` : ''
+      const retries = typeof config.retries === 'number' && config.retries > 0 ? `retries=${Math.floor(config.retries)}` : ''
+      return [node.title.trim(), node.instructions.trim(), metadata, credential, retries].filter(Boolean).join(': ')
     }).filter(Boolean)
 }
 
+function cloneGraph(nodes: readonly WorkflowNode[], edges: readonly WorkflowEdge[]): { nodes: WorkflowNode[]; edges: WorkflowEdge[] } {
+  return {
+    nodes: nodes.map(node => ({ ...node, ...(node.config === undefined ? {} : { config: { ...node.config } }) })),
+    edges: edges.map(edge => ({ ...edge })),
+  }
+}
+
+function publishedSnapshot(item: AuthoringItem, version: number, publishedAt: number): WorkflowVersion {
+  const graph = cloneGraph(item.nodes ?? [], item.edges ?? [])
+  return {
+    version,
+    publishedAt,
+    title: item.title.trim(),
+    description: item.description,
+    body: item.body,
+    steps: orderedSteps(graph.nodes),
+    nodes: graph.nodes,
+    edges: graph.edges,
+    ...(item.viewport === undefined || item.viewport === null ? {} : { viewport: item.viewport }),
+  }
+}
+
 function validateNodes(nodes: readonly WorkflowNode[], edges: readonly WorkflowEdge[], t: (key: LayoutKey) => string, body = ''): string[] {
-  const ids = new Set(nodes.map(node => node.id))
   const messages: string[] = []
+  const graph = analyzeWorkflowGraph(nodes, edges)
+  const issueMessage = (issue: WorkflowGraphIssue): string => {
+    const key: LayoutKey = issue.code === 'node-limit' ? 'workflow.validation.nodeLimit'
+      : issue.code === 'edge-limit' ? 'workflow.validation.edgeLimit'
+        : issue.code === 'node-id' ? 'workflow.validation.invalidNodeId'
+          : issue.code === 'duplicate-node-id' || issue.code === 'duplicate-edge-id' ? 'workflow.validation.duplicateId'
+            : issue.code === 'node-title' ? 'workflow.validation.missingTitle'
+              : issue.code === 'tool-config' ? 'workflow.validation.missingTool'
+                : issue.code === 'http-config' ? 'workflow.validation.invalidHttp'
+                  : issue.code === 'credential' ? 'workflow.validation.invalidCredential'
+                    : issue.code === 'retries' ? 'workflow.validation.invalidRetries'
+                      : issue.code === 'start-count' ? 'workflow.validation.singleStart'
+                        : issue.code === 'end-count' ? 'workflow.validation.singleEnd'
+                          : issue.code === 'edge-id' ? 'workflow.validation.invalidEdgeId'
+                            : issue.code === 'edge-reference' || issue.code === 'self-edge' || issue.code === 'duplicate-edge' ? 'workflow.validation.edge'
+                              : issue.code === 'edge-handle' ? 'workflow.validation.conditionHandle'
+                                : issue.code === 'start-incoming' ? 'workflow.validation.startEdge'
+                                  : issue.code === 'end-outgoing' ? 'workflow.validation.terminalEdge'
+                                    : issue.code === 'unreachable' ? 'workflow.validation.orphan'
+                                      : issue.code === 'dead-end' ? 'workflow.validation.deadEnd'
+                                        : issue.code === 'duplicate-branch' ? 'workflow.validation.duplicateBranch'
+                                          : 'workflow.validation.cycle'
+    const node = issue.nodeId === undefined ? undefined : nodes.find(candidate => candidate.id === issue.nodeId)
+    const prefix = node === undefined ? '' : `${node.title || nodeLabel(node.kind, t)}: `
+    return `${prefix}${t(key)}`
+  }
+  for (const issue of graph.issues) messages.push(issueMessage(issue))
   for (const node of nodes) {
-    if (node.title.trim() === '') messages.push(`${nodeLabel(node.kind, t)}: ${t('workflow.validation.missingTitle')}`)
-    if (['llm', 'tool', 'knowledge', 'condition', 'code', 'http', 'template'].includes(node.kind) && node.instructions.trim() === '' && !(node.kind === 'llm' && body.trim() !== '')) messages.push(`${node.title || nodeLabel(node.kind, t)}: ${t('workflow.validation.missingInstruction')}`)
-    if (node.kind === 'tool' && !node.config?.tool?.trim()) messages.push(`${node.title || nodeLabel(node.kind, t)}: ${t('workflow.validation.missingTool')}`)
-    if (node.kind === 'condition' && !node.config?.condition?.trim()) messages.push(`${node.title || nodeLabel(node.kind, t)}: ${t('workflow.validation.missingCondition')}`)
+    const title = node.title || nodeLabel(node.kind, t)
+    const requiresInstruction = ['llm', 'tool', 'knowledge', 'condition', 'code', 'http', 'template'].includes(node.kind)
+    const hasFallbackInstruction = node.kind === 'llm' && body.trim() !== ''
+    if (requiresInstruction && node.instructions.trim() === '' && !hasFallbackInstruction) messages.push(`${title}: ${t('workflow.validation.missingInstruction')}`)
+    if (node.kind === 'condition' && !node.config?.condition?.trim() && node.instructions.trim() === '') messages.push(`${title}: ${t('workflow.validation.missingCondition')}`)
   }
-  for (const edge of edges) if (!ids.has(edge.source) || !ids.has(edge.target)) messages.push(t('workflow.validation.edge'))
-  const start = nodes.find(node => node.kind === 'start')
-  if (start !== undefined) {
-    const reachable = new Set([start.id])
-    let changed = true
-    while (changed) {
-      changed = false
-      for (const edge of edges) {
-        if (reachable.has(edge.source) && !reachable.has(edge.target)) {
-          reachable.add(edge.target)
-          changed = true
-        }
-      }
-    }
-    for (const node of nodes) if (node.kind !== 'start' && !reachable.has(node.id)) messages.push(`${node.title || nodeLabel(node.kind, t)}: ${t('workflow.validation.orphan')}`)
-  }
-  const visiting = new Set<string>()
-  const visited = new Set<string>()
-  const outgoing = new Map<string, string[]>()
-  for (const edge of edges) outgoing.set(edge.source, [...(outgoing.get(edge.source) ?? []), edge.target])
-  const visit = (id: string): boolean => {
-    if (visiting.has(id)) return true
-    if (visited.has(id)) return false
-    visiting.add(id)
-    const cycle = (outgoing.get(id) ?? []).some(visit)
-    visiting.delete(id)
-    visited.add(id)
-    return cycle
-  }
-  if (nodes.some(node => visit(node.id))) messages.push(t('workflow.validation.cycle'))
   return messages
 }
+
 
 function point(node: WorkflowNode, side: 'left' | 'right', handle?: 'true' | 'false'): { x: number; y: number } {
   const y = node.kind === 'condition' && side === 'right' ? node.y + (handle === 'false' ? NODE_HEIGHT - 27 : 27) : node.y + NODE_HEIGHT / 2
   return { x: node.x + (side === 'right' ? NODE_WIDTH : 0), y }
 }
 
-export function WorkflowEditor({ initial, writable, save, close, run, subscribeDebug, t }: {
+export function WorkflowEditor({ initial, writable, save, close, run, runControls, subscribeDebug, t }: {
   initial: AuthoringItem
   writable: boolean
   save: (item: AuthoringItem) => Promise<void>
   close: () => void
-  run?: (item: AuthoringItem) => Promise<void>
+  run?: WorkflowRunStartHandler
+  runControls?: WorkflowRunControls
   subscribeDebug?: SubscribeWorkflowDebug
   t: (key: LayoutKey) => string
 }) {
@@ -152,14 +192,27 @@ export function WorkflowEditor({ initial, writable, save, close, run, subscribeD
   const [validation, setValidation] = useState<string[] | null>(null)
   const [selectedEdgeId, setSelectedEdgeId] = useState<string | null>(null)
   const [testing, setTesting] = useState(false)
+  const [activeRunId, setActiveRunId] = useState<string | null>(null)
+  const [selectedRunId, setSelectedRunId] = useState<string | null>(null)
+  const [runView, setRunView] = useState<WorkflowRunView | null>(null)
+  const [runHistory, setRunHistory] = useState<WorkflowRunView[]>([])
+  const [cancelling, setCancelling] = useState(false)
   const [debugEvents, setDebugEvents] = useState<WorkflowDebugEvent[]>([])
   const [debugOpen, setDebugOpen] = useState(true)
+  const [versionsOpen, setVersionsOpen] = useState(false)
   const debugRunId = useRef<string | null>(null)
   const canvasRef = useRef<HTMLDivElement>(null)
   const dirty = JSON.stringify(normalizedInitial) !== JSON.stringify(draft)
   const nodes = draft.nodes ?? []
   const edges = draft.edges ?? []
   const selected = nodes.find(node => node.id === selectedId)
+  const auditByNode = useMemo(() => new Map((runView?.audit ?? []).map(entry => [entry.nodeId, entry])), [runView])
+  const selectedAudit = selected === undefined ? undefined : auditByNode.get(selected.id)
+
+  const nodeStatusLabel = (status: NonNullable<WorkflowRunView['audit']>[number]['status'] | 'idle'): string => {
+    if (status === 'idle') return t('workflow.nodeStatus.idle')
+    return t(`workflow.nodeStatus.${status}` as LayoutKey)
+  }
 
   useEffect(() => {
     if (subscribeDebug === undefined) return
@@ -170,10 +223,47 @@ export function WorkflowEditor({ initial, writable, save, close, run, subscribeD
         setDebugEvents([event])
         return
       }
+      if (selectedRunId !== null && event.runId !== selectedRunId && event.runId !== activeRunId) return
       if (debugRunId.current !== event.runId) return
       setDebugEvents(current => [...current.slice(-99), event])
     })
-  }, [subscribeDebug, draft.id])
+  }, [subscribeDebug, draft.id, selectedRunId, activeRunId])
+
+  useEffect(() => {
+    if (runControls?.list === undefined) return
+    let disposed = false
+    void runControls.list(draft.id).then((runs) => {
+      if (!disposed) {
+        const history = [...runs]
+        setRunHistory(history)
+        if (history[0] !== undefined) {
+          setSelectedRunId(history[0].runId)
+          setRunView(history[0])
+        }
+      }
+    }).catch(() => { /* History is best effort; a run can still be started. */ })
+    return () => { disposed = true }
+  }, [runControls, draft.id])
+
+  useEffect(() => {
+    if (activeRunId === null || runControls?.status === undefined) return
+    let disposed = false
+    let timer: ReturnType<typeof setTimeout> | undefined
+    const poll = async (): Promise<void> => {
+      try {
+        const view = await runControls.status?.(activeRunId)
+        if (disposed || view === undefined) return
+        setRunView(view)
+        setRunHistory(current => [view, ...current.filter(item => item.runId !== view.runId)].slice(0, 30))
+        if (view.status === 'running') timer = setTimeout(() => { void poll() }, 700)
+        else setActiveRunId(null)
+      } catch {
+        if (!disposed) timer = setTimeout(() => { void poll() }, 1200)
+      }
+    }
+    void poll()
+    return () => { disposed = true; if (timer !== undefined) clearTimeout(timer) }
+  }, [activeRunId, runControls])
 
   const commit = (next: AuthoringItem | ((current: AuthoringItem) => AuthoringItem)): void => {
     const resolved = typeof next === 'function' ? next(draft) : next
@@ -332,20 +422,108 @@ export function WorkflowEditor({ initial, writable, save, close, run, subscribeD
     setValidation(issues)
     setSaving(true)
     setError(false)
-    try { await save({ ...draft, title: draft.title.trim(), steps: orderedSteps(draft.nodes ?? []), updatedAt: Date.now() }); close() }
+    try { await save({ ...draft, title: draft.title.trim(), steps: orderedSteps(draft.nodes ?? []), workflowStatus: dirty ? 'draft' : draft.workflowStatus ?? 'draft', version: draft.version ?? 0, updatedAt: Date.now() }); close() }
     catch { setError(true) }
     finally { setSaving(false) }
   }
+  const publish = async (): Promise<void> => {
+    if (!writable || saving || testing || !draft.title.trim()) return
+    const issues = validateNodes(nodes, edges, t, draft.body)
+    setValidation(issues)
+    if (issues.length > 0) return
+    setSaving(true)
+    setError(false)
+    try {
+      const publishedAt = Date.now()
+      const version = (draft.version ?? 0) + 1
+      const snapshot = publishedSnapshot(draft, version, publishedAt)
+      await save({ ...draft, title: draft.title.trim(), steps: orderedSteps(draft.nodes ?? []), workflowStatus: 'published', version, versions: [...(draft.versions ?? []), snapshot].slice(-20), updatedAt: publishedAt })
+      close()
+    }
+    catch { setError(true) }
+    finally { setSaving(false) }
+  }
+  const restoreVersion = (snapshot: WorkflowVersion): void => {
+    const graph = cloneGraph(snapshot.nodes, snapshot.edges)
+    commit(current => ({
+      ...current,
+      title: snapshot.title,
+      description: snapshot.description,
+      body: snapshot.body,
+      steps: [...snapshot.steps],
+      nodes: graph.nodes,
+      edges: graph.edges,
+      ...(snapshot.viewport === undefined || snapshot.viewport === null ? {} : { viewport: snapshot.viewport }),
+      workflowStatus: 'draft',
+      updatedAt: Date.now(),
+    }))
+    setViewport(viewportOf({ ...draft, viewport: snapshot.viewport ?? null }))
+    setValidation(null)
+    setVersionsOpen(false)
+  }
+  const persistTestInput = async (): Promise<void> => {
+    if (!writable || saving || testing) return
+    setSaving(true)
+    setError(false)
+    try {
+      await save({ ...draft, updatedAt: Date.now() })
+    } catch { setError(true) }
+    finally { setSaving(false) }
+  }
   const testRun = async () => {
-    if (run === undefined || !writable || saving || testing || !draft.title.trim()) return
+    if (run === undefined || !writable || saving || testing || activeRunId !== null || !draft.title.trim()) return
     const issues = validateNodes(nodes, edges, t, draft.body)
     setValidation(issues)
     if (issues.length > 0) return
     setTesting(true)
     setError(false)
-    try { await run({ ...draft, title: draft.title.trim(), steps: orderedSteps(draft.nodes ?? []), updatedAt: Date.now() }) }
+    setDebugEvents([])
+    debugRunId.current = null
+    try {
+      const input: WorkflowRunInput = { text: draft.testInput ?? '', mode: draft.testInputMode ?? 'text', ...(draft.testTimeoutMs === undefined ? {} : { timeoutMs: draft.testTimeoutMs }) }
+      const started = await run({ ...draft, title: draft.title.trim(), steps: orderedSteps(draft.nodes ?? []), updatedAt: Date.now() }, input)
+      if (started !== undefined) {
+        const initialView: WorkflowRunView = {
+          runId: started.runId,
+          workflowId: draft.id,
+          ...(draft.workflowStatus === 'published' && draft.version !== undefined && draft.version !== null ? { workflowVersion: draft.version } : {}),
+          name: workflowRuntimeName(draft.id),
+          status: 'running',
+          startedAt: started.startedAt,
+          agentsStarted: 0,
+        }
+        setActiveRunId(started.runId)
+        setSelectedRunId(started.runId)
+        debugRunId.current = started.runId
+        setRunView(initialView)
+        setRunHistory(current => [initialView, ...current.filter(item => item.runId !== started.runId)].slice(0, 30))
+      }
+    }
     catch { setError(true) }
     finally { setTesting(false) }
+  }
+  const cancelRun = async (): Promise<void> => {
+    if (activeRunId === null || runControls?.cancel === undefined || cancelling) return
+    setCancelling(true)
+    try { await runControls.cancel(activeRunId) }
+    catch { setError(true) }
+    finally { setCancelling(false) }
+  }
+  const selectRun = (view: WorkflowRunView): void => {
+    setSelectedRunId(view.runId)
+    setRunView(view)
+  }
+  const exportWorkflow = (format: 'json' | 'yaml'): void => {
+    try { downloadWorkflow(draft, format); setError(false) } catch { setError(true) }
+  }
+  const runStatusLabel = (view: WorkflowRunView | null): string => {
+    if (view === null) return t('workflow.runIdle')
+    if (view.timedOut) return t('workflow.runTimedOut')
+    return t(`workflow.runStatus.${view.status}` as LayoutKey)
+  }
+  const runDuration = (view: WorkflowRunView): string => {
+    const end = view.endedAt ?? Date.now()
+    return `${Math.max(0, end - view.startedAt)} ms`
   }
   const startDrag = (event: ReactPointerEvent<HTMLElement>, node: WorkflowNode) => {
     if ((event.target as HTMLElement).closest('button, input, textarea')) return
@@ -421,7 +599,7 @@ export function WorkflowEditor({ initial, writable, save, close, run, subscribeD
       <header className={css.visualHeader}>
         <Button icon={<IconChevronLeftOutline14 />} disabled={saving} onClick={back}>{t('workflow.back')}</Button>
         <div className={css.visualTitle}><h1>{t('workflow.edit')}</h1><span>{draft.title || t('name')}</span></div>
-        <div className={css.visualHeaderActions}><span className={`${css.saveState} ${dirty ? css.saveStateDirty : ''}`}><span className={css.saveDot} />{t(dirty ? 'workflow.unsaved' : 'workflow.saved')}</span><Button type="button" variant="outline" disabled={history.length === 0 || saving || testing} onClick={undo} aria-label={t('workflow.undo')}>↶</Button><Button type="button" variant="outline" disabled={future.length === 0 || saving || testing} onClick={redo} aria-label={t('workflow.redo')}>↷</Button><Button type="button" variant="outline" disabled={saving || testing} onClick={() => { setValidation(validateNodes(nodes, edges, t)) }}>{t('workflow.validate')}</Button>{run !== undefined && <Button type="button" variant="outline" icon={<IconNewChatOutline16 />} disabled={!writable || saving || testing || !draft.title.trim()} onClick={() => { void testRun() }}>{t(testing ? 'workflow.testing' : 'workflow.testRun')}</Button>}<Button type="button" variant="primary" icon={<IconCheckOutline16 />} disabled={!writable || saving || testing || !draft.title.trim()} onClick={() => { void submit() }}>{t(saving ? 'workflow.saving' : 'save')}</Button></div>
+        <div className={css.visualHeaderActions}><span className={`${css.saveState} ${dirty ? css.saveStateDirty : ''}`}><span className={css.saveDot} />{t(dirty ? 'workflow.unsaved' : 'workflow.saved')}</span><span className={css.versionBadge}>{t('workflow.version').replace('{version}', String(draft.version ?? 0))}</span><Button type="button" variant="outline" disabled={history.length === 0 || saving || testing} onClick={undo} aria-label={t('workflow.undo')}>↶</Button><Button type="button" variant="outline" disabled={future.length === 0 || saving || testing} onClick={redo} aria-label={t('workflow.redo')}>↷</Button><Button type="button" variant="outline" disabled={saving || testing} onClick={() => { setValidation(validateNodes(nodes, edges, t)) }}>{t('workflow.validate')}</Button><Button type="button" variant="outline" icon={<IconDownloadOutline16 />} disabled={saving || testing} onClick={() => { exportWorkflow('json') }}>{t('workflow.exportJson')}</Button><Button type="button" variant="outline" disabled={saving || testing} onClick={() => { exportWorkflow('yaml') }}>{t('workflow.exportYaml')}</Button>{run !== undefined && <Button type="button" variant="outline" icon={<IconNewChatOutline16 />} disabled={!writable || saving || testing || activeRunId !== null || !draft.title.trim()} onClick={() => { void testRun() }}>{t(testing ? 'workflow.testing' : 'workflow.testRun')}</Button>}<Button type="button" variant="outline" disabled={!writable || saving || testing || !draft.title.trim()} onClick={() => { void publish() }}>{t('workflow.publish')}</Button><Button type="button" variant="primary" icon={<IconCheckOutline16 />} disabled={!writable || saving || testing || !draft.title.trim()} onClick={() => { void submit() }}>{t(saving ? 'workflow.saving' : 'save')}</Button></div>
       </header>
       <div className={css.visualMeta}>
         <label className={css.compactField}><span>{t('name')}</span><input value={draft.title} onChange={(event) => { commit(current => ({ ...current, title: event.target.value })) }} /></label>
@@ -450,12 +628,16 @@ export function WorkflowEditor({ initial, writable, save, close, run, subscribeD
                   return <g key={edge.id} className={selectedEdgeId === edge.id ? css.edgeSelected : undefined} onClick={() => { setSelectedEdgeId(edge.id); setSelectedId(null) }}><path d={`M ${from.x} ${from.y} C ${bend} ${from.y}, ${bend} ${to.y}, ${to.x} ${to.y}`} markerEnd="url(#workflow-arrow)" /><text x={from.x + 8} y={from.y - 7} className={css.edgeLabel}>{edge.sourceHandle === 'true' ? 'true' : edge.sourceHandle === 'false' ? 'false' : ''}</text></g>
                 })}
               </svg>
-              {nodes.map(node => <article key={node.id} className={`${css.canvasNode} ${css[`node_${node.kind}`]}${selectedId === node.id ? ` ${css.nodeSelected}` : ''}`} style={{ left: node.x, top: node.y }} onPointerDown={(event) => { startDrag(event, node) }}>
-                <div className={css.nodeHeader}><span className={css.nodeType}>{nodeLabel(node.kind, t)}</span><button type="button" className={css.nodeDelete} disabled={node.kind === 'start' || node.kind === 'end'} title={t('workflow.removeNode')} onClick={() => { removeNode(node.id) }}><IconCloseOutline16 size={13} /></button></div>
-                <button type="button" className={css.nodeBody} onClick={() => { setSelectedId(node.id) }}><strong>{node.title}</strong><span>{node.instructions || t('workflow.selectNode')}</span></button>
-                {node.kind !== 'start' && <button type="button" className={css.nodeHandleLeft} title={t('workflow.connectTo')} aria-label={`${t('workflow.connectTo')} ${node.title}`} onClick={() => { connect(node.id) }} />}
-                {node.kind === 'condition' ? <><button type="button" className={`${css.nodeHandleRight} ${css.nodeHandleTrue}`} title={`${t('workflow.connectFrom')} true`} aria-label={`${t('workflow.connectFrom')} ${node.title} true`} onClick={() => { setPendingSource({ id: node.id, handle: 'true' }) }} data-active={pendingSource?.id === node.id && pendingSource.handle === 'true' || undefined} /><button type="button" className={`${css.nodeHandleRight} ${css.nodeHandleFalse}`} title={`${t('workflow.connectFrom')} false`} aria-label={`${t('workflow.connectFrom')} ${node.title} false`} onClick={() => { setPendingSource({ id: node.id, handle: 'false' }) }} data-active={pendingSource?.id === node.id && pendingSource.handle === 'false' || undefined} /></> : node.kind !== 'end' && <button type="button" className={css.nodeHandleRight} title={t('workflow.connectFrom')} aria-label={`${t('workflow.connectFrom')} ${node.title}`} onClick={() => { setPendingSource({ id: node.id }) }} data-active={pendingSource?.id === node.id || undefined} />}
-              </article>)}
+              {nodes.map((node) => {
+                const nodeAudit = auditByNode.get(node.id)
+                const nodeStatus = nodeAudit?.status ?? 'idle'
+                return <article key={node.id} className={`${css.canvasNode} ${css[`node_${node.kind}`]} ${css[`nodeRun_${nodeStatus}`]}${selectedId === node.id ? ` ${css.nodeSelected}` : ''}`} data-node-id={node.id} data-run-status={nodeStatus} style={{ left: node.x, top: node.y }} onPointerDown={(event) => { startDrag(event, node) }}>
+                  <div className={css.nodeHeader}><span className={css.nodeType}>{nodeLabel(node.kind, t)}</span><span className={css.nodeRunState} data-state={nodeStatus} title={nodeStatusLabel(nodeStatus)}>{nodeStatus === 'idle' ? '' : nodeStatusLabel(nodeStatus)}</span><button type="button" className={css.nodeDelete} disabled={node.kind === 'start' || node.kind === 'end'} title={t('workflow.removeNode')} onClick={() => { removeNode(node.id) }}><IconCloseOutline16 size={13} /></button></div>
+                  <button type="button" className={css.nodeBody} onClick={() => { setSelectedId(node.id) }}><strong>{node.title}</strong><span>{node.instructions || t('workflow.selectNode')}</span></button>
+                  {node.kind !== 'start' && <button type="button" className={css.nodeHandleLeft} title={t('workflow.connectTo')} aria-label={`${t('workflow.connectTo')} ${node.title}`} onClick={() => { connect(node.id) }} />}
+                  {node.kind === 'condition' ? <><button type="button" className={`${css.nodeHandleRight} ${css.nodeHandleTrue}`} title={`${t('workflow.connectFrom')} true`} aria-label={`${t('workflow.connectFrom')} ${node.title} true`} onClick={() => { setPendingSource({ id: node.id, handle: 'true' }) }} data-active={pendingSource?.id === node.id && pendingSource.handle === 'true' || undefined} /><button type="button" className={`${css.nodeHandleRight} ${css.nodeHandleFalse}`} title={`${t('workflow.connectFrom')} false`} aria-label={`${t('workflow.connectFrom')} ${node.title} false`} onClick={() => { setPendingSource({ id: node.id, handle: 'false' }) }} data-active={pendingSource?.id === node.id && pendingSource.handle === 'false' || undefined} /></> : node.kind !== 'end' && <button type="button" className={css.nodeHandleRight} title={t('workflow.connectFrom')} aria-label={`${t('workflow.connectFrom')} ${node.title}`} onClick={() => { setPendingSource({ id: node.id }) }} data-active={pendingSource?.id === node.id || undefined} />}
+                </article>
+              })}
             </div>
           </div>
           <div className={css.minimap} aria-label={t('workflow.minimap')}>
@@ -468,23 +650,49 @@ export function WorkflowEditor({ initial, writable, save, close, run, subscribeD
           <h2>{selected === undefined ? t('workflow.selectNode') : selected.title}</h2>
           {selected === undefined ? <p className={css.inspectorEmpty}>{selectedEdgeId !== null ? t('workflow.edgeSelected') : t('workflow.noSelection')}</p> : <>
             <span className={css.inspectorType}>{nodeLabel(selected.kind, t)}</span>
+            {selectedAudit !== undefined && <section className={css.nodeAudit} aria-label={t('workflow.nodeAudit')}>
+              <div className={css.nodeAuditHeader}><strong>{t('workflow.nodeAudit')}</strong><span className={`${css.nodeAuditStatus} ${css[`audit_${selectedAudit.status}`]}`}>{nodeStatusLabel(selectedAudit.status)}</span></div>
+              <div className={css.nodeAuditMeta}><span>{t('workflow.nodeStartedAt').replace('{date}', new Date(selectedAudit.startedAt).toLocaleString())}</span>{selectedAudit.durationMs !== undefined && <span>{t('workflow.nodeDuration').replace('{duration}', String(selectedAudit.durationMs))}</span>}<span>{t('workflow.nodeRetriesUsed').replace('{count}', String(selectedAudit.retryCount))}</span></div>
+              {selectedAudit.inputSummary !== undefined && <div className={css.nodeAuditBlock}><span>{t('workflow.nodeInputSummary')}</span><pre>{selectedAudit.inputSummary}</pre></div>}
+              {selectedAudit.outputSummary !== undefined && <div className={css.nodeAuditBlock}><span>{t('workflow.nodeOutputSummary')}</span><pre>{selectedAudit.outputSummary}</pre></div>}
+              {selectedAudit.error !== undefined && <p className={css.nodeAuditError}>{selectedAudit.error}</p>}
+            </section>}
             <label className={css.field}><span>{t('workflow.nodeTitle')}</span><input value={selected.title} onChange={(event) => { updateNodes(nodes.map(node => node.id === selected.id ? { ...node, title: event.target.value } : node)) }} /></label>
             <label className={css.field}><span>{t('workflow.nodeInstructions')}</span><textarea value={selected.instructions} onChange={(event) => { updateNodes(nodes.map(node => node.id === selected.id ? { ...node, instructions: event.target.value } : node)) }} /></label>
+            {!['start', 'end', 'input', 'output', 'template'].includes(selected.kind) && <label className={css.field}><span>{t('workflow.nodeRetries')}</span><input type="number" min="0" max="5" step="1" value={selected.config?.retries ?? 0} onChange={(event) => { const retries = Number(event.target.value); updateConfig(selected.id, { retries: Number.isFinite(retries) ? Math.max(0, Math.min(5, Math.floor(retries))) : 0 }) }} /></label>}
             {selected.kind === 'input' && <label className={css.field}><span>{t('workflow.nodeVariable')}</span><input value={selected.config?.variable ?? ''} placeholder={t('workflow.nodeVariablePlaceholder')} onChange={(event) => { updateConfig(selected.id, { variable: event.target.value }) }} /></label>}
             {selected.kind === 'llm' && <label className={css.field}><span>{t('workflow.nodeModel')}</span><input value={selected.config?.model ?? ''} placeholder={t('workflow.nodeModelPlaceholder')} onChange={(event) => { updateConfig(selected.id, { model: event.target.value }) }} /></label>}
-            {selected.kind === 'tool' && <label className={css.field}><span>{t('workflow.node.tool')}</span><input value={selected.config?.tool ?? ''} onChange={(event) => { updateConfig(selected.id, { tool: event.target.value }) }} /></label>}
+            {selected.kind === 'tool' && <><label className={css.field}><span>{t('workflow.node.tool')}</span><input value={selected.config?.tool ?? ''} onChange={(event) => { updateConfig(selected.id, { tool: event.target.value }) }} /></label><label className={css.field}><span>{t('workflow.nodeCredential')}</span><input value={selected.config?.credential ?? ''} placeholder={t('workflow.nodeCredentialPlaceholder')} autoComplete="off" onChange={(event) => { updateConfig(selected.id, { credential: event.target.value }) }} /></label></>}
             {selected.kind === 'knowledge' && <label className={css.field}><span>{t('workflow.nodeKnowledge')}</span><input value={selected.config?.knowledge ?? ''} placeholder={t('workflow.nodeKnowledgePlaceholder')} onChange={(event) => { updateConfig(selected.id, { knowledge: event.target.value }) }} /></label>}
             {selected.kind === 'condition' && <label className={css.field}><span>{t('workflow.node.condition')}</span><input value={selected.config?.condition ?? ''} onChange={(event) => { updateConfig(selected.id, { condition: event.target.value }) }} /></label>}
             {selected.kind === 'code' && <label className={css.field}><span>{t('workflow.nodeLanguage')}</span><input value={selected.config?.language ?? ''} placeholder={t('workflow.nodeLanguagePlaceholder')} onChange={(event) => { updateConfig(selected.id, { language: event.target.value }) }} /></label>}
-            {selected.kind === 'http' && <><label className={css.field}><span>{t('workflow.nodeUrl')}</span><input value={selected.config?.url ?? ''} placeholder={t('workflow.nodeUrlPlaceholder')} onChange={(event) => { updateConfig(selected.id, { url: event.target.value }) }} /></label><label className={css.field}><span>{t('workflow.nodeMethod')}</span><select value={selected.config?.method ?? 'GET'} onChange={(event) => { updateConfig(selected.id, { method: event.target.value }) }}><option>GET</option><option>POST</option><option>PUT</option><option>PATCH</option><option>DELETE</option></select></label></>}
+            {selected.kind === 'http' && <><label className={css.field}><span>{t('workflow.nodeUrl')}</span><input value={selected.config?.url ?? ''} placeholder={t('workflow.nodeUrlPlaceholder')} onChange={(event) => { updateConfig(selected.id, { url: event.target.value }) }} /></label><label className={css.field}><span>{t('workflow.nodeMethod')}</span><select value={selected.config?.method ?? 'GET'} onChange={(event) => { updateConfig(selected.id, { method: event.target.value }) }}><option value="GET">{t('workflow.method.GET')}</option><option value="POST">{t('workflow.method.POST')}</option><option value="PUT">{t('workflow.method.PUT')}</option><option value="PATCH">{t('workflow.method.PATCH')}</option><option value="DELETE">{t('workflow.method.DELETE')}</option></select></label><label className={css.field}><span>{t('workflow.nodeCredential')}</span><input value={selected.config?.credential ?? ''} placeholder={t('workflow.nodeCredentialPlaceholder')} autoComplete="off" onChange={(event) => { updateConfig(selected.id, { credential: event.target.value }) }} /></label></>}
             {selected.kind === 'template' && <label className={css.field}><span>{t('workflow.nodeTemplate')}</span><textarea value={selected.config?.template ?? ''} placeholder={t('workflow.nodeTemplatePlaceholder')} onChange={(event) => { updateConfig(selected.id, { template: event.target.value }) }} /></label>}
             {selected.kind === 'output' && <><label className={css.field}><span>{t('workflow.nodeOutput')}</span><textarea value={selected.config?.output ?? ''} onChange={(event) => { updateConfig(selected.id, { output: event.target.value }) }} /></label><label className={css.field}><span>{t('workflow.nodeFormat')}</span><input value={selected.config?.format ?? ''} placeholder={t('workflow.nodeFormatPlaceholder')} onChange={(event) => { updateConfig(selected.id, { format: event.target.value }) }} /></label></>}
             <Button size="sm" icon={<IconPlusOutline16 />} disabled={selected.kind === 'start' || selected.kind === 'end'} onClick={duplicateSelected}>{t('workflow.copy')}</Button>
           </>}
           <label className={css.field}><span>{t('workflow.instructions')}</span><textarea aria-label={t('workflow.instructions')} value={draft.body} onChange={(event) => { commit(current => ({ ...current, body: event.target.value })) }} /></label>
           {validation !== null && <div className={css.validation} role="status"><strong>{validation.length === 0 ? t('workflow.valid') : t('workflow.invalid').replace('{count}', String(validation.length))}</strong>{validation.length > 0 && <ul>{validation.map((message, index) => <li key={index}>{message}</li>)}</ul>}</div>}
-          {debugOpen && <section className={css.debugDock} aria-label={t('workflow.debugTitle')}><div className={css.debugHeader}><h3>{t('workflow.debugTitle')}</h3><span>{debugEvents.length > 0 ? t('workflow.debugLive') : t('workflow.debugIdle')}</span><button type="button" onClick={() => { setDebugEvents([]) }} aria-label={t('workflow.clearDebug')}>×</button></div>{debugEvents.length === 0 ? <p className={css.debugEmpty}>{t('workflow.debugEmpty')}</p> : <ol className={css.debugList}>{debugEvents.slice(-12).map((event, index) => <li key={`${event.at}-${index}`} className={css[`debug_${event.kind}`]}><span className={css.debugTime}>{new Date(event.at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}</span><span>{event.kind === 'phase' ? event.title : event.kind === 'log' ? event.message : event.kind === 'agent-start' ? event.label : event.kind === 'agent-end' ? `${event.label} · ${event.outcome}` : event.kind === 'end' ? event.stopReason : t('workflow.debugStarted')}</span></li>)}</ol>}</section>}
+          <section className={css.runInput} aria-label={t('workflow.runInputTitle')}>
+            <div className={css.debugHeader}><h3>{t('workflow.runInputTitle')}</h3><span>{draft.testInputMode === 'json' ? t('workflow.runInputJson') : t('workflow.runInputText')}</span></div>
+            <select value={draft.testInputMode ?? 'text'} aria-label={t('workflow.runInputMode')} onChange={(event) => { commit(current => ({ ...current, testInputMode: event.target.value as 'text' | 'json' })) }}><option value="text">{t('workflow.runInputText')}</option><option value="json">{t('workflow.runInputJson')}</option></select>
+            <textarea aria-label={t('workflow.runInput')} value={draft.testInput ?? ''} placeholder={t('workflow.runInputPlaceholder')} onChange={(event) => { commit(current => ({ ...current, testInput: event.target.value })) }} />
+            <label className={css.runTimeout}><span>{t('workflow.runTimeout')}</span><input type="number" min="1000" max="86400000" step="1000" value={draft.testTimeoutMs ?? ''} placeholder={t('workflow.runTimeoutPlaceholder')} onChange={(event) => { const value = event.target.value.trim(); commit((current) => { if (value === '') { const { testTimeoutMs: _removed, ...rest } = current; return rest } return { ...current, testTimeoutMs: Math.max(1000, Math.min(86400000, Number(value))) } }) }} /></label>
+            <Button size="sm" variant="outline" disabled={!writable || saving || testing} onClick={() => { void persistTestInput() }}>{t('workflow.saveTestInput')}</Button>
+          </section>
+          {runView !== null && <section className={css.runSummary} aria-label={t('workflow.runSummary')}>
+            <div className={css.debugHeader}><h3>{t('workflow.runSummary')}</h3><span className={runView.status === 'error' ? css.runFailed : css.runOk}>{runStatusLabel(runView)}</span></div>
+            <div className={css.runMeta}><span>{t('workflow.runStartedAt').replace('{date}', new Date(runView.startedAt).toLocaleString())}</span>{runView.workflowVersion !== undefined && <span>{t('workflow.runVersion').replace('{version}', String(runView.workflowVersion))}</span>}<span>{t('workflow.runDuration').replace('{duration}', runDuration(runView))}</span><span>{t('workflow.runAgents').replace('{count}', String(runView.agentsStarted))}</span></div>
+            {runView.error !== undefined && <p className={css.runError}>{runView.error}</p>}
+            {runView.value !== undefined && <pre className={css.runValue}>{JSON.stringify(runView.value, null, 2)}</pre>}
+            {runView.audit !== undefined && runView.audit.length > 0 && <section className={css.runAudit} aria-label={t('workflow.nodeTimeline')}><div className={css.debugHeader}><h4>{t('workflow.nodeTimeline')}</h4><span>{runView.audit.length}</span></div><ol className={css.runAuditList}>{runView.audit.map(entry => <li key={`${entry.nodeId}-${entry.startedAt}`}><button type="button" onClick={() => { if (nodes.some(node => node.id === entry.nodeId)) setSelectedId(entry.nodeId) }}><strong>{entry.label}</strong><span className={`${css.nodeAuditStatus} ${css[`audit_${entry.status}`]}`}>{nodeStatusLabel(entry.status)}</span><small>{entry.durationMs === undefined ? t('workflow.nodeInProgress') : t('workflow.nodeDuration').replace('{duration}', String(entry.durationMs))}{entry.retryCount > 0 ? ` · ${t('workflow.nodeRetriesUsed').replace('{count}', String(entry.retryCount))}` : ''}</small></button></li>)}</ol></section>}
+            <div className={css.runActions}>{activeRunId !== null && <Button size="sm" variant="outline" disabled={runControls?.cancel === undefined || cancelling} onClick={() => { void cancelRun() }}>{t(cancelling ? 'workflow.cancelling' : 'workflow.stopRun')}</Button>}{activeRunId === null && <Button size="sm" variant="outline" disabled={testing || saving} onClick={() => { void testRun() }}>{t('workflow.retryRun')}</Button>}</div>
+          </section>}
+          {runHistory.length > 0 && <section className={css.runHistory} aria-label={t('workflow.runHistory')}><div className={css.debugHeader}><h3>{t('workflow.runHistory')}</h3><span>{runHistory.length}</span></div><ol className={css.runList}>{runHistory.map(view => <li key={view.runId} className={selectedRunId === view.runId ? css.runSelected : undefined}><button type="button" onClick={() => { selectRun(view) }}><strong>{runStatusLabel(view)}</strong><span>{new Date(view.startedAt).toLocaleString()} · {runDuration(view)}</span></button></li>)}</ol></section>}
+          {debugOpen && <section className={css.debugDock} aria-label={t('workflow.debugTitle')}><div className={css.debugHeader}><h3>{t('workflow.debugTitle')}</h3><span>{debugEvents.length > 0 ? t('workflow.debugLive') : t('workflow.debugIdle')}</span><button type="button" onClick={() => { setDebugEvents([]) }} aria-label={t('workflow.clearDebug')}>×</button></div>{debugEvents.length === 0 ? <p className={css.debugEmpty}>{t('workflow.debugEmpty')}</p> : <ol className={css.debugList}>{debugEvents.slice(-12).map((event, index) => <li key={`${event.at}-${index}`} className={css[`debug_${event.kind}`]}><span className={css.debugTime}>{new Date(event.at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}</span><span>{debugEventText(event, t)}</span></li>)}</ol>}</section>}
           <button type="button" className={css.debugToggle} onClick={() => { setDebugOpen(value => !value) }}>{t(debugOpen ? 'workflow.hideDebug' : 'workflow.showDebug')}</button>
+          <button type="button" className={css.debugToggle} onClick={() => { setVersionsOpen(value => !value) }}>{t(versionsOpen ? 'workflow.hideVersions' : 'workflow.showVersions')}</button>
+          {versionsOpen && <section className={css.versionHistory} aria-label={t('workflow.versionHistory')}><div className={css.debugHeader}><h3>{t('workflow.versionHistory')}</h3><span>{(draft.versions ?? []).length}</span></div>{(draft.versions ?? []).length === 0 ? <p className={css.debugEmpty}>{t('workflow.noVersions')}</p> : <ol className={css.versionList}>{[...(draft.versions ?? [])].reverse().map(snapshot => <li key={`${snapshot.version}-${snapshot.publishedAt}`}><div><strong>{t('workflow.version').replace('{version}', String(snapshot.version))}</strong><span>{new Date(snapshot.publishedAt).toLocaleString()}</span></div><button type="button" onClick={() => { restoreVersion(snapshot) }} disabled={!writable || saving || testing}>{t('workflow.restoreVersion')}</button></li>)}</ol>}</section>}
         </aside>
       </div>
     </div>

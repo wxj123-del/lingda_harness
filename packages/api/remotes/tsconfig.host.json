@@ -60,6 +60,9 @@
       "path": "../../interaction/user-questions"
     },
     {
+      "path": "../../workflow/workflow"
+    },
+    {
       "path": "../session-controller/tsconfig.host.json"
     },
     {

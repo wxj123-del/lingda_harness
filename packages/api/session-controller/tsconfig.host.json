@@ -50,6 +50,7 @@
     { "path": "../../util/values" },
     { "path": "../../typert/protocol" },
     { "path": "../../typert/registry" },
-    { "path": "../../workspace/workspace" }
+    { "path": "../../workspace/workspace" },
+    { "path": "../../workflow/workflow" }
   ]
 }

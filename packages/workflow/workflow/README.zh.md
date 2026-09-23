@@ -75,7 +75,7 @@ return { reviewed: reviews.length }
 | 文件 | 职责 |
 |---|---|
 | [`src/index.ts`](src/index.ts) | 服务定义、`workflow/*` 事件声明、`WorkflowError` 及其 fatal 标志 |
-| [`src/types.ts`](src/types.ts) | 浏览器安全词汇：`WorkflowMeta`、`WorkflowResult`、运行与 agent 事件信息 |
+| [`src/types.ts`](src/types.ts) | 浏览器安全词汇：`WorkflowMeta`、`WorkflowResult`、运行、agent 与节点审计事件信息 |
 | [`src/runtime-types.ts`](src/runtime-types.ts) | 仅宿主的 `WorkflowStartRequest` 与 `WorkflowRun` 句柄 |
 | [`src/invariant.ts`](src/invariant.ts) | 不变式伴生插件：事件配对与身份校验 |
 
@@ -83,7 +83,7 @@ return { reviewed: reviews.length }
 
 运行由持有方负责：引擎插件卸载会阻止新的启动，但不会撤销已接受的运行，调用方必须 dispose 自己启动的每个运行。`dispose()` 在需要时取消，并等待脚本与子 agent 清理完成。PTC 引擎立即中止受管进程；子 agent 的资源释放仍遵循各 subagent 提供方的生命周期约定。
 
-`workflow/start` 与 `workflow/end` 为运行配对；`workflow/phase` 与 `workflow/log` 携带脚本叙述；`workflow/agent-start` 与 `workflow/agent-end` 按 `seq` 为每次子 agent 调用配对。每个监听器都独立隔离：抛错的监听器只记录日志，不会饿死同级监听器或改变执行，并且每个监听器都会收到自己的 payload 副本。
+`workflow/start` 与 `workflow/end` 为运行配对；`workflow/phase` 与 `workflow/log` 携带脚本叙述；`workflow/agent-start` 与 `workflow/agent-end` 按 `seq` 为每次子 agent 调用配对；`workflow/node-start` 与 `workflow/node-end` 按 `nodeId` 为可视化节点执行配对，并携带有界摘要、重试次数、耗时、失败、取消、明确的跳过状态及依赖阻塞状态。`skipped` 表示条件分支未选中；`blocked` 表示上游波次失败，因此节点没有启动。每个监听器都独立隔离：抛错的监听器只记录日志，不会饿死同级监听器或改变执行，并且每个监听器都会收到自己的 payload 副本。
 
 ### 失败纪律
 

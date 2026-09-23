@@ -173,6 +173,7 @@
 .muted { color: var(--dsw-alias-label-secondary); overflow-wrap: anywhere; }
 .requestAudit { margin: 0 16px 12px; padding: 8px 10px; border-left: 2px solid var(--dsw-alias-brand-primary); background: var(--dsw-alias-interactive-bg-hover); color: var(--dsw-alias-label-secondary); line-height: 1.6; }
 .requestAudit b { color: var(--dsw-alias-label-primary); }
+.contextBudgetWarning { color: var(--dsw-alias-state-warn-label); font-weight: 600; }
 .knowledgeSources { margin-top: 6px; }
 .knowledgeSources ul { margin: 4px 0 0; padding-left: 18px; }
 .knowledgeSources li { overflow-wrap: anywhere; }

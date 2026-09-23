@@ -43,6 +43,7 @@ export type * from './types.ts'
 // in aggregate programs that only import the package root.
 export type * from './usage-projection.ts'
 export type * from './breakdown-projection.ts'
+export { estimateContent, estimateMessage, estimateStructuralBlock, estimateToolsTokens, ROLE_OVERHEAD } from './estimate.ts'
 
 /**
  * Raw anchor facts captured at the latest successful call; the baseline is

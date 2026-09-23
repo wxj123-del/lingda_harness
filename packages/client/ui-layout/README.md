@@ -20,6 +20,8 @@ This package provides the Web GUI's three-column AppFrame, edge-column widths, a
 - [Known Limitations and Deferred Work](#known-limitations-and-deferred-work)
 - [Dev Note](#dev-note)
 
+Cancellation errors from in-flight HTTP nodes are classified separately and never consume the safe-method retry budget.
+
 -----
 
 <a id="use-this-package"></a>
@@ -51,7 +53,7 @@ The Skill marketplace combines the built-in Create Skill (`make-skill`) and Crea
 
 Upload Skill accepts one ZIP containing exactly one `SKILL.md`, at the root or inside a folder. YAML frontmatter must declare a lowercase hyphenated `name` and a non-empty `description`, followed by non-empty instructions. A preview allows editing the recognized fields and category before confirmation; importing the same name updates that record after confirmation. Existing entries remain editable. The original ZIP preserves scripts, references and assets. Limits are 2 MiB compressed, 8 MiB expanded and 256 entries; invalid metadata, multiple Skills, duplicate paths and path traversal are rejected. Uploading never executes bundled scripts.
 
-The Workflow workspace provides a template library, search and source filters, three built-in test workflows, one-click import, duplication and deletion, plus a visual editor with a draggable node canvas, node palette, connection handles, and a property inspector. The canvas supports auto-layout, zoom, selecting and deleting connections, validation, and save-and-test execution. Node types include input, model, tool, knowledge, condition, code, HTTP request, template transformation, and output; their properties are also serialized into runtime-compatible step instructions. Imported workflows can be launched into the composer or edited in place; enabled workflows are registered as instruction tools for the model. Legacy ordered steps are converted into a linear graph on first edit and remain available as the runtime instruction list.
+The Workflow workspace provides a template library, search and source filters, three built-in test workflows, one-click import, duplication and deletion, plus a visual editor with a draggable node canvas, node palette, connection handles, and a property inspector. The canvas supports auto-layout, zoom, selecting and deleting connections, validation, and save-and-test execution. Node types include input, model, tool, knowledge, condition, code, HTTP request, template transformation, and output; their properties are also serialized into runtime-compatible step instructions. Independent nodes run in dependency waves; a failed wave waits for its peers to settle and stops all downstream waves. HTTP nodes retry thrown request errors only for `GET` and `HEAD`; mutating methods stay single-shot. Imported workflows can be launched into the composer or edited in place; enabled workflows are registered as instruction tools for the model. Legacy ordered steps are converted into a linear graph on first edit and remain available as the runtime instruction list.
 
 -----
 

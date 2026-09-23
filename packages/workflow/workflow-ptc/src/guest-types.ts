@@ -1,7 +1,7 @@
 /** JSON callbacks between one workflow guest and its owning host run. */
 
-import type { WorkflowAgentEndInfo, WorkflowAgentInfo } from '@deepseek-ai/dsh-workflow'
-import type { ChildResult, ChildStartRequest, WorkerInit } from './types.ts'
+import type { WorkflowAgentEndInfo, WorkflowAgentInfo, WorkflowNodeEndInfo, WorkflowNodeStartInfo } from '@deepseek-ai/dsh-workflow'
+import type { ChildResult, ChildStartRequest, WorkerInit, WorkflowHttpRequest, WorkflowHttpResponse } from './types.ts'
 
 /** The host-allocated reference to one published child. */
 export interface StartedWorkflowChild {
@@ -23,6 +23,8 @@ export type WorkflowProgress =
   | { type: 'log'; message: string }
   | { type: 'agent-start'; info: WorkflowAgentInfo }
   | { type: 'agent-end'; info: WorkflowAgentEndInfo }
+  | { type: 'node-start'; info: WorkflowNodeStartInfo }
+  | { type: 'node-end'; info: WorkflowNodeEndInfo }
 
 /** Host functions exposed through the PTC runtime's JSON binding namespace. */
 export interface WorkflowGuestHost {
@@ -50,6 +52,8 @@ export interface WorkflowGuestHost {
    * @returns Null after the host finishes disposal.
    */
   disposeChild(request: WorkflowChildRequest): Promise<null>
+  /** Execute one host-controlled HTTP request without exposing host fetch to the guest VM. */
+  httpRequest(request: WorkflowHttpRequest): Promise<WorkflowHttpResponse>
   /**
    * Publish an ordered batch of progress for this workflow run.
    * @param events - Script narration and child lifecycle data in emission order.

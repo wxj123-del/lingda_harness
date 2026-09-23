@@ -7,7 +7,7 @@ import SandboxPolicy from '@deepseek-ai/dsh-sandbox-policy'
 import SubagentRuntime from '@deepseek-ai/dsh-subagent'
 import type { SubagentResult } from '@deepseek-ai/dsh-subagent'
 import { describe, expect, it, onTestFinished, vi } from 'vitest'
-import PtcWorkflowEngine from '../src/index.ts'
+import PtcWorkflowEngine, { type Config } from '../src/index.ts'
 import { fakeParent } from './setup.ts'
 
 const completed: PtcRunResult = { logs: [], value: { value: null, stopReason: 'completed', agentsStarted: 0 } }
@@ -25,7 +25,7 @@ class ControlledRuntime extends PtcRuntime {
   run(spec: PtcRunSpec): Promise<PtcRunResult> { return this.execute(spec) }
 }
 
-async function setup(execute?: (bindings: HostBindings, spec: PtcRunSpec) => Promise<PtcRunResult>, language = 'typescript') {
+async function setup(execute?: (bindings: HostBindings, spec: PtcRunSpec) => Promise<PtcRunResult>, language = 'typescript', config: Config = {}) {
   const ctx = new Context()
   onTestFinished(async () => { await ctx.fiber.dispose() })
   await ctx.plugin(SessionStore)
@@ -47,7 +47,7 @@ async function setup(execute?: (bindings: HostBindings, spec: PtcRunSpec) => Pro
   const runtime = ctx.ptcRuntime as ControlledRuntime
   runtime.language = language
   if (execute !== undefined) runtime.execute = spec => execute(spec.bindings[0]!.functions, spec)
-  await ctx.plugin(PtcWorkflowEngine, { provider: 'stub' })
+  await ctx.plugin(PtcWorkflowEngine, { provider: 'stub', ...config })
   const parent = fakeParent(ctx)
   const start = () => ctx.workflowEngine.start({
     script: 'return null', meta: { name: 'host-test', description: 'workflow callbacks' }, parent,
@@ -62,6 +62,10 @@ describe('workflow host callback validation', () => {
     ['startChild', { prompt: 7 }, 'prompt must be a string'],
     ['startChild', { prompt: 'p', provider: 7 }, 'provider must be a string'],
     ['startChild', { prompt: 'p', model: false }, 'model must be a string'],
+    ['startChild', { prompt: 'p', toolFilter: [] }, 'requires an object'],
+    ['startChild', { prompt: 'p', toolFilter: {} }, 'must declare allow and/or deny'],
+    ['startChild', { prompt: 'p', toolFilter: { allow: [1] } }, 'array of non-empty strings'],
+    ['startChild', { prompt: 'p', toolFilter: { allow: ['read'], extra: [] } }, 'unknown field "extra"'],
     ['progress', {}, 'requires an array of events'],
     ['progress', [{ type: 'phase', title: null }], 'phase must be a string'],
     ['progress', [{ type: 'agent-start', info: { seq: 0 } }], 'sequence must be a positive integer'],
@@ -107,6 +111,66 @@ describe('workflow host callback validation', () => {
     const handle = start()
     try { expect((await handle.result).stopReason).toBe('completed') }
     finally { await handle.dispose() }
+  })
+
+  it('executes bounded HTTP requests on the host and never exposes credentials in the response projection', async () => {
+    const fetchMock = vi.fn(async (_input: RequestInfo | URL, init?: RequestInit) => {
+      expect(init?.method).toBe('POST')
+      expect(init?.headers).toMatchObject({ authorization: 'Bearer top-secret', 'content-type': 'application/json' })
+      expect(init?.body).toBe('{"ok":true}')
+      return new Response('{"accepted":true}', { status: 201, headers: { 'content-type': 'application/json', 'set-cookie': 'session=secret' } })
+    })
+    vi.stubGlobal('fetch', fetchMock)
+    vi.stubEnv('API_TOKEN', 'top-secret')
+    onTestFinished(() => { vi.unstubAllGlobals() })
+    const { start } = await setup(async (bindings) => {
+      await expect(bindings.httpRequest!({ url: 'https://api.example.test/items', method: 'POST', body: { ok: true }, credential: 'API_TOKEN' })).resolves.toEqual({
+        url: 'https://api.example.test/items', status: 201, headers: { 'content-type': 'application/json' }, body: '{"accepted":true}', truncated: false, json: { accepted: true },
+      })
+      return completed
+    }, 'typescript', { httpAllowedHosts: ['api.example.test'], httpTimeoutMs: 1_000 })
+    const handle = start()
+    try { expect((await handle.result).stopReason).toBe('completed') }
+    finally { await handle.dispose() }
+  })
+
+  it('rejects private or non-allowlisted HTTP destinations before network access', async () => {
+    const fetchMock = vi.fn()
+    vi.stubGlobal('fetch', fetchMock)
+    onTestFinished(() => { vi.unstubAllGlobals() })
+    const { start } = await setup(async (bindings) => {
+      await expect(bindings.httpRequest!({ url: 'http://127.0.0.1/admin', method: 'GET' })).rejects.toThrow('not allowed')
+      await expect(bindings.httpRequest!({ url: 'https://other.example.test/', method: 'GET' })).rejects.toThrow('not allowed')
+      expect(fetchMock).not.toHaveBeenCalled()
+      return completed
+    }, 'typescript', { httpAllowedHosts: ['api.example.test'] })
+    const handle = start()
+    try { expect((await handle.result).stopReason).toBe('completed') }
+    finally { await handle.dispose() }
+  })
+
+  it('classifies an in-flight HTTP abort as cancellation', async () => {
+    const started = Promise.withResolvers<void>()
+    const fetchMock = vi.fn(async (_input: RequestInfo | URL, init?: RequestInit) => {
+      started.resolve(undefined)
+      return await new Promise<Response>((_resolve, reject) => {
+        init?.signal?.addEventListener('abort', () => { reject(init.signal?.reason) }, { once: true })
+      })
+    })
+    vi.stubGlobal('fetch', fetchMock)
+    onTestFinished(() => { vi.unstubAllGlobals() })
+    const { start } = await setup(async (bindings) => {
+      await bindings.httpRequest!({ url: 'https://api.example.test/items', method: 'GET' })
+      return completed
+    }, 'typescript', { httpAllowedHosts: ['api.example.test'], httpTimeoutMs: 10_000 })
+    const handle = start()
+    try {
+      await started.promise
+      handle.cancel('user stopped the request')
+      const result = await handle.result
+      expect(result.stopReason).toBe('cancelled')
+      expect(result.error).toContain('user stopped the request')
+    } finally { await handle.dispose() }
   })
 })
 

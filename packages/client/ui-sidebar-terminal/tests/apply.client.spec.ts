@@ -15,7 +15,9 @@ import { TerminalBody } from '../src/client/TerminalBody.tsx'
 import { TerminalTitle } from '../src/client/TerminalTitle.tsx'
 import { TerminalRecovery, type TerminalRecoveryInjected } from '../src/client/TerminalRecovery.tsx'
 import { TerminalCleanup, type TerminalCleanupInjected } from '../src/client/TerminalCleanup.tsx'
-import type { TerminalBodyInjected } from '../src/client/face.ts'
+import { ConversationTerminal } from '../src/client/ConversationTerminal.tsx'
+import { conversationTerminalId } from '../src/client/terminal-id.ts'
+import type { ConversationTerminalInjected, TerminalBodyInjected } from '../src/client/face.ts'
 import { en, zh } from '../src/client/locales.ts'
 
 vi.mock('@xterm/xterm', () => ({ Terminal: vi.fn() }))
@@ -89,6 +91,7 @@ it('registers terminal views, recovery and cleanup, then releases every contribu
       ['sidebar.right.pane.tab.title', TerminalTitle, 'sidebarTerminal'],
       ['conversation.session.header.actions', TerminalRecovery, 'sidebarTerminal'],
       ['shell.overlay', TerminalCleanup, 'sidebarTerminal'],
+      ['conversation.view', ConversationTerminal, 'sidebarTerminal'],
     ])
     const sessionId = 'session' as SessionId
     const launcher = h.entries[0]!.inject(sessionId) as TerminalGuideInjected
@@ -127,6 +130,10 @@ it('registers terminal views, recovery and cleanup, then releases every contribu
     expect(cleanupFace.hooks.closeFailures).toBe(h.terminals.closeFailures)
     cleanupFace.retryClose('terminal' as Parameters<TerminalCleanupInjected['retryClose']>[0])
     expect(h.terminals.retryClose).toHaveBeenCalledWith('terminal')
+    const conversation = h.entries[5]!.inject(sessionId) as ConversationTerminalInjected
+    expect(conversation.terminal).toBe(h.model)
+    expect(h.terminals.view).toHaveBeenLastCalledWith(sessionId, 'conversation-terminal', conversationTerminalId(sessionId), undefined, true)
+    expect(conversation.hooks.theme.getSnapshot()).toBe(h.theme)
   } finally {
     await h.dispose()
   }
@@ -148,7 +155,7 @@ it('shares pending and completed recovery across Session headers and opens each 
     expect(remounted.restore()).toBe(completion)
     expect(h.terminals.recover).toHaveBeenCalledExactlyOnceWith(sessionId)
     expect(h.openTabIn).not.toHaveBeenCalled()
-    pending.resolve([terminalInfo('build'), terminalInfo('tests')])
+    pending.resolve([terminalInfo('build'), terminalInfo('tests'), terminalInfo(conversationTerminalId(sessionId))])
     await completion
     expect(h.openTabIn.mock.calls).toEqual([
       [sessionId, 'terminal', { params: { terminalId: 'build' } }],

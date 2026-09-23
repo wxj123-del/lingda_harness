@@ -10,16 +10,18 @@ import { brandString } from '@deepseek-ai/dsh-brand'
 import type { ContentBlock } from '@deepseek-ai/dsh-llm'
 import type { SessionId } from '@deepseek-ai/dsh-session'
 import { assertObjectJsonSchema, JsonSchemaError } from '@deepseek-ai/dsh-tools'
-import type { ObjectJsonSchema } from '@deepseek-ai/dsh-tools'
+import type { ObjectJsonSchema, ToolRestriction } from '@deepseek-ai/dsh-tools'
 import { isFatalWorkflowError, WorkflowError } from '@deepseek-ai/dsh-workflow'
 import type {
   WorkflowAgentEndInfo,
   WorkflowAgentInfo,
+  WorkflowNodeEndInfo,
+  WorkflowNodeStartInfo,
   WorkflowMeta,
   WorkflowResult,
 } from '@deepseek-ai/dsh-workflow'
 import { materializeFromRealm, MaterializeError, renderThrown } from './realm.ts'
-import type { ChildHandle, ChildPort, WorkerLimits } from './types.ts'
+import type { ChildHandle, ChildPort, WorkerLimits, WorkflowHttpPort, WorkflowHttpRequest, WorkflowHttpResponse } from './types.ts'
 
 /** The observers the execution reports progress through (the session posts them to the host). */
 export interface ExecutionObserver {
@@ -27,10 +29,12 @@ export interface ExecutionObserver {
   log(message: string): void
   agentStart(info: WorkflowAgentInfo): void
   agentEnd(info: WorkflowAgentEndInfo): void
+  nodeStart(info: WorkflowNodeStartInfo): void
+  nodeEnd(info: WorkflowNodeEndInfo): void
 }
 
 /** The `agent()` options the script may pass; everything else rejects loud. */
-const SUPPORTED_AGENT_OPTIONS = new Set(['label', 'phase', 'schema', 'provider', 'model'])
+const SUPPORTED_AGENT_OPTIONS = new Set(['label', 'phase', 'schema', 'provider', 'model', 'toolFilter'])
 /** Deferred Claude Code options we name explicitly in the rejection message. */
 const DEFERRED_AGENT_OPTIONS = new Set(['effort', 'isolation', 'agentType'])
 
@@ -59,6 +63,7 @@ export class WorkflowExecution {
   private activeSlots = 0
   private readonly slotWaiters: (() => void)[] = []
   private currentPhase: string | undefined
+  private readonly liveNodes = new Map<string, WorkflowNodeStartInfo>()
   private readonly context: vm.Context
   private readonly compiled: vm.Script
 
@@ -69,6 +74,8 @@ export class WorkflowExecution {
     private readonly limits: WorkerLimits,
     private readonly observer: ExecutionObserver,
     private readonly children: ChildPort,
+    private readonly http: WorkflowHttpPort,
+    private readonly nodeAudit: boolean,
   ) {
     // The host parses this same wrapper before publishing a run.
     try {
@@ -86,16 +93,128 @@ export class WorkflowExecution {
       agent: (prompt: unknown, opts?: unknown) => this.contain(this.agent(prompt, opts)),
       parallel: (thunks: unknown) => this.contain(this.parallel(thunks)),
       pipeline: (items: unknown, ...stages: unknown[]) => this.contain(this.pipeline(items, stages)),
+      httpRequest: (request: unknown) => this.contain(this.httpRequest(request)),
       phase: (title: unknown) => { this.phase(title) },
       log: (message: unknown) => { this.log(message) },
       // PTC has already copied these inputs through its JSON channel.
       args,
+    }
+    if (this.nodeAudit) {
+      ;(this.context as Record<string, unknown>).nodeStart = Object.freeze((nodeId: unknown, label: unknown, input: unknown, retryCount?: unknown) => {
+        this.nodeStart(nodeId, label, input, retryCount)
+      })
+      ;(this.context as Record<string, unknown>).nodeEnd = Object.freeze((nodeId: unknown, label: unknown, status: unknown, output?: unknown, error?: unknown, retryCount?: unknown) => {
+        this.nodeEnd(nodeId, label, status, output, error, retryCount)
+      })
     }
     for (const [key, value] of Object.entries(globals)) {
       // Data properties on the contextified global; frozen shape not required —
       // a script overwriting its own hooks only sabotages itself.
       ;(this.context as Record<string, unknown>)[key] = typeof value === 'function' ? Object.freeze(value) : value
     }
+  }
+
+  /** The host-controlled `httpRequest()` hook. */
+  private async httpRequest(rawRequest: unknown): Promise<WorkflowHttpResponse> {
+    let request: unknown
+    try {
+      request = materializeFromRealm(rawRequest, 'httpRequest() request')
+    } catch (error: unknown) {
+      /* v8 ignore next -- defensive rethrow: materializeFromRealm owns the error class. */
+      if (!(error instanceof MaterializeError)) throw error
+      throw new WorkflowError(`httpRequest() request must be plain JSON data — ${error.message}`, 'INVALID_ARGUMENT', { cause: error })
+    }
+    if (typeof request !== 'object' || request === null || Array.isArray(request)) {
+      throw new WorkflowError('httpRequest() requires an object request', 'INVALID_ARGUMENT')
+    }
+    const record = request as Record<string, unknown>
+    const unknown = Object.keys(record).find(key => !['url', 'method', 'body', 'credential'].includes(key))
+    if (unknown !== undefined) throw new WorkflowError(`httpRequest() has unknown field "${unknown}"`, 'INVALID_ARGUMENT')
+    if (typeof record.url !== 'string' || record.url.trim() === '') throw new WorkflowError('httpRequest() url must be a non-empty string', 'INVALID_ARGUMENT')
+    if (typeof record.method !== 'string' || record.method.trim() === '') throw new WorkflowError('httpRequest() method must be a non-empty string', 'INVALID_ARGUMENT')
+    if (record.credential !== undefined && (typeof record.credential !== 'string' || record.credential.trim() === '')) {
+      throw new WorkflowError('httpRequest() credential must be a non-empty string when provided', 'INVALID_ARGUMENT')
+    }
+    const normalized: WorkflowHttpRequest = {
+      url: record.url,
+      method: record.method.toUpperCase(),
+      ...Object.hasOwn(record, 'body') ? { body: record.body } : {},
+      ...record.credential === undefined ? {} : { credential: record.credential },
+    }
+    try {
+      return await this.http.request(normalized)
+    } catch (error: unknown) {
+      if (isFatalWorkflowError(error)) throw error
+      throw new WorkflowError(`httpRequest() failed: ${renderThrown(error)}`, 'HTTP_REQUEST', { cause: error })
+    }
+  }
+
+  /** Keep audit payloads bounded before they cross the guest/host boundary. */
+  private summary(value: unknown): string | undefined {
+    if (value === undefined) return undefined
+    let rendered: string
+    try { rendered = typeof value === 'string' ? value : JSON.stringify(value) ?? String(value) }
+    catch { rendered = '[unserializable]' }
+    return rendered.length <= 2_048 ? rendered : `${rendered.slice(0, 2_047)}…`
+  }
+
+  private nodeText(value: unknown, name: string): string {
+    if (typeof value !== 'string' || value.trim() === '') throw new WorkflowError(`node ${name} must be a non-empty string`, 'INVALID_ARGUMENT')
+    return value
+  }
+
+  private nodeRetryCount(value: unknown): number {
+    if (value === undefined) return 0
+    if (!Number.isSafeInteger(value) || (value as number) < 0 || (value as number) > 5) {
+      throw new WorkflowError('node retryCount must be an integer between 0 and 5', 'INVALID_ARGUMENT')
+    }
+    return value as number
+  }
+
+  private nodeStart(rawNodeId: unknown, rawLabel: unknown, input: unknown, rawRetryCount?: unknown): void {
+    const nodeId = this.nodeText(rawNodeId, 'id')
+    const label = this.nodeText(rawLabel, 'label')
+    if (this.liveNodes.has(nodeId)) throw new WorkflowError(`node ${nodeId} started more than once`, 'INVALID_ARGUMENT')
+    const inputSummary = this.summary(input)
+    const info: WorkflowNodeStartInfo = {
+      nodeId,
+      label,
+      ...inputSummary === undefined ? {} : { inputSummary },
+      retryCount: this.nodeRetryCount(rawRetryCount),
+      startedAt: Date.now(),
+    }
+    this.liveNodes.set(nodeId, info)
+    this.observer.nodeStart(info)
+  }
+
+  private nodeEnd(rawNodeId: unknown, rawLabel: unknown, rawStatus: unknown, output?: unknown, rawError?: unknown, rawRetryCount?: unknown): void {
+    const nodeId = this.nodeText(rawNodeId, 'id')
+    const label = this.nodeText(rawLabel, 'label')
+    if (rawStatus !== 'completed' && rawStatus !== 'failed' && rawStatus !== 'skipped' && rawStatus !== 'blocked' && rawStatus !== 'cancelled') {
+      throw new WorkflowError('node status is invalid', 'INVALID_ARGUMENT')
+    }
+    const status = rawStatus as WorkflowNodeEndInfo['status']
+    const started = this.liveNodes.get(nodeId)
+    if (status === 'skipped' || status === 'blocked') {
+      if (started !== undefined) throw new WorkflowError(`node ${nodeId} cannot be skipped after starting`, 'INVALID_ARGUMENT')
+    } else if (started === undefined) {
+      throw new WorkflowError(`node ${nodeId} ended without a start`, 'INVALID_ARGUMENT')
+    }
+    const endedAt = Date.now()
+    const base = started ?? { nodeId, label, retryCount: this.nodeRetryCount(rawRetryCount), startedAt: endedAt }
+    const error = rawError === undefined ? undefined : this.nodeText(rawError, 'error')
+    const outputSummary = this.summary(output)
+    const info: WorkflowNodeEndInfo = {
+      ...base,
+      label,
+      status,
+      ...outputSummary === undefined ? {} : { outputSummary },
+      ...error === undefined ? {} : { error: error.length <= 8_000 ? error : `${error.slice(0, 7_999)}…` },
+      durationMs: Math.max(0, endedAt - base.startedAt),
+      endedAt,
+    }
+    this.liveNodes.delete(nodeId)
+    this.observer.nodeEnd(info)
   }
 
   /**
@@ -109,6 +228,11 @@ export class WorkflowExecution {
       const value = raw === undefined ? null : this.materializeResult(raw)
       return { value, stopReason: 'completed', agentsStarted: this.started }
     } catch (error: unknown) {
+      for (const info of this.liveNodes.values()) {
+        const endedAt = Date.now()
+        this.observer.nodeEnd({ ...info, status: 'failed', error: renderThrown(error), durationMs: Math.max(0, endedAt - info.startedAt), endedAt })
+      }
+      this.liveNodes.clear()
       return { value: null, stopReason: 'error', error: renderThrown(error), agentsStarted: this.started }
     }
   }
@@ -185,6 +309,7 @@ export class WorkflowExecution {
           ...opts.schema !== undefined ? { schema: opts.schema } : {},
           ...opts.provider !== undefined ? { provider: opts.provider } : {},
           ...opts.model !== undefined ? { model: opts.model } : {},
+          ...opts.toolFilter !== undefined ? { toolFilter: opts.toolFilter } : {},
         })
       } catch (error: unknown) {
         throw new WorkflowError(`agent() could not start a child: ${renderThrown(error)}`, 'AGENT_START', { cause: error })
@@ -235,6 +360,7 @@ export class WorkflowExecution {
     provider?: string
     model?: string
     schema?: ObjectJsonSchema
+    toolFilter?: ToolRestriction
   } {
     if (rawOpts === undefined) return {}
     let opts: unknown
@@ -252,9 +378,9 @@ export class WorkflowExecution {
     for (const key of Object.keys(record)) {
       if (SUPPORTED_AGENT_OPTIONS.has(key)) continue
       if (DEFERRED_AGENT_OPTIONS.has(key)) {
-        throw new WorkflowError(`agent() option "${key}" is deferred and not supported by this engine (supported: label, phase, schema, provider, model)`, 'UNSUPPORTED_OPTION')
+        throw new WorkflowError(`agent() option "${key}" is deferred and not supported by this engine (supported: label, phase, schema, provider, model, toolFilter)`, 'UNSUPPORTED_OPTION')
       }
-      throw new WorkflowError(`agent() option "${key}" is not recognized (supported: label, phase, schema, provider, model)`, 'UNSUPPORTED_OPTION')
+      throw new WorkflowError(`agent() option "${key}" is not recognized (supported: label, phase, schema, provider, model, toolFilter)`, 'UNSUPPORTED_OPTION')
     }
     for (const key of ['label', 'phase', 'provider', 'model'] as const) {
       if (record[key] !== undefined && typeof record[key] !== 'string') {
@@ -272,12 +398,33 @@ export class WorkflowExecution {
         throw new WorkflowError(`agent() schema is outside the supported subset — ${error.message}`, 'UNSUPPORTED_SCHEMA', { cause: error })
       }
     }
+    let toolFilter: ToolRestriction | undefined
+    if (record.toolFilter !== undefined) {
+      if (typeof record.toolFilter !== 'object' || record.toolFilter === null || Array.isArray(record.toolFilter)) {
+        throw new WorkflowError('agent() option "toolFilter" must be an object', 'INVALID_ARGUMENT')
+      }
+      const filter = record.toolFilter as Record<string, unknown>
+      const unknown = Object.keys(filter).find(key => key !== 'allow' && key !== 'deny')
+      if (unknown !== undefined) throw new WorkflowError(`agent() option "toolFilter" has unknown field "${unknown}"`, 'INVALID_ARGUMENT')
+      const readNames = (key: 'allow' | 'deny'): string[] | undefined => {
+        if (filter[key] === undefined) return undefined
+        if (!Array.isArray(filter[key]) || filter[key].some(name => typeof name !== 'string' || name.trim() === '')) {
+          throw new WorkflowError(`agent() option "toolFilter.${key}" must be an array of non-empty strings`, 'INVALID_ARGUMENT')
+        }
+        return filter[key] as string[]
+      }
+      const allow = readNames('allow')
+      const deny = readNames('deny')
+      if (allow === undefined && deny === undefined) throw new WorkflowError('agent() option "toolFilter" must declare allow and/or deny', 'INVALID_ARGUMENT')
+      toolFilter = { ...allow === undefined ? {} : { allow }, ...deny === undefined ? {} : { deny } }
+    }
     return {
       ...record.label !== undefined ? { label: record.label as string } : {},
       ...record.phase !== undefined ? { phase: record.phase as string } : {},
       ...record.provider !== undefined ? { provider: record.provider as string } : {},
       ...record.model !== undefined ? { model: record.model as string } : {},
       ...schema !== undefined ? { schema } : {},
+      ...toolFilter !== undefined ? { toolFilter } : {},
     }
   }
 

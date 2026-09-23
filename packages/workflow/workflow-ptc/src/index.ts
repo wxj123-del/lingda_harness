@@ -5,6 +5,7 @@
  */
 
 import { randomUUID } from 'node:crypto'
+import { lookup } from 'node:dns/promises'
 import { availableParallelism } from 'node:os'
 import * as vm from 'node:vm'
 import type { Context } from '@deepseek-ai/cordis'
@@ -14,6 +15,7 @@ import z from '@deepseek-ai/schemastery'
 import WorkflowEngine, { WorkflowError, WorkflowRunId } from '@deepseek-ai/dsh-workflow'
 import type { WorkflowRun, WorkflowRunInfo, WorkflowStartRequest } from '@deepseek-ai/dsh-workflow'
 import { PtcWorkflowRun } from './host.ts'
+import type { WorkflowHttpPolicy } from './host.ts'
 import { validateMeta } from './meta.ts'
 import type { WorkerInit, WorkerLimits } from './types.ts'
 
@@ -40,6 +42,16 @@ export interface Config {
   maxItemsPerCall?: number
   /** VM timeout for the script's initial synchronous slice (default 5000 ms). */
   syncTimeoutMs?: number
+  /** Hostname allowlist for native workflow HTTP nodes (`*` means public hosts). */
+  httpAllowedHosts?: string[]
+  /** Native workflow HTTP request timeout in milliseconds. */
+  httpTimeoutMs?: number
+  /** Native workflow HTTP request-body byte cap. */
+  httpMaxRequestBytes?: number
+  /** Native workflow HTTP response byte cap. */
+  httpMaxResponseBytes?: number
+  /** Native workflow HTTP decoded response character cap. */
+  httpMaxResponseChars?: number
 }
 
 type ResolvedConfig = Required<Config>
@@ -108,6 +120,11 @@ class PtcWorkflowEngine extends WorkflowEngine {
     maxTotalAgents: z.natural().min(1).default(1000),
     maxItemsPerCall: z.natural().min(1).default(4096),
     syncTimeoutMs: z.natural().min(1).default(5000),
+    httpAllowedHosts: z.array(z.string()).default(['*']),
+    httpTimeoutMs: z.natural().min(1).default(30_000),
+    httpMaxRequestBytes: z.natural().min(1).default(1_000_000),
+    httpMaxResponseBytes: z.natural().min(1).default(5_000_000),
+    httpMaxResponseChars: z.natural().min(1).default(100_000),
   })
 
   private readonly config: ResolvedConfig
@@ -150,6 +167,7 @@ class PtcWorkflowEngine extends WorkflowEngine {
       body: request.script,
       ...request.args !== undefined ? { args: structuredClone(request.args) } : {},
       limits,
+      ...request.nodeAudit === true ? { nodeAudit: true } : {},
     }
     // Captured service handles keep a holder-owned run usable after engine unload.
     const runCtx = this.ctx
@@ -169,7 +187,10 @@ class PtcWorkflowEngine extends WorkflowEngine {
         log: (message) => { this.emitWorkflowEvent('workflow/log', info, message) },
         agentStart: (agent) => { this.emitWorkflowEvent('workflow/agent-start', info, agent) },
         agentEnd: (agent) => { this.emitWorkflowEvent('workflow/agent-end', info, agent) },
+        nodeStart: (node) => { this.emitWorkflowEvent('workflow/node-start', info, node) },
+        nodeEnd: (node) => { this.emitWorkflowEvent('workflow/node-end', info, node) },
       },
+      this.httpPolicy(),
       request.signal,
     )
 
@@ -185,6 +206,20 @@ class PtcWorkflowEngine extends WorkflowEngine {
     })
 
     return run
+  }
+
+  private httpPolicy(): WorkflowHttpPolicy {
+    const credentials = this.ctx.get('credentials') as { resolve(reference: string): Promise<{ value: string } | undefined> } | undefined
+    const checkDns = this.config.httpAllowedHosts.some(pattern => pattern.trim() === '*' || pattern.trim().startsWith('*.'))
+    return {
+      allowedHosts: this.config.httpAllowedHosts,
+      timeoutMs: this.config.httpTimeoutMs,
+      maxRequestBytes: this.config.httpMaxRequestBytes,
+      maxResponseBytes: this.config.httpMaxResponseBytes,
+      maxResponseChars: this.config.httpMaxResponseChars,
+      ...checkDns ? { resolveAddresses: async (hostname: string) => (await lookup(hostname, { all: true, verbatim: true })).map(entry => entry.address) } : {},
+      ...credentials === undefined ? {} : { resolveCredential: async (reference: string) => (await credentials.resolve(reference))?.value },
+    }
   }
 }
 

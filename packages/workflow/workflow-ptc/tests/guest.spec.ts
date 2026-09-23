@@ -16,6 +16,7 @@ function fixture(body: string, overrides: Partial<WorkflowGuestHost> = {}, limit
     body,
     args: { prompt: 'answer this' },
     limits: { maxConcurrentAgents: 4, maxTotalAgents: 8, maxItemsPerCall: 8, syncTimeoutMs: 5000, ...limits },
+    nodeAudit: true,
   }
   const host: WorkflowGuestHost = {
     begin: async () => init,
@@ -25,6 +26,7 @@ function fixture(body: string, overrides: Partial<WorkflowGuestHost> = {}, limit
     },
     childResult: async ({ callId }) => ({ output: [{ type: 'text', text: requests[callId - 1]!.prompt }], stopReason: 'completed' }),
     async disposeChild({ callId }) { disposed.push(callId); return null },
+    async httpRequest(request) { return { url: request.url, status: 200, headers: {}, body: '', truncated: false } },
     async progress(batch) { events.push(...batch); return null },
     ...overrides,
   }
@@ -36,10 +38,10 @@ describe('workflow guest callbacks', () => {
     const test = fixture(`
       phase('Read')
       log('starting')
-      return await agent(args.prompt, { label: 'Answer', provider: 'openai', model: 'small', schema: { type: 'object' } })
+      return await agent(args.prompt, { label: 'Answer', provider: 'openai', model: 'small', schema: { type: 'object' }, toolFilter: { allow: ['read'] } })
     `, { childResult: async () => ({ output: [], structured: { answer: 42 }, stopReason: 'completed' }) })
     await expect(runWorkflowGuest(test.host)).resolves.toEqual({ value: { answer: 42 }, stopReason: 'completed', agentsStarted: 1 })
-    expect(test.requests).toEqual([{ prompt: 'answer this', provider: 'openai', model: 'small', schema: { type: 'object' } }])
+    expect(test.requests).toEqual([{ prompt: 'answer this', provider: 'openai', model: 'small', schema: { type: 'object' }, toolFilter: { allow: ['read'] } }])
     expect(test.events).toEqual([
       { type: 'phase', title: 'Read' },
       { type: 'log', message: 'starting' },
@@ -47,6 +49,36 @@ describe('workflow guest callbacks', () => {
       { type: 'agent-end', info: { seq: 1, label: 'Answer', phase: 'Read', childId: 'child-1', outcome: 'completed' } },
     ])
     expect(test.disposed).toEqual([1])
+  })
+
+  it('routes HTTP requests through the host callback and keeps fetch absent from the VM', async () => {
+    const test = fixture('return await httpRequest({ url: \'https://api.example.test/items\', method: \'POST\', body: { ok: true }, credential: \'API_TOKEN\' })', {
+      httpRequest: async request => ({ url: request.url, status: 201, headers: { 'content-type': 'application/json' }, body: '{"id":1}', truncated: false, json: { id: 1 } }),
+    })
+    await expect(runWorkflowGuest(test.host)).resolves.toMatchObject({ value: { status: 201, json: { id: 1 } }, stopReason: 'completed' })
+  })
+
+  it('publishes bounded node start and end audit events', async () => {
+    const test = fixture('nodeStart(\'fetch\', \'Fetch data\', { token: \'redacted\' }, 1); nodeEnd(\'fetch\', \'Fetch data\', \'completed\', { ok: true }, undefined, 1); return 1')
+    await expect(runWorkflowGuest(test.host)).resolves.toMatchObject({ value: 1, stopReason: 'completed' })
+    expect(test.events.filter(event => event.type === 'node-start')).toHaveLength(1)
+    expect(test.events.filter(event => event.type === 'node-end')).toHaveLength(1)
+    expect(test.events.find(event => event.type === 'node-end')).toMatchObject({ type: 'node-end', info: { nodeId: 'fetch', status: 'completed', retryCount: 1 } })
+  })
+
+  it('accepts dependency-blocked terminal audit events without a start', async () => {
+    const test = fixture('nodeEnd(\'downstream\', \'Downstream\', \'blocked\'); return 1')
+    await expect(runWorkflowGuest(test.host)).resolves.toMatchObject({ value: 1, stopReason: 'completed' })
+    expect(test.events).toContainEqual(expect.objectContaining({
+      type: 'node-end',
+      info: expect.objectContaining({ nodeId: 'downstream', status: 'blocked' }),
+    }))
+  })
+
+  it('does not expose visual audit hooks to ordinary scripted workflows', async () => {
+    const test = fixture('return typeof nodeStart')
+    delete test.init.nodeAudit
+    await expect(runWorkflowGuest(test.host)).resolves.toMatchObject({ value: 'undefined', stopReason: 'completed' })
   })
 
   it('keeps combinator functions inside the VM and maps ordinary stage failures to null', async () => {
@@ -325,6 +357,10 @@ describe('workflow script validation', () => {
     ['return await agent("x", {effort: "high"})', 'deferred and not supported'],
     ['return await agent("x", {unknown: true})', 'not recognized'],
     ['return await agent("x", {label: 1})', 'must be a string'],
+    ['return await agent("x", {toolFilter: []})', 'toolFilter" must be an object'],
+    ['return await agent("x", {toolFilter: {}})', 'must declare allow and/or deny'],
+    ['return await agent("x", {toolFilter: {allow: [""]}})', 'array of non-empty strings'],
+    ['return await agent("x", {toolFilter: {allow: ["read"], extra: []}})', 'unknown field "extra"'],
     ['return await agent("x", {schema: {type: "object", pattern: "x"}})', 'outside the supported subset'],
     ['return await parallel(1)', 'requires an array'],
     ['return await parallel([1])', 'not a function'],

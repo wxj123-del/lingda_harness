@@ -70,6 +70,16 @@ declare module '@deepseek-ai/cordis' {
      * @mode waterfall
      */
     'llm/stream'(this: LlmRuntime, options: GenerateOptions, next: () => AsyncIterable<StreamChunk>): AsyncIterable<StreamChunk>
+    /**
+     * Awaited after provider-neutral file/image projection and immediately
+     * before the adapter receives the request. Observers may audit the exact
+     * harness payload but must not mutate it. Awaiting this boundary lets
+     * durability policies persist a final request audit before dispatch.
+     */
+    'llm/request-ready'(this: LlmRuntime, options: GenerateOptions, projection: {
+      files: boolean
+      images: boolean
+    }): void | Promise<void>
 
   }
 }
@@ -1046,12 +1056,14 @@ export class LlmRuntime extends TypertRemoteService {
           : { ...options, ...resolvedConfig }
       // Files are never dispatched natively: every route receives handle text.
       let projectedMessages: readonly Message[] = resolvedOptions.messages
-      if (projectedMessages.some(message => contentHasFile(message.content))) {
+      const filesProjected = projectedMessages.some(message => contentHasFile(message.content))
+      if (filesProjected) {
         projectedMessages = projectFilesToText(projectedMessages, ref => this.fileReadPath(ref))
       }
-      if (modelInfo.inputModalities !== undefined
+      const imagesProjected = modelInfo.inputModalities !== undefined
         && !modelInfo.inputModalities.includes('image')
-        && projectedMessages.some(message => contentHasImage(message.content))) {
+        && projectedMessages.some(message => contentHasImage(message.content))
+      if (imagesProjected) {
         projectedMessages = projectImagesForTextModel(projectedMessages)
       }
       const projectedOptions = projectedMessages === resolvedOptions.messages
@@ -1059,6 +1071,10 @@ export class LlmRuntime extends TypertRemoteService {
         : Object.isFrozen(resolvedOptions)
           ? deepFreeze({ ...resolvedOptions, messages: projectedMessages as Message[] })
           : { ...resolvedOptions, messages: projectedMessages as Message[] }
+      await this.ctx.parallel(this, 'llm/request-ready', projectedOptions, {
+        files: filesProjected,
+        images: imagesProjected,
+      })
       const stream = dispatch(this.forAdapter(projectedOptions, adapter))
       iterator = stream[Symbol.asyncIterator]()
     } catch (error: unknown) {

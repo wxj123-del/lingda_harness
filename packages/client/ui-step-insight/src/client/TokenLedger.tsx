@@ -7,12 +7,25 @@ import type { StepInsightInjected } from './types.ts'
 // These type-only imports merge the host projections into the client hook.
 import type {} from '@deepseek-ai/dsh-personal-agent/client'
 import type {} from '@deepseek-ai/dsh-token-meter/client'
-import { createStepReader } from './step-model.ts'
+import type { ContextRouteSignal } from '@deepseek-ai/dsh-context-router'
+import { createStepReader, summarizeContextRoutes } from './step-model.ts'
 import { contentText, estimateText } from './usage.ts'
 import { accounted, number, rowLabel } from './format.ts'
 import { RequestDetail } from './RequestDetail.tsx'
 import { ContextPreview } from './ContextPreview.tsx'
 import css from './ledger.module.css'
+
+const routeSignalLabels: readonly (readonly [ContextRouteSignal, Parameters<TokenLedgerProps['t']>[0]])[] = [
+  ['explicit-full', 'contextSignalExplicitFull'],
+  ['explicit-fresh', 'contextSignalExplicitFresh'],
+  ['co-reference', 'contextSignalCoReference'],
+  ['task-reference', 'contextSignalTaskReference'],
+  ['follow-up', 'contextSignalFollowUp'],
+  ['acknowledgement', 'contextSignalAcknowledgement'],
+  ['lexical-match', 'contextSignalLexicalMatch'],
+  ['open-turn', 'contextSignalOpenTurn'],
+  ['unrelated', 'contextSignalUnrelated'],
+]
 
 /** Props assembled by the conversation slot, locale and private event hook. */
 export type TokenLedgerProps = ConvViewProps & InjectFace<StepInsightInjected> & PropsLocale<'stepInsight'>
@@ -31,6 +44,7 @@ export function TokenLedger({
   const loading = useSession(value => value.loadingOlder)
   const readSteps = useMemo(createStepReader, [])
   const rows = readSteps(window)
+  const routeMetrics = summarizeContextRoutes(rows)
   // Older test hosts may not mount the projection kit; absence is a valid
   // capability state and should leave the ledger usable.
   const modeProjection = useProjection?.('personalAgentMode')
@@ -123,6 +137,14 @@ export function TokenLedger({
     {(mode !== undefined || breakdown !== undefined) && <div className={css.ledgerContext} aria-label={t('contextSummary')}>
       {mode !== undefined && <span><b>{t('mode')}</b> {modeNames[mode]} · {t('toolBudget')} {usedSteps}/{maxSteps}</span>}
       {breakdown !== undefined && <span>{t('system')} ~{number(breakdown.systemTokens)} · {t('schema')} ~{number(breakdown.toolsTokens)} · {t('content')} ~{number(breakdown.messageTokens)}</span>}
+    </div>}
+    {routeMetrics.requests > 0 && <div className={css.ledgerContext} role="region" aria-label={t('contextMetrics')} data-context-route-metrics="">
+      <span><b>{t('contextMetrics')}</b> {routeMetrics.requests} {t('contextMetricRequests')} · {t('contextRouteFresh')} {routeMetrics.fresh} · {t('contextRouteRecent')} {routeMetrics.recent} · {t('contextRouteTask')} {routeMetrics.task} · {t('contextRouteFull')} {routeMetrics.full}</span>
+      <span>{t('contextMetricBudgetWarnings')} {routeMetrics.budgetWarnings} · {t('contextMetricTaskRecall')} {routeMetrics.taskRecalls} · {t('contextMetricCalibrated')} {routeMetrics.calibrated} · {t('contextMetricDropped')} ~{number(routeMetrics.averageDroppedMessages)}</span>
+      <span data-context-route-signals=""><b>{t('contextMetricSignals')}</b> {routeSignalLabels
+        .filter(([signal]) => routeMetrics.signals[signal] > 0)
+        .map(([signal, label]) => `${t(label)} ${routeMetrics.signals[signal]}`)
+        .join(' · ') || t('contextMetricSignalsNone')}</span>
     </div>}
     <ContextPreview row={rows.at(-1)} window={window} t={t} />
     {task !== undefined && task !== null && <div className={css.ledgerContext} data-task-status={task.status} aria-label={t('task')}>

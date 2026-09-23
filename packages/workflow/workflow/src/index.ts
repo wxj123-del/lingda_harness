@@ -9,6 +9,8 @@ import { HarnessError } from '@deepseek-ai/dsh-llm'
 import type {
   WorkflowAgentEndInfo,
   WorkflowAgentInfo,
+  WorkflowNodeEndInfo,
+  WorkflowNodeStartInfo,
   WorkflowResultInfo,
   WorkflowRunInfo,
 } from './types.ts'
@@ -19,6 +21,9 @@ export type {
   WorkflowAgentEndInfo,
   WorkflowAgentInfo,
   WorkflowAgentOutcome,
+  WorkflowNodeAuditStatus,
+  WorkflowNodeEndInfo,
+  WorkflowNodeStartInfo,
   WorkflowMeta,
   WorkflowPhase,
   WorkflowResult,
@@ -77,6 +82,10 @@ declare module '@deepseek-ai/cordis' {
      * @mode emit
      */
     'workflow/agent-end'(info: WorkflowRunInfo, agent: WorkflowAgentEndInfo): void
+    /** A visual node began execution; consumers may persist this as audit state. */
+    'workflow/node-start'(info: WorkflowRunInfo, node: WorkflowNodeStartInfo): void
+    /** A visual node completed, failed, was skipped, blocked, or was cancelled. */
+    'workflow/node-end'(info: WorkflowRunInfo, node: WorkflowNodeEndInfo): void
     /**
      * A workflow run settled (any stop reason). Fired when
      * {@link WorkflowRun.result} resolves. Paired with
@@ -97,6 +106,8 @@ export type WorkflowEventName =
   | 'workflow/log'
   | 'workflow/agent-start'
   | 'workflow/agent-end'
+  | 'workflow/node-start'
+  | 'workflow/node-end'
   | 'workflow/end'
 
 /**
@@ -115,6 +126,7 @@ export type WorkflowErrorCode =
   | 'ITEM_CAP'
   | 'AGENT_START'
   | 'AGENT_RESULT'
+  | 'HTTP_REQUEST'
   | 'RESULT_UNSERIALIZABLE'
   | 'CANCELLED'
 

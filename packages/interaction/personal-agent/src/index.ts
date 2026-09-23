@@ -11,6 +11,7 @@
 import { Context } from '@deepseek-ai/cordis'
 import type { Agent, PreStepDecision } from '@deepseek-ai/dsh-agent'
 import type { Message } from '@deepseek-ai/dsh-llm'
+import { estimateMessage, estimateToolsTokens } from '@deepseek-ai/dsh-token-meter'
 import { CommandDefinitionId } from '@deepseek-ai/dsh-commands/brand'
 import type { Session, SessionEvent } from '@deepseek-ai/dsh-session'
 import type { ProjectionDefinition } from '@deepseek-ai/dsh-session-projection'
@@ -300,12 +301,8 @@ function modeOfEvent(event: SessionEvent): AgentMode | undefined {
   return event.type === 'agent/mode' ? event.data.mode : undefined
 }
 
-const CONTEXT_TOKENS_PER_CHAR = 4
-
-function estimateContextTokens(value: unknown): number {
-  let serialized: string
-  try { serialized = JSON.stringify(value) } catch { serialized = String(value) }
-  return Math.ceil(serialized.length / CONTEXT_TOKENS_PER_CHAR) + 4
+function estimateContextTokens(value: Message): number {
+  return estimateMessage(value)
 }
 
 function isKnowledgeContext(message: Message): boolean {
@@ -926,7 +923,10 @@ export class PersonalAgentService extends TypertRemoteService {
         if (incompleteUnits.has(root)) continue
         const unit = units.get(root) ?? [index]
         if (unit.some(unitIndex => kept.has(unitIndex))) continue
-        const cost = unit.reduce((sum, unitIndex) => sum + estimateContextTokens(messages[unitIndex]), 0)
+        const cost = unit.reduce((sum, unitIndex) => {
+          const message = messages[unitIndex]
+          return message === undefined ? sum : sum + estimateContextTokens(message)
+        }, 0)
         if (total + cost > maxTokens) continue
         for (const unitIndex of unit) kept.add(unitIndex)
         total += cost
@@ -962,8 +962,7 @@ export class PersonalAgentService extends TypertRemoteService {
       else if (isToolResultMessage(message)) toolResultTokens += tokens
       else historyTokens += tokens
     }
-    const tools = session.requestHeader()?.tools ?? []
-    const toolSchemaTokens = tools.length === 0 ? 0 : estimateContextTokens(tools)
+    const toolSchemaTokens = estimateToolsTokens(session.requestHeader())
     const estimatedInputTokens = systemPromptTokens + toolSchemaTokens + historyTokens + knowledgeBaseTokens + skillTokens + toolResultTokens
     const maxTokens = session.requestHeader()?.config.maxTokens
     return {

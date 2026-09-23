@@ -115,6 +115,37 @@ export interface WorkflowAgentEndInfo extends WorkflowAgentInfo {
   outcome: WorkflowAgentOutcome
 }
 
+/** Stable node execution states used by visual-workflow audit consumers. */
+export type WorkflowNodeAuditStatus = 'running' | 'completed' | 'failed' | 'skipped' | 'blocked' | 'cancelled'
+
+/** One visual workflow node's start observation. */
+export interface WorkflowNodeStartInfo {
+  /** Stable node id from the visual workflow graph. */
+  nodeId: string
+  /** Display label captured at execution time. */
+  label: string
+  /** Bounded, redacted JSON/text summary of the node input. */
+  inputSummary?: string
+  /** Configured retry budget for this node. */
+  retryCount: number
+  /** Guest-process epoch timestamp for the start. */
+  startedAt: number
+}
+
+/** One visual workflow node's terminal observation. */
+export interface WorkflowNodeEndInfo extends WorkflowNodeStartInfo {
+  /** Terminal node state. `skipped` and `blocked` have no preceding start event. */
+  status: Exclude<WorkflowNodeAuditStatus, 'running'>
+  /** Bounded, redacted JSON/text summary of the node output. */
+  outputSummary?: string
+  /** Bounded failure text for failed or cancelled nodes. */
+  error?: string
+  /** Guest-process elapsed duration in milliseconds. */
+  durationMs: number
+  /** Guest-process epoch timestamp for the terminal observation. */
+  endedAt: number
+}
+
 /**
  * A settled run's outcome as event data (the `workflow/end` payload): the
  * {@link WorkflowResult} minus `value` (a listener observing outcomes must not

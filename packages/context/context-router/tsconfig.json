@@ -18,10 +18,16 @@
       "path": "../../core/agent"
     },
     {
+      "path": "../../compaction/compaction"
+    },
+    {
       "path": "../../llm/llm"
     },
     {
       "path": "../../core/session"
+    },
+    {
+      "path": "../../llm/token-meter"
     }
   ]
 }

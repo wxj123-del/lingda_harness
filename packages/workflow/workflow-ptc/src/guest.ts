@@ -5,7 +5,7 @@ import type { WorkflowGuestHost, WorkflowProgress } from './guest-types.ts'
 import { renderThrown } from './realm.ts'
 import { WorkflowExecution } from './runtime.ts'
 import type { ExecutionObserver } from './runtime.ts'
-import type { ChildPort } from './types.ts'
+import type { ChildPort, WorkflowHttpPort } from './types.ts'
 
 /**
  * Run a workflow with one progress batch in flight. Drain progress before child
@@ -45,6 +45,8 @@ export async function runWorkflowGuest(host: WorkflowGuestHost): Promise<Workflo
     log: (message) => { send({ type: 'log', message }) },
     agentStart: (info) => { send({ type: 'agent-start', info }) },
     agentEnd: (info) => { send({ type: 'agent-end', info }) },
+    nodeStart: (info) => { send({ type: 'node-start', info }) },
+    nodeEnd: (info) => { send({ type: 'node-end', info }) },
   }
   const children: ChildPort = {
     async startAgent(request) {
@@ -63,7 +65,10 @@ export async function runWorkflowGuest(host: WorkflowGuestHost): Promise<Workflo
       }
     },
   }
-  const execution = new WorkflowExecution(init.meta, init.body, init.args, init.limits, observer, children)
+  const http: WorkflowHttpPort = {
+    request: request => host.httpRequest(request),
+  }
+  const execution = new WorkflowExecution(init.meta, init.body, init.args, init.limits, observer, children, http, init.nodeAudit === true)
   const result = await execution.drive()
   await drain()
   return progressError === undefined ? result : {

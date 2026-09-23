@@ -63,15 +63,16 @@ export class ClientTerminals extends Service {
    * @param key - sidebar occurrence key.
    * @param terminalId - existing Host identity when restoring a listed terminal.
    * @param shellPath - explicit shell for a new terminal; restored terminals retain their own shell.
+   * @param createWhenMissing - allocate the supplied identity when Host has no retained terminal for it.
    * @returns its observable state and terminal commands.
    */
-  view(sessionId: SessionId, key: string, terminalId?: WebTerminalId, shellPath?: string): TerminalView {
+  view(sessionId: SessionId, key: string, terminalId?: WebTerminalId, shellPath?: string, createWhenMissing = terminalId === undefined): TerminalView {
     let views = this.views.get(sessionId)
     if (views === undefined) { views = new Map(); this.views.set(sessionId, views) }
     let view = views.get(key)
     if (view === undefined) {
       const id = terminalId ?? randomUUID() as WebTerminalId
-      view = new TerminalView(sessionId, this.remote, this.ctx.remote, id, terminalId === undefined, shellPath)
+      view = new TerminalView(sessionId, this.remote, this.ctx.remote, id, createWhenMissing, shellPath)
       views.set(key, view)
       void view.refresh()
     }

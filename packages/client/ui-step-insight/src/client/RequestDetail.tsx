@@ -34,6 +34,7 @@ export function RequestDetail({ row, window, t, initialTab = 'inputTab' }: Detai
   const ttft = row.startTime === null || row.firstTokenTime === null ? null : row.firstTokenTime - row.startTime
   const decode = row.firstTokenTime === null || row.endTime === null ? null : row.endTime - row.firstTokenTime
   const rate = decode !== null && decode > 0 && usage.output !== null ? usage.output * 1000 / decode : null
+  const routeOverflow = row.contextRoute?.requestOverflowTokens ?? row.contextRoute?.overflowTokens
   const metrics = [
     ['uncached', usage.input], ['cache', usage.cacheRead], ['cacheWrite', usage.cacheWrite],
     ['unknownInput', usage.unclassified], ['input', usage.prompt], ['output', usage.output],
@@ -64,12 +65,21 @@ export function RequestDetail({ row, window, t, initialTab = 'inputTab' }: Detai
     </p>}
     {row.contextRoute !== undefined && <p className={css.requestAudit}>
       <b>{t('contextRoute')}</b> {t(row.contextRoute.scope === 'fresh' ? 'contextRouteFresh' : row.contextRoute.scope === 'recent' ? 'contextRouteRecent' : row.contextRoute.scope === 'task' ? 'contextRouteTask' : 'contextRouteFull')}
+      {row.contextRoute.signal !== undefined && <> {' · '}<code>{row.contextRoute.signal}</code></>}
       {' · '}{row.contextRoute.reason}{' · '}{t('contextMessages')} {row.contextRoute.outputMessages}/{row.contextRoute.inputMessages}
       {row.contextRoute.maxInputTokens !== undefined && <> {' · '}{t('contextBudget')} ~{number(row.contextRoute.maxInputTokens)}</>}
+      {row.contextRoute.estimatedRequestTokens !== undefined && <> {' · '}{t('contextEstimatedInput')} ~{number(row.contextRoute.estimatedRequestTokens)}</>}
+      {row.contextRoute.estimatedWindowTokens !== undefined && <> {' · '}{t('contextEstimatedWindow')} ~{number(row.contextRoute.estimatedWindowTokens)}</>}
+      {row.contextRoute.estimateBasis !== undefined && <> {' · '}{t(row.contextRoute.estimateBasis === 'heuristic+reserve' ? 'contextEstimateReserved' : 'contextEstimateHeuristic')}</>}
+      {row.contextRoute.safetyReserveTokens !== undefined && row.contextRoute.safetyReserveTokens > 0 && <> {' · '}{t('contextSafetyReserve')} ~{number(row.contextRoute.safetyReserveTokens)}</>}
+      {row.contextRoute.providerReportedInputTokens !== undefined && <> {' · '}{t('contextProviderReported')} ~{number(row.contextRoute.providerReportedInputTokens)}</>}
+      {row.contextRoute.calibrationSampleCount !== undefined && <> {' · '}{t('contextCalibration')} {number(row.contextRoute.calibrationSampleCount)}</>}
+      {row.contextRoute.taskId !== undefined && <> {' · '}{t('contextTaskRecall')} {number(row.contextRoute.taskRecallMessages ?? 0)}</>}
       {row.contextRoute.contextWindow !== undefined && <> {' · '}{t('contextWindow')} ~{number(row.contextRoute.contextWindow)}</>}
+      {row.contextRoute.budgetExceeded && <span className={css.contextBudgetWarning} role="alert">{' · '}{t('contextBudgetExceeded')} {row.contextRoute.requestOverflowTokens !== undefined ? t('contextRequestOverflow') : t('contextBudgetOverflow')} ~{number(routeOverflow)} {t('token')}</span>}
     </p>}
     {row.context?.estimatedInputTokens !== undefined && <div className={css.contextBreakdown}>
-      <b>{t('contextBreakdown')}</b>
+      <b>{t(row.contextRoute === undefined ? 'contextFinal' : 'contextPolicy')} · {t('contextBreakdown')}</b>
       <div className={css.contextBreakdownGrid}>
         <span>{t('contextSystem')} <strong>~{number(row.context.systemPromptTokens ?? 0)}</strong></span>
         <span>{t('contextSchema')} <strong>~{number(row.context.toolSchemaTokens ?? 0)}</strong></span>

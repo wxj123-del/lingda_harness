@@ -4,7 +4,7 @@ import { cleanup, fireEvent, render, screen, within } from '@testing-library/rea
 import type { SessionEventLikeEntry } from '@deepseek-ai/dsh-api-session-controller/client'
 import { TokenLedger, type TokenLedgerProps } from '../src/client/TokenLedger.tsx'
 import { zh } from '../src/client/locales.ts'
-import { fixture, live, message, usage } from './fixtures.client.ts'
+import { entry, fixture, live, message, usage } from './fixtures.client.ts'
 
 afterEach(cleanup)
 
@@ -87,8 +87,11 @@ describe('Token trajectory interactions', () => {
         type: 'context/router',
         data: {
           turn: 1, step: 2, scope: 'recent', reason: 'fixture route',
+          signal: 'lexical-match',
           inputMessages: 4, outputMessages: 2, droppedMessages: 2,
-          estimatedInputTokens: 20,
+          estimatedInputTokens: 20, estimatedRequestTokens: 28, estimatedWindowTokens: 60, requestOverflowTokens: 12,
+          taskId: 'task-1', taskRecallMessages: 1,
+          budgetExceeded: true, overflowTokens: 4,
           selectedMessageIds: [String(system.id), String(user.id)],
         },
       },
@@ -98,5 +101,52 @@ describe('Token trajectory interactions', () => {
     expect(preview.textContent).toContain('You audit requests.')
     expect(preview.textContent).toContain('Inspect the source')
     expect(preview.textContent).not.toContain('export const source = 1')
+    fireEvent.click(screen.getByRole('button', { name: /轮 1 \/ 步骤 2/ }))
+    expect(within(screen.getByRole('complementary')).getByText(zh.contextBudgetExceeded, { exact: false })).toBeTruthy()
+    expect(within(screen.getByRole('complementary')).getByText(zh.contextRequestOverflow, { exact: false })).toBeTruthy()
+    expect(within(screen.getByRole('complementary')).getByText(zh.contextTaskRecall, { exact: false })).toBeTruthy()
+    expect(screen.getByRole('region', { name: zh.contextMetrics })).toBeTruthy()
+    expect(screen.getByRole('region', { name: zh.contextMetrics }).textContent).toContain(zh.contextSignalLexicalMatch)
+  })
+
+  it('labels policy preprocessing and warns when preview content was transformed', () => {
+    const events = fixture()
+    events.splice(10, 0, entry(9.5, 'agent/request-context', {
+      turn: 1, step: 2, mode: 'qa', maxSteps: 0, usedSteps: 0,
+      inputMessages: 4, outputMessages: 3, clippedToolResults: 1, droppedMessages: 0,
+      estimatedInputTokens: 24,
+    }), entry(9.6, 'context/router', {
+      turn: 1, step: 2, scope: 'task', reason: 'fixture route',
+      inputMessages: 4, outputMessages: 3, droppedMessages: 1,
+      estimatedInputTokens: 20, estimatedRequestTokens: 24,
+      budgetExceeded: false, overflowTokens: 0, selectedMessageIds: [],
+    }))
+    render(<TokenLedger {...props(events)} />)
+    expect(screen.getByRole('region', { name: zh.contextPreview }).textContent).toContain(zh.contextPreviewTransformed)
+    fireEvent.click(screen.getByRole('button', { name: /轮 1 \/ 步骤 2/ }))
+    expect(within(screen.getByRole('complementary')).getByText(zh.contextPolicy, { exact: false })).toBeTruthy()
+  })
+
+  it('renders bounded final message metadata when the router records it', () => {
+    const events = fixture()
+    const system = (events[2] as { event: { data: { message: { id: unknown } } } }).event.data.message
+    const user = (events[3] as { event: { data: { id: unknown } } }).event.data
+    events.splice(10, 0, entry(9.5, 'context/router', {
+      turn: 1, step: 2, scope: 'recent', reason: 'fixture route',
+      inputMessages: 4, outputMessages: 2, droppedMessages: 2,
+      estimatedInputTokens: 20, estimatedRequestTokens: 39,
+      budgetExceeded: false, overflowTokens: 0,
+      selectedMessageIds: [String(system.id), String(user.id)],
+      selectedMessageMetaOmitted: 2,
+      selectedMessageMeta: [
+        { id: String(system.id), kind: 'system', sourceKind: 'system', estimatedTokens: 5, preview: 'Final system snapshot' },
+        { id: String(user.id), kind: 'user', sourceKind: 'user', estimatedTokens: 6, preview: 'Final transformed request' },
+      ],
+    }))
+    render(<TokenLedger {...props(events)} />)
+    const preview = screen.getByRole('region', { name: zh.contextPreview })
+    expect(preview.textContent).toContain('Final transformed request')
+    expect(preview.textContent).toContain(zh.contextPreviewMetadataTruncated)
+    expect(preview.textContent).not.toContain('Inspect the source')
   })
 })

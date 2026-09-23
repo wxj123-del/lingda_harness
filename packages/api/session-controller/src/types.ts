@@ -11,6 +11,86 @@ import type { SessionProjectionMap } from '@deepseek-ai/dsh-session-projection/t
 import type { JobId } from '@deepseek-ai/dsh-jobs/brand'
 import type { JsonValue } from '@deepseek-ai/dsh-util-values'
 import type { WorkspaceId } from '@deepseek-ai/dsh-workspace/types'
+import type { WorkflowMeta, WorkflowNodeAuditStatus, WorkflowRunId } from '@deepseek-ai/dsh-workflow/types'
+
+/** Browser request for a host-owned visual workflow run. */
+export interface WorkflowRemoteStartRequest {
+  readonly sessionId: SessionId
+  readonly workflowId: string
+  readonly script: string
+  /** Node identifiers emitted by the visual compiler; Host audit events are scoped to this manifest. */
+  readonly nodeIds: readonly string[]
+  /** Published workflow version used for this run, when the editor runs a release. */
+  readonly workflowVersion?: number
+  readonly meta: WorkflowMeta
+  readonly args?: JsonValue
+  readonly timeoutMs?: number
+}
+
+/** Acknowledgement returned before the workflow's child agents finish. */
+export interface WorkflowRemoteStartValue {
+  readonly runId: WorkflowRunId
+  readonly status: 'running'
+  readonly startedAt: number
+}
+
+/** Identity of a workflow run scoped to one Session Agent. */
+export interface WorkflowRemoteRunRequest {
+  readonly sessionId: SessionId
+  readonly runId: WorkflowRunId
+}
+
+/** Terminal and in-flight states exposed for one workflow run. */
+export type WorkflowRemoteRunStatus = 'running' | 'completed' | 'cancelled' | 'error'
+
+/** Redacted per-node audit entry retained with a visual workflow run. */
+export interface WorkflowNodeAudit {
+  readonly correlationId: WorkflowRunId
+  readonly nodeId: string
+  readonly label: string
+  readonly status: WorkflowNodeAuditStatus
+  readonly startedAt: number
+  readonly endedAt?: number
+  readonly durationMs?: number
+  readonly retryCount: number
+  readonly inputSummary?: string
+  readonly outputSummary?: string
+  readonly error?: string
+}
+
+/** Redacted, JSON-safe execution state for the editor's run history. */
+export interface WorkflowRemoteRunView {
+  readonly runId: WorkflowRunId
+  readonly workflowId: string
+  /** Published workflow version used for this run, when available. */
+  readonly workflowVersion?: number
+  readonly name: string
+  readonly status: WorkflowRemoteRunStatus
+  readonly startedAt: number
+  readonly endedAt?: number
+  readonly agentsStarted: number
+  readonly error?: string
+  readonly value?: JsonValue
+  readonly timedOut?: boolean
+  /** Audit source for runs created through a Remote surface. */
+  readonly source: 'visual-editor'
+  /** Detached input size in bytes; no input payload is retained in history. */
+  readonly inputBytes?: number
+  readonly timeoutMs?: number
+  /** Bounded node-level audit trail, newest updates replacing active entries. */
+  readonly audit?: readonly WorkflowNodeAudit[]
+}
+
+/** Filter and bound one Session's recent workflow run list. */
+export interface WorkflowRemoteRunsRequest {
+  readonly workflowId?: string
+  readonly limit?: number
+}
+
+/** Recent workflow run views returned by the Host. */
+export interface WorkflowRemoteRunListValue {
+  readonly runs: readonly WorkflowRemoteRunView[]
+}
 
 declare module '@deepseek-ai/dsh-session-projection/types' {
   interface SessionProjectionStateMap {
@@ -33,6 +113,10 @@ declare module '@deepseek-ai/dsh-session-projection/types' {
 
 declare module '@deepseek-ai/dsh-session/types' {
   interface SessionEventMap {
+    /** Durable visual-editor workflow run checkpoint. */
+    'visual-workflow/run': WorkflowRemoteRunView
+    /** Incremental redacted audit update for one visual-editor workflow node. */
+    'visual-workflow/node': WorkflowNodeAudit
     /**
      * Complete validated model selection requested for subsequent prompt
      * assembly. Log-only: it never enters derived model history.
@@ -185,6 +269,7 @@ export const SESSION_SEARCH_SNIPPET_MAX_CODE_POINTS = 240
 
 declare module '@deepseek-ai/dsh-typert-protocol' {
   interface RemoteErrorDetailsMap {
+    'gateway/busy': {}
     'session/model-unavailable': { readonly provider: string; readonly model: string }
     'session/conflict': {
       readonly sessionId: SessionId

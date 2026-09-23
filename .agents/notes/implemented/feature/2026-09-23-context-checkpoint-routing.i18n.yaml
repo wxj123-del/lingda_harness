@@ -1,0 +1,6 @@
+# Bilingual-pair consistency record (docs/i18n/README.md): the git blob hash of each
+# side as of the last confirmed-consistent state. Both languages carry equal authority;
+# after editing either side, bring the other along and re-record with:
+#   pnpm run verify-translation-pairing --write .agents/notes/implemented/feature/2026-09-23-context-checkpoint-routing.md
+2026-09-23-context-checkpoint-routing.md: 313131a9809bb47e88de845098f2a16d888d16b2
+2026-09-23-context-checkpoint-routing.zh.md: a0d6083267432f693ff1774bc050a72e0a9f1cd7

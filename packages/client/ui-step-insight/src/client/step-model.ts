@@ -8,7 +8,7 @@ import type {} from '@deepseek-ai/dsh-compaction/types'
 import type {} from '@deepseek-ai/dsh-host-knowledge'
 import type {} from '@deepseek-ai/dsh-personal-agent'
 import type {} from '@deepseek-ai/dsh-git-workspace'
-import type {} from '@deepseek-ai/dsh-context-router'
+import type { ContextRouteSignal } from '@deepseek-ai/dsh-context-router'
 import type {} from '@deepseek-ai/dsh-tools/types'
 import type { GitCheckpointAudit, KnowledgeRetrievalAudit, StepRow, ToolDeniedAudit, ToolRow, ToolSelectionReason } from './types.ts'
 import { readUsage } from './usage.ts'
@@ -34,6 +34,51 @@ function visibleBlocks(stream: ReturnType<typeof assembleAssistantStream>) {
  */
 export function deriveSteps(entries: readonly SessionEventLikeEntry[]): StepRow[] {
   return createAccumulator()(entries)
+}
+
+/** Bounded route-quality counters derived from the loaded request rows. */
+export interface ContextRouteMetrics {
+  requests: number
+  fresh: number
+  recent: number
+  task: number
+  full: number
+  budgetWarnings: number
+  taskRecalls: number
+  calibrated: number
+  averageDroppedMessages: number
+  signals: Record<ContextRouteSignal, number>
+}
+
+const CONTEXT_ROUTE_SIGNALS: readonly ContextRouteSignal[] = [
+  'explicit-full', 'explicit-fresh', 'co-reference', 'task-reference',
+  'follow-up', 'acknowledgement', 'lexical-match', 'open-turn', 'unrelated',
+]
+
+/**
+ * Summarize the router's observable decisions without adding another durable
+ * event. The UI can label the result as loaded-history scope when pagination
+ * has not loaded the complete session.
+ */
+export function summarizeContextRoutes(rows: readonly StepRow[]): ContextRouteMetrics {
+  const routed = rows.flatMap(row => row.contextRoute === undefined ? [] : [row.contextRoute])
+  const dropped = routed.reduce((sum, route) => sum + route.droppedMessages, 0)
+  const signals = Object.fromEntries(CONTEXT_ROUTE_SIGNALS.map(signal => [
+    signal,
+    routed.filter(route => route.signal === signal).length,
+  ])) as Record<ContextRouteSignal, number>
+  return {
+    requests: routed.length,
+    fresh: routed.filter(route => route.scope === 'fresh').length,
+    recent: routed.filter(route => route.scope === 'recent').length,
+    task: routed.filter(route => route.scope === 'task').length,
+    full: routed.filter(route => route.scope === 'full').length,
+    budgetWarnings: routed.filter(route => route.budgetExceeded).length,
+    taskRecalls: routed.filter(route => (route.taskRecallMessages ?? 0) > 0).length,
+    calibrated: routed.filter(route => (route.calibrationSampleCount ?? 0) > 0).length,
+    averageDroppedMessages: routed.length === 0 ? 0 : dropped / routed.length,
+    signals,
+  }
 }
 
 /**
