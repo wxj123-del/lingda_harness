@@ -244,6 +244,7 @@ function responseComposition(node: AssistantMessageNode, toolCount: number, t: W
   ].join(' · ')
 }
 
+/** Format one epoch millisecond timestamp as a local HH:MM:SS clock time. */
 function clockTime(time: number | undefined): string | undefined {
   if (time === undefined) return undefined
   const date = new Date(time)
