@@ -13,6 +13,9 @@
 .renderer .code {
   --dsl-code-block-border-radius: 0px;
   --dsl-code-block-line-white-space: pre;
+  /* The pane owns the viewport and scrolls its own content node below, so the
+     shared chat-style height cap would nest a second scrollport inside it. */
+  --dsl-code-block-max-height: none;
   /* In a sidebar pane the code sits on the pane's own background; the chat
      card's gray fill stays a chat-only default. */
   --dsl-code-block-background: transparent;

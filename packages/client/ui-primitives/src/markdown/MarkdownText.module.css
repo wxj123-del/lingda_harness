@@ -15,35 +15,37 @@
 
 .markdown h1 {
   font: var(--dsw-font-markdown-h1);
-  margin: 32px 0 16px;
+  margin: 24px 0 12px;
 }
 
 .markdown h2 {
   font: var(--dsw-font-markdown-h2);
-  margin: 32px 0 16px;
+  margin: 24px 0 12px;
 }
 
 .markdown h3 {
   font: var(--dsw-font-markdown-h3);
-  margin: 32px 0 16px;
+  margin: 24px 0 12px;
 }
 
 .markdown h4 {
   font: var(--dsw-font-markdown-h4);
-  margin: 16px 0;
+  margin: 16px 0 8px;
 }
 
 .markdown :where(h5, h6) {
   font: var(--dsw-font-markdown-base-strong);
-  margin: 16px 0;
+  margin: 16px 0 8px;
 }
 
 .markdown :where(h1, h2, h3, h4, h5, h6) strong {
   font-weight: inherit;
 }
 
+/* 14px rather than the 16px baseline: an answer reads as a dense block of
+   prose, and the gap already separates paragraphs at this line height. */
 .markdown p {
-  margin: 16px 0;
+  margin: 14px 0;
 }
 
 /* Tighten h4–h6 against a following list (design: 8px gap). */

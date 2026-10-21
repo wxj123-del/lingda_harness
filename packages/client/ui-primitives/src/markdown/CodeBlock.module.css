@@ -80,6 +80,13 @@
   padding: 16px;
   margin: 0 !important;
   overflow-x: auto;
+  /* A long fenced block scrolls inside its own frame instead of pushing the
+     rest of the answer off-screen; the banner stays above it, outside this
+     scrollport, so Copy never scrolls away. 60vh keeps a tall block from
+     covering the whole viewport on short windows. A host that already owns
+     the viewport (the sidebar file preview) sets the variable to none. */
+  max-height: var(--dsl-code-block-max-height, min(420px, 60vh));
+  overflow-y: auto;
   white-space: pre-wrap;
   word-break: break-all;
   background: var(--dsl-code-block-background);
