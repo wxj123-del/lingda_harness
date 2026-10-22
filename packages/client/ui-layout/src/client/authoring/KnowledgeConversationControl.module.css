@@ -10,7 +10,7 @@
   margin-right: 4px;
   padding: 0 7px;
   overflow: hidden;
-  border: 1px solid var(--dsw-alias-interactive-border-hover);
+  border: 0.5px solid var(--dsw-alias-border-l3);
   border-radius: 14px;
   background: var(--dsw-alias-interactive-bg-hover);
   color: var(--dsw-alias-label-secondary);
@@ -47,7 +47,7 @@
 }
 
 .trigger:focus-visible {
-  outline: 2px solid var(--dsw-alias-interactive-border-focus);
+  outline: 2px solid var(--dsw-alias-state-business-primary);
   outline-offset: 1px;
 }
 

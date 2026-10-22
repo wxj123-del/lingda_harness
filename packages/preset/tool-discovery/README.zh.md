@@ -9,7 +9,7 @@ kind: "package-reference"
 
 ## 概述
 
-在请求中保留少量高频工具，需要其他能力时再发现并加载。适用于继承了大量工具的原生工具预设。搜索只加载少量相关工具，不返回完整目录。发现工具可能增加一轮模型请求，改变已加载工具时也可能降低提示词缓存复用率。其他预设与执行权限保持不变。
+在请求中保留少量高频工具，需要其他能力时再发现并加载。适用于继承了大量工具的原生工具预设。搜索只加载少量相关工具，不返回完整目录。可选的类型化决策服务可以为能力候选排序，词法排序仍是确定性的回退路径。发现工具可能增加一轮模型请求，改变已加载工具时也可能降低提示词缓存复用率。其他预设与执行权限保持不变。
 
 ## 目录
 
@@ -40,13 +40,20 @@ kind: "package-reference"
     searchLimit: 2
     descriptionChars: 160
     resultMaxBytes: 2048
+    decisionModel:
+      url: http://127.0.0.1:8000
+      timeoutMs: 500
+      minConfidence: 0.7
+      candidateLimit: 32
 ```
 
 `initialTools` 与 `maxTools` 包含已注册的固定工具，不含 `tool_search`。初始选择根据最近创建的 `historySessions` 个其他会话及当前会话中的实际直接调用次数排序，不重复计入分支继承的次数。仅展示工具不会提高优先级。同频次与无历史记录时使用 `fallbackTools` 顺序，其次按名称排序。每个智能体初始化只读取一次历史，之后由已提交的本地事件更新状态。无法读取的历史会话会记录并跳过。取消会终止当次装配，之后可以重试。
 
-完整名称搜索只加载对应工具。关键词查询要求每个词都匹配名称或描述，优先按相关性、其次按频次排序，最多加载 `searchLimit` 个结果。查询无命中时可以加载配置的 `recoveryTools` 安全集合，并为每个工具记录 exact-name、lexical-match 或 safe-recovery 选择原因。描述受 `descriptionChars` 限制，完整渲染后的 JSON 受 `resultMaxBytes` 限制。只有成功提交结果后，工具才会出现在下一次请求中。达到容量上限时，最近最少使用的非固定项退出目录。保留的 schema 维持规范顺序。缺失或被拒绝的固定工具不会被强行开放。
+完整名称搜索只加载对应工具。关键词查询要求每个词都匹配名称或描述，然后可以把经过权限过滤的候选及其有界描述发送到 `POST <decisionModel.url>/decide`，请求中包含类型化的 `capability` choice schema。决策服务选中项的置信度低于 `minConfidence`、响应无效或请求超时时回退到词法排序；这个建议性模型不能授予权限，也不能绕过工具限制。关键词搜索最多加载 `searchLimit` 个结果。查询无命中时可以加载配置的 `recoveryTools` 安全集合，并为每个工具记录 exact-name、decision-model、lexical-match 或 safe-recovery 选择原因。描述受 `descriptionChars` 限制，完整渲染后的 JSON 受 `resultMaxBytes` 限制。只有成功提交结果后，工具才会出现在下一次请求中。达到容量上限时，最近最少使用的非固定项退出目录。保留的 schema 维持规范顺序。缺失或被拒绝的固定工具不会被强行开放。
 
 -----
+
+随附的 `standard` 与 `diaosi` 预设指向 `http://127.0.0.1:8000`。使用 `scripts/start-decision-model.sh` 启动可选本地服务；其 Python 环境依赖记录在 `scripts/decision-model-requirements.txt`。服务会在 Apple Silicon 的 MPS 上加载本地缓存的 `Mapika/decider-2b` 快照，也可以通过 `DECISION_MODEL_PATH`、`DECISION_MODEL_DEVICE` 或 `DECISION_MODEL_PORT` 覆盖默认值。
 
 <a id="understand-the-implementation"></a>
 ## 理解实现
@@ -79,7 +86,7 @@ kind: "package-reference"
 
 #### Token 影响
 
-初始请求最多包含 `initialTools + 1` 个 schema，后续请求最多包含 `maxTools + 1` 个。schema 自身大小没有上限。发现工具会添加有界结果，通常还会增加一次模型请求。输入缓存与已有历史意味着无法保证计费或总 Token 的固定降幅。
+初始请求最多包含 `initialTools + 1` 个 schema，后续请求最多包含 `maxTools + 1` 个。schema 自身大小没有上限。发现工具会添加有界结果，通常还会增加一次模型请求；启用 `decisionModel` 后，能力搜索还会增加一次有界的本地 HTTP 调用及其超时延迟。输入缓存与已有历史意味着无法保证计费或总 Token 的固定降幅。
 
 #### KV Cache 影响
 
@@ -89,7 +96,7 @@ kind: "package-reference"
 
 <a id="known-limitations-and-deferred-work"></a>
 
-- 采用英文关键词或完整名称进行词法搜索，未实现中文语义检索。
+- 未配置 `decisionModel` 时，搜索采用英文关键词或完整名称的词法匹配。可选决策服务支持语义能力排序，但它只是建议组件，必须显式配置，不能替代权限检查、审批、参数校验、超时或并发控制。
 - 频次包含有界样本中失败的直接调用，不包含 PTC 内部调用，也不会持续刷新全局排名；不支持 PTC 展示模式。
 - Skill 目录、通用指令、先前工具输出和对话历史仍需各自的预算。仅隐藏可单独归属到工具的指令。
 - 已挂载的预设代次保留其配置。新对话使用更新后的随附预设；已产生的历史 Token 费用无法减少。

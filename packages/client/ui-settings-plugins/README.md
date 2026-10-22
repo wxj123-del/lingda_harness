@@ -39,7 +39,7 @@ The Subagent card stages its permission switch and exact model checkboxes togeth
 
 ### Secret-role fields
 
-A key control starts blank, reports only whether one is configured, and writes through the credentials domain rather than the settings section; a blank draft writes nothing and keeps the stored key.
+A key control starts blank, reports only whether one is configured, and writes through the credentials domain rather than the settings section; a blank draft writes nothing and keeps the stored key. The Phone access card treats its Host Remote as optional, so a profile without that namespace remains usable; a rejected tunnel request clears its busy state and can be retried.
 
 -----
 

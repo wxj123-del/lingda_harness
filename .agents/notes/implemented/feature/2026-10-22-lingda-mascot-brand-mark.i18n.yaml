@@ -1,0 +1,6 @@
+# Bilingual-pair consistency record (docs/i18n/README.md): the git blob hash of each
+# side as of the last confirmed-consistent state. Both languages carry equal authority;
+# after editing either side, bring the other along and re-record with:
+#   pnpm run verify-translation-pairing --write .agents/notes/implemented/feature/2026-10-22-lingda-mascot-brand-mark.md
+2026-10-22-lingda-mascot-brand-mark.md: df446415cb33b30225542e9606342065fb8535f6
+2026-10-22-lingda-mascot-brand-mark.zh.md: 50577bfdf7456bff9322e7571faa3f6eeb673b20

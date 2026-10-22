@@ -28,6 +28,15 @@ export const name = 'repeat-tool-reminder'
 export interface Config {
   /** Consecutive-repeat counts that trigger a reminder (default `[3, 5, 8]`). */
   thresholds?: number[]
+  /**
+   * Counts at which an identical call repeated WITHIN the turn — in any order,
+   * not necessarily back to back — triggers a reminder (default `[2, 4]`).
+   * The consecutive chain misses the pattern that actually wastes context in
+   * long tasks: the same `read` of the same path returning several steps
+   * apart, with unrelated calls in between, so its run length never
+   * accumulates. An empty list disables the check.
+   */
+  repeatInTurnThresholds?: number[]
   /** Tool-name patterns to track; empty means every tool is tracked. */
   include?: string[]
   /** Tool-name patterns transparent to the chain (neither count nor reset). */
@@ -44,6 +53,7 @@ export interface Config {
 
 export const Config: z<Config> = z.object({
   thresholds: z.array(z.number()).default([3, 5, 8]),
+  repeatInTurnThresholds: z.array(z.number()).default([2, 4]),
   include: z.array(z.string()).default([]),
   exclude: z.array(z.string()).default([]),
   argumentsPreviewChars: z.number().default(500),
@@ -65,6 +75,28 @@ const GENTLE_REMINDER =
   + 'Carefully analyze the previous result before calling again: if the task is '
   + 'not complete, try a different approach or different arguments instead of '
   + 'repeating the call.'
+
+/**
+ * First in-turn repeat reminder. Deliberately distinct from
+ * {@link GENTLE_REMINDER}: the earlier result is still in the conversation, so
+ * the useful advice is "reuse what you already have", not "you are looping".
+ */
+const IN_TURN_REPEAT_REMINDER =
+  'This exact call already ran earlier in this turn and its result is still in '
+  + 'the conversation. Reuse that result instead of fetching it again: re-read '
+  + 'only when an edit or write changed the file, and otherwise continue from '
+  + 'the content you already have.'
+
+/** The later in-turn reminder naming the call, how often it ran, and the arguments. */
+function inTurnRepeatReminder(toolName: string, count: number, canonicalArguments: string): string {
+  return 'Repeated identical call within one turn:\n'
+    + `- tool: ${toolName}\n`
+    + `- calls_this_turn: ${count}\n`
+    + `- arguments: ${canonicalArguments}\n`
+    + 'Each repeat costs context without adding evidence. Use the result you '
+    + 'already received, or change the arguments, or finish if the evidence is '
+    + 'sufficient.'
+}
 
 /** The detailed later-threshold reminder naming the tool, the run length, and the canonical arguments. */
 function detailedReminder(toolName: string, count: number, canonicalArguments: string): string {
@@ -141,17 +173,55 @@ function validateThresholds(values: number[]): number[] {
 }
 
 /**
- * Prepend the guard's reminder while preserving every downstream context's
- * source and metadata.
+ * Fold every reminder onto the downstream decision, preserving its variant.
+ * @param reminders - this attempt's reminders, in delivery order.
+ * @param downstream - the decision later listeners produced.
+ * @returns the same decision carrying the reminders ahead of its own contexts.
  */
-function prependContext(ours: UserMessage, theirs: UserMessage[] | undefined): UserMessage[] {
-  return [ours, ...theirs ?? []]
+function foldReminders(reminders: UserMessage[], downstream: PostToolDecision): PostToolDecision {
+  const contexts = [...reminders, ...downstream.additionalContexts ?? []]
+  return downstream.kind === 'block'
+    ? { kind: 'block', feedback: downstream.feedback, additionalContexts: contexts }
+    : { ...downstream, additionalContexts: contexts }
+}
+
+/**
+ * Build one reminder message for the model.
+ * @param toolName - the repeated call's tool.
+ * @param count - how many times it has now run.
+ * @param text - the reminder body.
+ * @returns the message, stamped with the guard's plugin source.
+ */
+function notice(toolName: string, count: number, text: string): UserMessage {
+  return createUserMessage({
+    content: [{ type: 'text', text }],
+    source: { ...PLUGIN_SOURCE, form: 'notice', summary: `${toolName} × ${count}` },
+  })
 }
 
 /** One agent's consecutive-repeat chain: the last tracked call's identity key and its run length. */
 interface Chain {
   key: string
   count: number
+}
+
+/**
+ * Validate the in-turn repeat thresholds. Unlike `thresholds`, an empty list is
+ * legal here: it is how a deployment turns this check off without also
+ * disabling the consecutive one.
+ * @param values - configured repeat counts.
+ * @returns the same values, ascending.
+ */
+function validateInTurnThresholds(values: number[]): number[] {
+  for (const value of values) {
+    if (!Number.isInteger(value) || value < 2) {
+      throw new Error(`repeat-tool-reminder: invalid repeatInTurnThresholds entry ${value} — every entry must be an integer >= 2`)
+    }
+  }
+  if (new Set(values).size !== values.length) {
+    throw new Error('repeat-tool-reminder: `repeatInTurnThresholds` must not contain duplicates')
+  }
+  return [...values].sort((a, b) => a - b)
 }
 
 /**
@@ -163,6 +233,8 @@ export function apply(ctx: Context, config: Config): void {
   // schemastery's .default() guarantees the fields are set after validation.
   const thresholds = validateThresholds(config.thresholds as number[])
   const thresholdSet = new Set(thresholds)
+  const inTurnThresholds = validateInTurnThresholds(config.repeatInTurnThresholds as number[])
+  const inTurnThresholdSet = new Set(inTurnThresholds)
   const includePatterns = (config.include as string[]).map(wildcardToRegExp)
   const excludePatterns = (config.exclude as string[]).map(wildcardToRegExp)
   const argumentsPreviewChars = config.argumentsPreviewChars as number
@@ -171,6 +243,14 @@ export function apply(ctx: Context, config: Config): void {
   }
 
   const chains = new WeakMap<Agent, Chain>()
+  /**
+   * Per-agent counts of every tracked identity key seen since the last user
+   * message. `chains` only tracks a back-to-back run, which never accumulates
+   * across the interleaved calls a long task is full of; this map is what
+   * catches "the same read again, ten steps later". It is bounded by the
+   * number of distinct calls one turn makes.
+   */
+  const inTurnCounts = new WeakMap<Agent, Map<string, number>>()
 
   /** Whether a tool participates in the chain (untracked calls are transparent: they neither count nor reset). */
   function tracked(toolName: string): boolean {
@@ -186,24 +266,53 @@ export function apply(ctx: Context, config: Config): void {
    * same pipeline), and a model hammering a denied call is exactly the loop
    * worth breaking.
    */
-  function observe(exec: ToolExecution): UserMessage | undefined {
+  /**
+   * Advance both counters for one attempt and return the reminders to deliver.
+   *
+   * The consecutive chain and the in-turn tally answer different questions. The
+   * chain catches a model hammering one call without moving; the tally catches
+   * the same call coming back after unrelated work, which is the shape that
+   * actually wastes context in a long task. Both count denied calls too, because
+   * a deny flows through this same waterfall and a model repeating a denied call
+   * is exactly the loop worth breaking.
+   * @param exec - the finished attempt, including the agent that issued it.
+   * @returns the reminders to fold onto the result, consecutive first.
+   */
+  function observe(exec: ToolExecution): UserMessage[] {
     // A direct `ctx.tools.execute()` caller has no model to remind and no id
     // to key on; only agent-loop calls participate.
-    if (!exec.agent) return undefined
-    if (!tracked(exec.name)) return undefined
+    if (!exec.agent) return []
+    if (!tracked(exec.name)) return []
     const canonical = canonicalize(exec.arguments)
     const key = JSON.stringify([exec.name, canonical])
+    const reminders: UserMessage[] = []
+
     const chain = chains.get(exec.agent)
     const count = chain !== undefined && chain.key === key ? chain.count + 1 : 1
     chains.set(exec.agent, { key, count })
-    if (!thresholdSet.has(count)) return undefined
-    const text = count === thresholds[0]
-      ? GENTLE_REMINDER
-      : detailedReminder(exec.name, count, previewArguments(canonical, argumentsPreviewChars))
-    return createUserMessage({
-      content: [{ type: 'text', text }],
-      source: { ...PLUGIN_SOURCE, form: 'notice', summary: `${exec.name} × ${count}` },
-    })
+    if (thresholdSet.has(count)) {
+      const text = count === thresholds[0]
+        ? GENTLE_REMINDER
+        : detailedReminder(exec.name, count, previewArguments(canonical, argumentsPreviewChars))
+      reminders.push(notice(exec.name, count, text))
+    }
+
+    if (inTurnThresholdSet.size > 0) {
+      let counts = inTurnCounts.get(exec.agent)
+      if (counts === undefined) {
+        counts = new Map()
+        inTurnCounts.set(exec.agent, counts)
+      }
+      const calls = (counts.get(key) ?? 0) + 1
+      counts.set(key, calls)
+      if (inTurnThresholdSet.has(calls)) {
+        const text = calls === inTurnThresholds[0]
+          ? IN_TURN_REPEAT_REMINDER
+          : inTurnRepeatReminder(exec.name, calls, previewArguments(canonical, argumentsPreviewChars))
+        reminders.push(notice(exec.name, calls, text))
+      }
+    }
+    return reminders
   }
 
   // Observe-and-enrich, never veto: count first (state advances regardless of
@@ -211,23 +320,20 @@ export function apply(ctx: Context, config: Config): void {
   // replace, then fold the reminder onto whatever came back — additionalContexts
   // rides both decision variants, so a blocked call still gets the nudge.
   ctx.on('tools/post-execute', async (exec, _result, next): Promise<PostToolDecision> => {
-    const reminder = observe(exec)
+    const reminders = observe(exec)
     const downstream = await next()
-    if (!reminder) return downstream
-    if (downstream.kind === 'block') {
-      return { kind: 'block', feedback: downstream.feedback, additionalContexts: prependContext(reminder, downstream.additionalContexts) }
-    }
-    return {
-      ...downstream,
-      additionalContexts: prependContext(reminder, downstream.additionalContexts),
-    }
+    if (reminders.length === 0) return downstream
+    return foldReminders(reminders, downstream)
   })
 
   // A user interjection changes the context; repetition across it is not a
-  // loop. Pure reset hook: always delegates (attaching nothing, vetoing
-  // nothing).
+  // loop, and the in-turn tally is scoped to one turn by definition. Pure
+  // reset hook: always delegates (attaching nothing, vetoing nothing).
   ctx.on('agent/pre-step', ({ agent, messages }, next): Promise<PreStepDecision> => {
-    if (messages.some(message => message.source.kind === 'user')) chains.delete(agent)
+    if (messages.some(message => message.source.kind === 'user')) {
+      chains.delete(agent)
+      inTurnCounts.delete(agent)
+    }
     return next()
   })
 }

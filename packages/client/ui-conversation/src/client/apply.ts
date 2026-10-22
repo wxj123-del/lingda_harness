@@ -27,6 +27,7 @@ import { InputHub } from './input/hub.ts'
 import { ComposerSubmissionPolicy } from './input/submission-policy.ts'
 import { queueDockEntry } from './queue/QueueDock.tsx'
 import { EnterBehaviorRow } from './settings/EnterBehaviorRow.tsx'
+import { ViewTabsRow, type ViewTabsRowInjected } from './settings/ViewTabsRow.tsx'
 import type { EnterBehaviorRowInjected } from './settings/EnterBehaviorRow.tsx'
 import { ConversationRoot } from './skeleton/ConversationRoot.tsx'
 import { ConversationPanel } from './skeleton/ConversationPanel.tsx'
@@ -164,6 +165,17 @@ export function apply(ctx: Context, config: Config = Config({})): void {
       setBusyEnter: (behavior) => { submissionPolicy.setBusyEnter(behavior) },
     }),
   }, EnterBehaviorRow))
+
+  ctx.slots.inject('settings.general.item', () => ctx.slots.register({
+    name: 'settings.general.item',
+    id: 'show-view-tabs',
+    order: 21,
+    locale: NS,
+    inject: (): ViewTabsRowInjected => ({
+      hooks: { showViewTabs: submissionPolicy.showViewTabs },
+      setShowViewTabs: (visible) => { submissionPolicy.setShowViewTabs(visible) },
+    }),
+  }, ViewTabsRow))
 
   const viewTabs = (): ViewTab[] => {
     const tabs: ViewTab[] = []
@@ -304,7 +316,7 @@ export function apply(ctx: Context, config: Config = Config({})): void {
     },
     store: conversationStore,
     inject: (sessionId: SessionId, actions: BoundActions<typeof conversationStore>): ConversationSessionInjected => ({
-      hooks: { conversationViews },
+      hooks: { conversationViews, showViewTabs: submissionPolicy.showViewTabs },
       bindDraftMirror: write => inputHub.shell(sessionId).bindMirror(write),
       openView: (view, focus) => {
         activateView(sessionId, view)
@@ -324,7 +336,7 @@ export function apply(ctx: Context, config: Config = Config({})): void {
     },
     store: conversationStore,
     inject: (sessionId: SessionId, actions: BoundActions<typeof conversationStore>): ConversationSessionHeaderInjected => ({
-      hooks: { conversationViews },
+      hooks: { conversationViews, showViewTabs: submissionPolicy.showViewTabs },
       open: (id) => { workspaceNavigation.openSession(id) },
       selectView: (view) => {
         activateView(sessionId, view)
@@ -356,6 +368,7 @@ export function apply(ctx: Context, config: Config = Config({})): void {
           retryFileUpload: undefined,
           toggleCommandMenu: undefined,
           stop: undefined,
+          optimizePrompt: undefined,
           hooks: {
             busyEnter: submissionPolicy.busyEnter,
             fileUploads: ABSENT_FILE_UPLOADS,
@@ -407,6 +420,13 @@ export function apply(ctx: Context, config: Config = Config({})): void {
           scopedConversation(sessions, sessionId).cancel().catch(() => {
             // Stop failure is published through Session promptError.
           })
+        },
+        optimizePrompt: (...args) => {
+          const session = sessions.binding(sessionId)?.session
+          if (session === undefined) {
+            return Promise.reject(new Error(`ui-conversation: session "${sessionId}" resolved no binding`))
+          }
+          return session.optimizePrompt(...args)
         },
         hooks: {
           busyEnter: submissionPolicy.busyEnter,

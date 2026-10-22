@@ -18,7 +18,10 @@ const config: Discovery.Config = {
   historySessions: 50, searchLimit: 2, descriptionChars: 80, resultMaxBytes: 1024,
 }
 const contexts: Context[] = []
-afterEach(async () => { for (const ctx of contexts.splice(0)) await ctx.fiber.dispose() })
+afterEach(async () => {
+  for (const ctx of contexts.splice(0)) await ctx.fiber.dispose()
+  vi.unstubAllGlobals()
+})
 
 async function harness(overrides: Partial<Discovery.Config> = {}) {
   const ctx = new Context()
@@ -106,6 +109,70 @@ describe('bounded tool discovery', () => {
     expect((await h.ctx.systemPrompt.assemble(assembleContextFor(standard.agent))).tools).toHaveLength(7)
   })
 
+  it('uses a typed decision endpoint for semantic capability matches', async () => {
+    const fetchMock = vi.fn<typeof fetch>(async () => new Response(JSON.stringify({
+      capability: {
+        choice: 'generate_image',
+        confidence: 0.91,
+        probabilities: { generate_image: 0.91, list_image_models: 0.06, generate_speech: 0.03 },
+      },
+    }), { status: 200, headers: { 'content-type': 'application/json' } }))
+    vi.stubGlobal('fetch', fetchMock)
+    const h = await harness({
+      decisionModel: { url: 'http://127.0.0.1:9876', timeoutMs: 100, minConfidence: 0.7, candidateLimit: 16 },
+    })
+    await h.assemble()
+    const result = await search(h.ctx, h.agent, '我需要制作一张图片')
+    expect(result.meta).toMatchObject({
+      toolDiscovery: ['generate_image', 'list_image_models'],
+      toolDiscoveryReasons: [
+        { name: 'generate_image', reason: 'decision-model:0.91' },
+        { name: 'list_image_models', reason: 'decision-model:0.06' },
+      ],
+    })
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+    expect(fetchMock.mock.calls[0]?.[0]).toBe('http://127.0.0.1:9876/decide')
+    const request = fetchMock.mock.calls[0]?.[1]
+    expect(JSON.parse(String(request?.body))).toMatchObject({
+      context: '我需要制作一张图片',
+      schema: { capability: { type: 'choice', options: expect.arrayContaining(['generate_image']) } },
+    })
+  })
+
+  it('falls back to lexical discovery when the decision model is unavailable', async () => {
+    vi.stubGlobal('fetch', vi.fn(async () => new Response('unavailable', { status: 503 })))
+    const h = await harness({
+      decisionModel: { url: 'http://127.0.0.1:9876', timeoutMs: 100, minConfidence: 0.7, candidateLimit: 16 },
+    })
+    await h.assemble()
+    const result = await search(h.ctx, h.agent, 'image')
+    expect(result.meta).toMatchObject({
+      toolDiscovery: ['generate_image', 'list_image_models'],
+      toolDiscoveryReasons: [
+        { name: 'generate_image', reason: 'lexical-match' },
+        { name: 'list_image_models', reason: 'lexical-match' },
+      ],
+    })
+  })
+
+  it('filters denied tools before sending decision candidates', async () => {
+    const fetchMock = vi.fn<typeof fetch>(async () => new Response(JSON.stringify({
+      capability: { choice: 'list_image_models', confidence: 0.88, probabilities: { list_image_models: 0.88 } },
+    }), { status: 200, headers: { 'content-type': 'application/json' } }))
+    vi.stubGlobal('fetch', fetchMock)
+    const h = await harness({
+      decisionModel: { url: 'http://127.0.0.1:9876', timeoutMs: 100, minConfidence: 0.7, candidateLimit: 16 },
+    })
+    await h.assemble()
+    h.agent.ctx.tools.restrict({ deny: ['generate_image'] })
+    const result = await search(h.ctx, h.agent, 'image')
+    expect(result.meta).toMatchObject({ toolDiscovery: ['list_image_models'] })
+    const body = JSON.parse(String(fetchMock.mock.calls[0]?.[1]?.body)) as { schema: { capability: { options: string[]; instructions: string } } }
+    expect(body.schema.capability.options).not.toContain('generate_image')
+    expect(body.schema.capability.options).toContain('list_image_models')
+    expect(body.schema.capability.instructions).toContain('list_image_models: List image models')
+  })
+
   it('keeps exact rare matches ahead of frequent partial matches and evicts least recently used tools', async () => {
     const h = await harness({ maxTools: 3 })
     const history = h.ctx.sessions.create(SessionId('history'))
@@ -142,6 +209,22 @@ describe('bounded tool discovery', () => {
     await h.agent.ctx.plugin(Discovery, config)
     expect(await h.names()).toEqual(expected)
     expect(await h.names()).not.toContain('generate_image')
+  })
+
+  it('bounds a legacy request header when resuming a session', async () => {
+    const h = await harness()
+    const allTools = h.ctx.tools.schemas(h.agent)
+    h.agent.session.append('request/header', {
+      reason: 'initial',
+      header: { config: { provider: 'fixture', model: 'fixture' }, tools: allTools },
+    })
+
+    await h.disposeDiscovery()
+    await h.agent.ctx.plugin(Discovery, config)
+
+    const names = await h.names()
+    expect(names).toHaveLength(config.maxTools + 1)
+    expect(names).toContain('tool_search')
   })
 
   it('bounds UTF-8 search output and rejects empty or wildcard-only queries', async () => {

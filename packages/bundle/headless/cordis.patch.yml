@@ -12,6 +12,21 @@
     personaPrefix: >-
       You are a coding agent powered by the {{model}} model.
 
+# A one-shot process has no interactive mode selector. Fresh Sessions therefore
+# start with the full execution policy; resumed Sessions keep their logged mode.
+# Keep the policy overrides aligned with the base row because a patch replaces
+# the complete plugin config.
+- id: personal-agent
+  config:
+    defaultMode: execution
+    modes:
+      research:
+        maxSteps: 20
+      coding:
+        maxSteps: 60
+      execution:
+        maxSteps: 40
+
 - id: tools
   config:
     # Keep the same temporary process-wide PTC mode opt-in as the Web surface.

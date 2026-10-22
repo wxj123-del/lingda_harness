@@ -30,9 +30,13 @@ exports[`sidebar shell snapshots > renders the collapsed rail after the crossfad
           />
         </button>
         <div
-          data-slot="sidebar.navigation"
-          style="display: contents;"
-        />
+          class="navigationArea"
+        >
+          <div
+            data-slot="sidebar.navigation"
+            style="display: contents;"
+          />
+        </div>
       </aside>
       <div
         class="content"
@@ -102,12 +106,7 @@ exports[`sidebar shell snapshots > renders the expanded column (wordmark, capsul
     >
       <aside
         class="navigationRail"
-      >
-        <div
-          data-slot="sidebar.navigation"
-          style="display: contents;"
-        />
-      </aside>
+      />
       <div
         class="content"
       >
@@ -130,12 +129,13 @@ exports[`sidebar shell snapshots > renders the expanded column (wordmark, capsul
                   data-slot="sidebar.brand.mark"
                   style="display: contents;"
                 >
-                  <svg
+                  <img
+                    alt=""
                     aria-hidden="true"
-                    data-content="965fe321"
-                    fill="none"
-                    height="17.6580310880829"
-                    viewBox="0 0 23.16 17.04"
+                    data-content="8894bf74"
+                    draggable="false"
+                    height="24"
+                    src="data:image/webp;base64,"
                     width="24"
                   />
                 </div>
@@ -153,7 +153,7 @@ exports[`sidebar shell snapshots > renders the expanded column (wordmark, capsul
                     <span
                       class="localBuildTitle"
                     >
-                      DSH Local Build
+                      Lingda Harness
                     </span>
                     <span
                       class="buildVersion"
@@ -200,6 +200,14 @@ exports[`sidebar shell snapshots > renders the expanded column (wordmark, capsul
             New Session
           </span>
         </button>
+        <div
+          class="navigationArea"
+        >
+          <div
+            data-slot="sidebar.navigation"
+            style="display: contents;"
+          />
+        </div>
         <div
           class="regionArea"
         >
@@ -248,12 +256,7 @@ exports[`sidebar shell snapshots > renders the expanded column in the default lo
     >
       <aside
         class="navigationRail"
-      >
-        <div
-          data-slot="sidebar.navigation"
-          style="display: contents;"
-        />
-      </aside>
+      />
       <div
         class="content"
       >
@@ -276,12 +279,13 @@ exports[`sidebar shell snapshots > renders the expanded column in the default lo
                   data-slot="sidebar.brand.mark"
                   style="display: contents;"
                 >
-                  <svg
+                  <img
+                    alt=""
                     aria-hidden="true"
-                    data-content="965fe321"
-                    fill="none"
-                    height="17.6580310880829"
-                    viewBox="0 0 23.16 17.04"
+                    data-content="8894bf74"
+                    draggable="false"
+                    height="24"
+                    src="data:image/webp;base64,"
                     width="24"
                   />
                 </div>
@@ -299,7 +303,7 @@ exports[`sidebar shell snapshots > renders the expanded column in the default lo
                     <span
                       class="localBuildTitle"
                     >
-                      DSH 本地构建
+                      灵搭
                     </span>
                     <span
                       class="buildVersion"
@@ -346,6 +350,14 @@ exports[`sidebar shell snapshots > renders the expanded column in the default lo
             新会话
           </span>
         </button>
+        <div
+          class="navigationArea"
+        >
+          <div
+            data-slot="sidebar.navigation"
+            style="display: contents;"
+          />
+        </div>
         <div
           class="regionArea"
         >

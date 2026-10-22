@@ -2,5 +2,5 @@
 # side as of the last confirmed-consistent state. Both languages carry equal authority;
 # after editing either side, bring the other along and re-record with:
 #   pnpm run verify-translation-pairing --write .agents/notes/implemented/feature/2026-09-23-workflow-node-audit.md
-2026-09-23-workflow-node-audit.md: e4fcddc84da550336d8670c5646c3ba3d08906ae
-2026-09-23-workflow-node-audit.zh.md: 28fa33f3e66bffcc9e22b0c4d9393716ed2ef39e
+2026-09-23-workflow-node-audit.md: 2491e3a4051adc508dbe6dd37f9fcbb92c9c6b4a
+2026-09-23-workflow-node-audit.zh.md: 8181515152bcf749343a682207147eb448e999be

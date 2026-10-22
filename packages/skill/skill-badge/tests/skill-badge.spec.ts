@@ -15,7 +15,7 @@ describe('dsh-skill-badge', () => {
 
     expect(await ctx.skills.list()).toEqual([{
       name: 'dsh-badge',
-      description: 'Add the official “powered by dsh” badge to documents, pull requests, merge requests, and other content produced with DeepSeek Harness. Use whenever creating a pull request or merge request. Also use when the user asks for a dsh badge, powered-by-dsh attribution, or a reusable dsh badge asset or snippet.',
+      description: 'Add the official “powered by Lingda Harness” badge to documents, pull requests, merge requests, and other content produced with Lingda Harness. Use whenever creating a pull request or merge request. Also use when the user asks for a Lingda Harness badge, powered-by attribution, or a reusable badge asset or snippet.',
       invocation: { modelInvocable: true, userInvocable: true },
       provider: 'dsh-badge',
       source: 'bundled',

@@ -7,6 +7,7 @@ import SessionStore, { SessionId } from '@deepseek-ai/dsh-session'
 // Type-only: merges the personal-agent task events into SessionEventMap, which
 // the durable task fixtures append.
 import type {} from '@deepseek-ai/dsh-personal-agent'
+import * as contextRouterPlugin from '../src/index.ts'
 import { apply as applyContextRouter } from '../src/index.ts'
 import { selectContextMessages } from '../src/router.ts'
 
@@ -16,6 +17,18 @@ const user = (text: string): UserMessage => createUserMessage({
 })
 
 describe('context router integration', () => {
+  it('declares the session store needed by its final request listener', async () => {
+    const ctx = new Context()
+    await ctx.plugin(SessionStore)
+    const fiber = await ctx.plugin(contextRouterPlugin)
+    await fiber.await()
+    const session = ctx.sessions.create(SessionId('context-router-loader-injection'))
+
+    await expect(ctx.parallel('llm/request-ready', {
+      provider: 'test', model: 'test', messages: [], sessionId: session.id,
+    }, { files: false, images: false })).resolves.toBeUndefined()
+  })
+
   it('audits the final snapshot after an inner context listener transforms it', async () => {
     const ctx = new Context()
     await ctx.plugin(SessionStore)

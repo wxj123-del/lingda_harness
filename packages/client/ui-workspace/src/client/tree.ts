@@ -294,8 +294,12 @@ function groupByWorkspace(
   return groups
 }
 
-/** Keep navigation presentation independent from domain-owned interaction objects. */
-function visiblePendingKind(kind: string | undefined): SessionPendingInteractionStatus | undefined {
+/**
+ * Keep navigation presentation independent from domain-owned interaction objects.
+ * @param kind - domain-owned pending interaction discriminator.
+ * @returns the kind when the browser has a dedicated presentation for it, otherwise undefined.
+ */
+export function visiblePendingKind(kind: string | undefined): SessionPendingInteractionStatus | undefined {
   switch (kind) {
     case 'approval':
     case 'plan-review':

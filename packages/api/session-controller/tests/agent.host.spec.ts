@@ -9,6 +9,7 @@ import SessionStore, { SESSION_FORMAT_VERSION, SessionLogOffset, SessionId } fro
 import type { SessionEvent, SessionHeader } from '@deepseek-ai/dsh-session'
 import type { SessionObservation } from '@deepseek-ai/dsh-session-query'
 import TypertRegistry from '@deepseek-ai/dsh-typert-registry'
+import { RemoteError } from '@deepseek-ai/dsh-typert-protocol'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import {
   ApiSessionAgentController,
@@ -451,5 +452,65 @@ describe('ApiSession create or adoption', () => {
     writeFileSync(file, 'not a directory')
     await expect(agents.ensureSession(SessionId('mkdir-failure'), join(file, 'child'), false))
       .rejects.toThrow('failed to ensure project directory')
+  })
+})
+
+describe('ApiSession preset resolution', () => {
+  /** Roster that knows one preset id and reports every other as removed. */
+  function removingRoster(known: readonly string[], mounted: string[]): never {
+    return {
+      resolve: (id?: string) => {
+        const wanted = id ?? known[0] ?? ''
+        if (!known.includes(wanted)) {
+          return Promise.reject(new RemoteError(
+            'agent-preset/not-found',
+            `agent-presets: preset "${wanted}" not found`,
+            { agentPreset: wanted, available: known },
+          ))
+        }
+        return Promise.resolve({ id: wanted })
+      },
+      mount: (_ctx: Context, id?: string) => {
+        mounted.push(id ?? known[0] ?? '')
+        return Promise.resolve({ id: id ?? known[0] })
+      },
+    } as never
+  }
+
+  it('composes the default when a stored preset is gone, and warns once', async () => {
+    const { ctx, agents } = await harness()
+    const mounted: string[] = []
+    ctx.provide('agentPresets', removingRoster(['standard', 'minimal'], mounted))
+    const warn = vi.spyOn(ctx.logger, 'warn').mockImplementation(() => {})
+
+    const composition = await agents.composeStoredAgent('removed-preset')
+    await composition.setup(ctx, agent(ctx, header('fallback-preset')))
+
+    expect(composition.agentPreset).toBe('standard')
+    expect(mounted).toEqual(['standard'])
+    expect(warn).toHaveBeenCalledWith(expect.stringContaining('removed-preset'))
+  })
+
+  it('keeps an explicit request for a missing preset a failure', async () => {
+    const { ctx, agents } = await harness()
+    ctx.provide('agentPresets', removingRoster(['standard'], []))
+
+    // A caller naming a preset must learn it is gone; only a RECORDED id falls back.
+    await expect(agents.composeAgent('removed-preset'))
+      .rejects.toMatchObject({ code: 'agent-preset/not-found' })
+  })
+
+  it('leaves a resolvable stored preset on its own composition', async () => {
+    const { ctx, agents } = await harness()
+    const mounted: string[] = []
+    ctx.provide('agentPresets', removingRoster(['standard', 'minimal'], mounted))
+    const warn = vi.spyOn(ctx.logger, 'warn').mockImplementation(() => {})
+
+    const composition = await agents.composeStoredAgent('minimal')
+    await composition.setup(ctx, agent(ctx, header('kept-preset')))
+
+    expect(composition.agentPreset).toBe('minimal')
+    expect(mounted).toEqual(['minimal'])
+    expect(warn).not.toHaveBeenCalled()
   })
 })

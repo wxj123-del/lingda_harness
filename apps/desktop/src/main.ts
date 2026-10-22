@@ -10,16 +10,18 @@ import {
   ipcMain,
   Menu,
   protocol,
+  screen,
   type IpcMainInvokeEvent,
 } from 'electron'
 import { resolveDesktopPaths } from './paths.ts'
 import { DesktopProjectManager, type DesktopProjectHooks } from './project-manager.ts'
 import { DesktopHostProcess } from './host-process.ts'
 import { DesktopBackendController, type DesktopBackendState } from './backend-controller.ts'
-import { DESKTOP_IPC, type DesktopUpdateState } from './ipc.ts'
+import { DESKTOP_IPC, type DesktopPetView, type DesktopUpdateState } from './ipc.ts'
 import { formatDesktopMessage, resolveDesktopLocale } from './locale.ts'
 import { claimDesktopSingleInstance } from './single-instance.ts'
 import { DesktopUpdateCoordinator } from './update-coordinator.ts'
+import { DesktopPet } from './pet.ts'
 import { desktopErrorState } from './startup-error.ts'
 import { startupFailureDocument } from './startup-document.ts'
 
@@ -131,6 +133,59 @@ function assertDesktopSender(event: IpcMainInvokeEvent, hostnames: readonly stri
   }
 }
 
+/**
+ * The desk pet's own window: frameless, transparent, always on top, and out of
+ * the taskbar and window switcher. It never takes focus, so clicking it cannot
+ * pull the user out of whatever they were doing.
+ */
+function createPetWindow(preload: string): BrowserWindow {
+  const window = new BrowserWindow({
+    width: PET_SIZE.width,
+    height: PET_SIZE.height,
+    transparent: true,
+    frame: false,
+    resizable: false,
+    movable: true,
+    minimizable: false,
+    maximizable: false,
+    fullscreenable: false,
+    skipTaskbar: true,
+    hasShadow: false,
+    focusable: false,
+    alwaysOnTop: true,
+    show: false,
+    webPreferences: {
+      preload,
+      nodeIntegration: false,
+      contextIsolation: true,
+      sandbox: true,
+      webSecurity: true,
+      backgroundThrottling: false,
+    },
+  })
+  // 'screen-saver' keeps the pet above full-screen apps without stealing focus.
+  window.setAlwaysOnTop(true, 'screen-saver')
+  window.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true })
+  window.webContents.setWindowOpenHandler(() => ({ action: 'deny' }))
+  window.once('ready-to-show', () => { window.showInactive() })
+  return window
+}
+
+/** Pet window geometry in px; the renderer lays out inside exactly this box. */
+const PET_SIZE = { width: 320, height: 120 } as const
+
+/** Fraction of the work area kept clear when the pet first appears. */
+const PET_INSET = 24
+
+/** One pointer delta reported by the pet renderer. */
+function isPetDelta(value: unknown): value is { readonly dx: number; readonly dy: number } {
+  return typeof value === 'object' && value !== null
+    && typeof (value as { dx?: unknown }).dx === 'number'
+    && typeof (value as { dy?: unknown }).dy === 'number'
+    && Number.isFinite((value as { dx: number }).dx)
+    && Number.isFinite((value as { dy: number }).dy)
+}
+
 async function serveShellAsset(request: Request): Promise<Response> {
   if (request.method !== 'GET' && request.method !== 'HEAD') return new Response(null, { status: 405 })
   const root = resolve(app.getAppPath(), 'renderer')
@@ -169,6 +224,7 @@ async function main(): Promise<void> {
   const messages = locale.messages
   const appPreload = fileURLToPath(new URL('./preload-app.cjs', import.meta.url))
   const managementPreload = fileURLToPath(new URL('./preload.cjs', import.meta.url))
+  const petPreload = fileURLToPath(new URL('./preload-pet.cjs', import.meta.url))
   const startupUrl = `${SCHEME}://shell/startup.html`
   const applicationUrl = `${SCHEME}://app/index.html`
   let navigation: { window: BrowserWindow; url: string; promise: Promise<void> } | undefined
@@ -374,6 +430,23 @@ async function main(): Promise<void> {
       await showStartupError(error)
     }
   })
+  ipcMain.handle(DESKTOP_IPC.petState, (event): DesktopPetView | undefined => {
+    assertDesktopSender(event, ['shell'])
+    return pet?.state
+  })
+  ipcMain.handle(DESKTOP_IPC.petDrag, (event, delta: unknown) => {
+    if (!isPetDelta(delta)) return
+    assertDesktopSender(event, ['shell'])
+    pet?.drag(delta)
+  })
+  ipcMain.handle(DESKTOP_IPC.petDragEnd, (event) => {
+    assertDesktopSender(event, ['shell'])
+    pet?.dragEnd()
+  })
+  ipcMain.handle(DESKTOP_IPC.petToggle, (event, visible: unknown) => {
+    assertDesktopSender(event, ['shell'])
+    if (typeof visible === 'boolean') setPetVisible(visible)
+  })
   ipcMain.handle(DESKTOP_IPC.updatesCheck, async (event) => {
     assertDesktopSender(event, ['shell', 'app'])
     return updates.check()
@@ -438,6 +511,49 @@ async function main(): Promise<void> {
     void pluginWindow.loadURL(`${SCHEME}://shell/plugin-manager.html`)
   }
 
+  // The pet outlives the main window: it is an ambient surface, not a child of
+  // the document, so hiding the app keeps it watching the same Host.
+  let pet: DesktopPet | undefined
+  let petVisible = process.env.DSH_DESKTOP_PET !== '0'
+  // Read `screen` through the capability check: a harness without a display
+  // (the main-startup suite's Electron stub) has no such export, and the pet
+  // simply stays off instead of failing startup.
+  const workArea = (): { x: number; y: number; width: number; height: number } | undefined => {
+    try {
+      return screen.getPrimaryDisplay().workArea
+    } catch {
+      return undefined
+    }
+  }
+  const dockPosition = (): { x: number; y: number } => {
+    const area = workArea() ?? { x: 0, y: 0, width: 1440, height: 900 }
+    return {
+      x: area.x + area.width - PET_SIZE.width - PET_INSET,
+      y: area.y + area.height - PET_SIZE.height - PET_INSET,
+    }
+  }
+  const startPet = (): void => {
+    if (pet !== undefined || !petVisible || quitting) return
+    if (workArea() === undefined) return
+    pet = new DesktopPet({
+      locale,
+      host: () => backend.host,
+      initialPosition: dockPosition(),
+      createWindow: () => createPetWindow(petPreload),
+    })
+    pet.start()
+  }
+  const stopPet = (): void => {
+    pet?.dispose()
+    pet = undefined
+  }
+  const setPetVisible = (visible: boolean): void => {
+    if (visible === petVisible) return
+    petVisible = visible
+    if (visible) startPet()
+    else stopPet()
+  }
+
   Menu.setApplicationMenu(Menu.buildFromTemplate([{
     label: process.platform === 'darwin' ? app.name : messages.application,
     submenu: [
@@ -448,6 +564,10 @@ async function main(): Promise<void> {
         click: openPluginWindow,
       },
       { label: messages.checkUpdatesMenu, click: () => { void checkAndPrompt(true) } },
+      {
+        label: petVisible ? messages.petMenuHide : messages.petMenuShow,
+        click: () => { setPetVisible(!petVisible) },
+      },
       { type: 'separator' },
       { role: 'quit' },
     ],
@@ -491,6 +611,9 @@ async function main(): Promise<void> {
     if (shellInstallerOwnsQuit || quitting) return
     event.preventDefault()
     quitting = true
+    // The pet is a second always-on-top window; closing it here keeps
+    // `window-all-closed` from firing on platforms that quit with it.
+    stopPet()
     void backend.close().catch((error: unknown) => { console.error(error) }).finally(() => { app.quit() })
   })
 
@@ -503,6 +626,9 @@ async function main(): Promise<void> {
   if (mainWindow !== undefined && development !== undefined && process.env.DSH_DESKTOP_OPEN_DEVTOOLS !== '0') {
     mainWindow.webContents.openDevTools({ mode: 'detach' })
   }
+  // Pet visibility comes from the environment only: the menu toggles it for the
+  // running session, and a fresh launch returns to the default shown state.
+  if (petVisible) startPet()
   publishUpdate(updateState)
   setTimeout(() => { void checkAndPrompt(false) }, 10_000)
 }

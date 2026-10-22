@@ -3,6 +3,7 @@ import { sessionFormatCatalog } from '@deepseek-ai/dsh-session-format-catalog'
 import { SessionFormatEventCollector, SessionFormatUnsupportedMigrationError } from '@deepseek-ai/dsh-session-format'
 import type { SessionFormatEvent, SessionFormatJsonObject } from '@deepseek-ai/dsh-session-format'
 import { releasedV3SessionFormatCodec, restoreReleasedV3Artifact } from '../src/index.ts'
+import { releasedV4SessionFormatCodec, restoreReleasedV4Artifact } from '@deepseek-ai/dsh-session-format-v3-to-v4'
 
 const header = { type: 'session', version: 2, id: 'combined', createdAt: 1, isSeeded: false, delegationDepth: 0 }
 const config = { provider: 'mock', model: 'mock' }
@@ -58,17 +59,17 @@ describe('combined structural, canonical-envelope and PTC catalog migration', ()
     const reader = sessionFormatCatalog.createRestore(header, { recovery: 'strict', validation: 'current' })
     for (const row of source) reader.decodeRow(row)
     const target = reader.finish()
-    expect(target.header.version).toBe(3)
+    expect(target.header.version).toBe(sessionFormatCatalog.currentVersion)
     expect(target.events).toHaveLength(source.length + 3)
     assertComposite(target.events)
-    expect(restoreReleasedV3Artifact(target, new Set())).toBe(target)
+    expect(restoreReleasedV4Artifact(target, new Set())).toBe(target)
     expect(JSON.stringify(source)).toBe(before)
     const native = sessionFormatCatalog.createRestore({ ...header, version: 3 }, { recovery: 'strict', validation: 'current' })
-    for (const row of target.events) native.decodeRow(releasedV3SessionFormatCodec.encodeEvent(row))
+    for (const row of target.events) native.decodeRow(releasedV4SessionFormatCodec.encodeEvent(row))
     expect(native.finish()).toEqual(target)
     const mismatched = target.events.map(row => row.type === 'tool/ptc-dispatch' && (row.data as SessionFormatJsonObject)['subCallId'] === inner.subCallId
       ? { ...row, data: { ...inner, parentCallId: 'missing', isError: false, content: [] } } : row)
-    expect(() => restoreReleasedV3Artifact({ ...target, events: mismatched }, new Set())).toThrow(/parentCallId/)
+    expect(() => restoreReleasedV4Artifact({ ...target, events: mismatched }, new Set())).toThrow(/parentCallId/)
   })
 
   it('composes header and scalar preset renames with every structural and canonical transformation', () => {
@@ -76,10 +77,10 @@ describe('combined structural, canonical-envelope and PTC catalog migration', ()
     const selection = event('agent-preset/selected', source.length, { agentPreset: 'code' })
     for (const row of [...source, selection]) reader.decodeRow(row)
     const target = reader.finish()
-    expect(target.header).toMatchObject({ version: 3, agentPreset: 'ptc' })
+    expect(target.header).toMatchObject({ version: sessionFormatCatalog.currentVersion, agentPreset: 'ptc' })
     expect(target.events.at(-1)).toEqual({ ...selection, seq: source.length + 3, data: { agentPreset: 'ptc' } })
     assertComposite(target.events)
-    expect(restoreReleasedV3Artifact(target, new Set())).toBe(target)
+    expect(restoreReleasedV4Artifact(target, new Set())).toBe(target)
   })
 
   it('refuses unaudited V2 preset extensions but preserves native nested preset data', () => {
@@ -150,8 +151,8 @@ describe('combined structural, canonical-envelope and PTC catalog migration', ()
     expect(target.inheritedEventCount).toBe(source.length + 4)
     expect(target.events.at(-1)).toEqual({ ...cut, seq: target.inheritedEventCount })
     assertComposite(target.events)
-    const reopened = sessionFormatCatalog.createRestore(releasedV3SessionFormatCodec.encodeHeader(target.header, target.inheritedEventCount), { recovery: 'strict', validation: 'current' })
-    for (const row of target.events) reopened.decodeRow(releasedV3SessionFormatCodec.encodeEvent(row))
+    const reopened = sessionFormatCatalog.createRestore(releasedV4SessionFormatCodec.encodeHeader(target.header, target.inheritedEventCount), { recovery: 'strict', validation: 'current' })
+    for (const row of target.events) reopened.decodeRow(releasedV4SessionFormatCodec.encodeEvent(row))
     expect(reopened.finish()).toEqual(target)
   })
 

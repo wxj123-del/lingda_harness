@@ -65,6 +65,8 @@ kind: "package-bundle"
 
 - 当前内容类型没有 audio 块。结果是可下载的文件附件，暂不提供内嵌播放、流式音频和声音克隆。
 
+不会发布 runtime invariant companion，因为语音生成拥有音频产物，而不是独立的回放不变量。
+
 <a id="dev-note"></a>
 ### 开发备注
 

@@ -80,6 +80,12 @@ flowchart LR
   cfg --> plugin_dsh_base_approval
   plugin_dsh_base_permission["permission<br/>@deepseek-ai/dsh-permission-presets"]
   cfg --> plugin_dsh_base_permission
+  plugin_dsh_base_personal_agent["personal-agent<br/>@deepseek-ai/dsh-personal-agent"]
+  cfg --> plugin_dsh_base_personal_agent
+  plugin_dsh_base_context_router["context-router<br/>@deepseek-ai/dsh-context-router"]
+  cfg --> plugin_dsh_base_context_router
+  plugin_dsh_base_git_workspace["git-workspace<br/>@deepseek-ai/dsh-git-workspace"]
+  cfg --> plugin_dsh_base_git_workspace
   plugin_dsh_base_shell_env["shell-env<br/>@deepseek-ai/dsh-shell-env"]
   cfg --> plugin_dsh_base_shell_env
   plugin_dsh_base_tool_bash["tool-bash<br/>@deepseek-ai/dsh-tool-bash"]
@@ -222,6 +228,9 @@ flowchart LR
 | `pwsh-sandbox` | `@deepseek-ai/dsh-pwsh-sandbox` |
 | `approval` | `@deepseek-ai/dsh-user-approval` |
 | `permission` | `@deepseek-ai/dsh-permission-presets` |
+| `personal-agent` | `@deepseek-ai/dsh-personal-agent` |
+| `context-router` | `@deepseek-ai/dsh-context-router` |
+| `git-workspace` | `@deepseek-ai/dsh-git-workspace` |
 | `shell-env` | `@deepseek-ai/dsh-shell-env` |
 | `tool-bash` | `@deepseek-ai/dsh-tool-bash` |
 | `tool-pwsh` | `@deepseek-ai/dsh-tool-pwsh` |

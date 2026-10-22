@@ -2,5 +2,5 @@
 # side as of the last confirmed-consistent state. Both languages carry equal authority;
 # after editing either side, bring the other along and re-record with:
 #   pnpm run verify-translation-pairing --write .agents/notes/implemented/feature/2026-09-23-workflow-history-persistence.md
-2026-09-23-workflow-history-persistence.md: a2ba31941be1fff84c7fd97d1fc44cd50cda08c1
-2026-09-23-workflow-history-persistence.zh.md: 0c7077cf0fb20b8abdbdca15baa5eaa93c564647
+2026-09-23-workflow-history-persistence.md: 3b837550ce226ba31edd28c74a4c453a8abc7414
+2026-09-23-workflow-history-persistence.zh.md: 4ddbe6f6bba22c6e68f269391d8b3c6bbdef585b

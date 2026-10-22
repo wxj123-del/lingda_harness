@@ -25,6 +25,8 @@ export interface WorkflowRemoteStartRequest {
   readonly meta: WorkflowMeta
   readonly args?: JsonValue
   readonly timeoutMs?: number
+  /** Invocation owner recorded with the run history. */
+  readonly source?: 'visual-editor' | 'schedule'
 }
 
 /** Acknowledgement returned before the workflow's child agents finish. */
@@ -73,7 +75,7 @@ export interface WorkflowRemoteRunView {
   readonly value?: JsonValue
   readonly timedOut?: boolean
   /** Audit source for runs created through a Remote surface. */
-  readonly source: 'visual-editor'
+  readonly source: 'visual-editor' | 'schedule'
   /** Detached input size in bytes; no input payload is retained in history. */
   readonly inputBytes?: number
   readonly timeoutMs?: number
@@ -285,6 +287,7 @@ declare module '@deepseek-ai/dsh-typert-protocol' {
       readonly existingPreset?: string
     }
     'session/attachment-invalid': { readonly reason: string }
+    'session/prompt-optimization-failed': { readonly reason: string }
     'session/queue-item-not-found': { readonly itemId: MessageId }
     'session/steer-unavailable': { readonly itemId: MessageId }
     'session/title-invalid': { readonly sessionId: SessionId }
@@ -368,6 +371,21 @@ export interface SessionSelectModelRequest extends ModelSelection {
 /** Accepted model selection after Host resolution. */
 export interface SessionSelectModelValue {
   readonly selected: ModelSelection
+}
+
+/** Optimization posture supplied to the model-backed prompt rewriter. */
+export type PromptOptimizationMode = 'general' | 'code' | 'writing' | 'analysis'
+
+/** Session-addressed request to rewrite a draft through the selected model. */
+export interface SessionOptimizePromptRequest {
+  readonly sessionId: SessionId
+  readonly draft: string
+  readonly mode: PromptOptimizationMode
+}
+
+/** Optimized prompt returned without appending anything to Session history. */
+export interface SessionOptimizePromptValue {
+  readonly text: string
 }
 
 /** Session rename request. */

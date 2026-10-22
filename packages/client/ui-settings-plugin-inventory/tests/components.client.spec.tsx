@@ -349,6 +349,19 @@ describe('PluginInventorySettingsTab', () => {
     expect(view.container.querySelector('[data-plugin-entry="tts"]')).toBeTruthy()
   })
 
+  it('shows the capability map and lets a node filter the inventory category', async () => {
+    const view = await renderReady()
+
+    const toolsNode = view.container.querySelector('[data-plugin-map-node="tools"]')
+    expect(toolsNode).toBeTruthy()
+    expect(toolsNode?.getAttribute('aria-label')).toContain(en.visualTools)
+    expect(toolsNode?.textContent).toContain(en.visualCountUnit)
+
+    fireEvent.click(toolsNode as HTMLElement)
+    expect(view.container.querySelector('[data-plugin-category="tools"]')?.getAttribute('aria-selected')).toBe('true')
+    expect(view.container.querySelector('[data-plugin-map-node="tools"]')?.getAttribute('data-active')).toBe('true')
+  })
+
   it('renders a rosterless deployment as one expanded global list', async () => {
     const view = await renderReady({
       entries: [

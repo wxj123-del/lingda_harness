@@ -94,7 +94,7 @@ describe('tsdown client artifact', () => {
     ctx.plugin({ inject: [...locale.inject], apply: locale.apply })
     const fiber = ctx.plugin(exports as { apply: (ctx: Context) => void })
     await fiber.await()
-    expect(slots.entries('conversation.view').map(e => e.options.id)).toEqual(['trajectory'])
+    expect(slots.entries('conversation.view').map(e => e.options.id)).toEqual(['trajectory', 'workflow'])
     expect(events.entries().length).toBeGreaterThan(0)
     expect(views.entries()).toHaveLength(1)
     await fiber.dispose()

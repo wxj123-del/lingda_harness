@@ -94,7 +94,7 @@ API Gateway 包同时拥有 Host dispatcher 与 Client Remote endpoint 两个对
 
 ## 严格生成流水线
 
-根构建依次执行 `build:lib:host`、`build:lib:client` 与 `build:web`。Host lib 阶段先运行 `tsc -b tsconfig.host.json`，再运行 `tsdown --env.DSH_BUILD_FACE host`；Typert generator 由正常 Host Project Reference 图编译，并在这次 tsdown 中以 Host aggregate 为唯一 `ts.Program` 种子运行。Client lib 阶段先运行 `tsc -b tsconfig.client.json` 生成项目产物，再运行 `tsdown --env.DSH_BUILD_FACE client`，使用刚生成的 Remote Client 声明和运行时贡献，但不再次启动 Typert。Client 聚合中已知的测试合约诊断不会阻断生产 bundle；严格检查由独立的 `pnpm run typecheck:contracts-ready` 提供。
+根构建依次执行 `build:lib:host`、`build:lib:client` 与 `build:web`。Host lib 阶段先运行 `tsc -b tsconfig.host.json`，再运行 `tsdown --env.DSH_BUILD_FACE host`；Typert generator 由正常 Host Project Reference 图编译，并在这次 tsdown 中以 Host aggregate 为唯一 `ts.Program` 种子运行。Client lib 阶段先运行 `tsc -b tsconfig.client.json` 生成并校验项目产物，再运行 `tsdown --env.DSH_BUILD_FACE client`，使用刚生成的 Remote Client 声明和运行时贡献，但不再次启动 Typert。Client 聚合出现诊断时，构建会在 bundle、Web 编译和 client artifact record 写入之前停止。
 
 两次 tsdown 都接收完整 workspace，且都只打包 `lib/types` 中由对应 tsc 阶段发射的 JavaScript。根配置不扫描 Client 产物、不按包名分类，也不向 tsdown 传维护式 filter；各包的本地配置根据 `DSH_BUILD_FACE` 返回当前阶段的入口。普通 Client 插件在 Client 阶段一起生成 Node loader 入口与 browser bundle。
 
@@ -153,7 +153,7 @@ pnpm run dev:web
 pnpm run build:lib
 ```
 
-运行中的 Client watcher 会在重新打包时消费这些生成文件。若已单独运行 `pnpm run build:lib:host` 刷新 Host 约定，也可再运行 `pnpm run build:lib:client` 完成 Client 侧；干净工作树不能跳过 Host 阶段。仅重新编译前端源码不能从 Host decorator 推导新类型。`pnpm run typecheck` 会执行 Host lib 阶段后严格运行 Client tsc；生产构建和发布构建允许 Client 聚合的测试合约诊断，但仍会以成功的 tsdown 和 Web 构建为准。
+运行中的 Client watcher 会在重新打包时消费这些生成文件。若已单独运行 `pnpm run build:lib:host` 刷新 Host 约定，也可再运行 `pnpm run build:lib:client` 完成 Client 侧；干净工作树不能跳过 Host 阶段。仅重新编译前端源码不能从 Host decorator 推导新类型。`pnpm run typecheck` 会执行 Host lib 阶段后严格运行 Client tsc；生产构建和发布构建会在 tsdown 与 Web 编译之前执行相同的 Client 诊断门禁。
 
 ## 边界
 

@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; img-src data:">
+    <title>Lingda</title>
+    <link rel="stylesheet" href="pet.css">
+  </head>
+  <body>
+    <!-- The drag strip owns the whole window: no chrome, no scroll, pointer
+    events captured for window positioning by the main process. -->
+    <div id="pet" data-phase="idle" aria-live="polite">
+      <div id="bubble" hidden>
+        <span id="headline"></span>
+        <span id="detail"></span>
+        <div id="meter" hidden><div id="meter-fill"></div></div>
+      </div>
+      <img id="sprite" alt="">
+    </div>
+    <script src="pet.js"></script>
+  </body>
+</html>

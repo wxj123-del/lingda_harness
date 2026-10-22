@@ -23,6 +23,12 @@ type WorkspaceViewState = {
   groupExpansion: Record<string, boolean>
   /** Saved manual order per Workspace group plus the browser-local flat-list account. */
   sessionOrderByAccount: Record<string, string[]>
+  /**
+   * Workspace whose flow page is showing, or null before one is chosen. Shared
+   * state: the folder menu writes it and the main-slot page reads it, so the
+   * page survives the sidebar's remounts and a reload.
+   */
+  flowTarget: string | null
 }
 
 /**
@@ -48,6 +54,8 @@ type WorkspaceViewActions = {
     order: readonly string[],
     initialOrders: Readonly<Record<string, readonly string[]>>,
   ) => void
+  /** Target the flow page at one Workspace, or clear it to none. */
+  setFlowTarget: (draft: WorkspaceViewState, workspaceId: string | null) => void
 }
 
 /** Copy read-only projections into the persisted mutable store representation. */
@@ -68,6 +76,7 @@ export function createWorkspaceViewStore(): EngineStoreHandle<WorkspaceViewState
       orderBy: 'updated',
       groupExpansion: {},
       sessionOrderByAccount: {},
+      flowTarget: null,
     }),
     persist: 'dsh.workspace.view.v5',
     actions: {
@@ -97,6 +106,7 @@ export function createWorkspaceViewStore(): EngineStoreHandle<WorkspaceViewState
         d.orderBy = 'manual'
         d.sessionOrderByAccount[accountKey] = [...order]
       },
+      setFlowTarget: (d, workspaceId) => { d.flowTarget = workspaceId },
     },
   })
 }

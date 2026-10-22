@@ -41,6 +41,18 @@
   white-space: nowrap;
 }
 
+.duration {
+  flex: none;
+  color: var(--dsw-alias-label-primary);
+  font-size: 14px;
+  line-height: 24px;
+}
+
+.duration::after {
+  content: ' · ';
+  color: var(--dsw-alias-label-tertiary);
+}
+
 @media (prefers-reduced-motion: reduce) {
   .chevron {
     transition: none;

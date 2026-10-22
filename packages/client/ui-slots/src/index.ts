@@ -446,7 +446,7 @@ export type SlotInjectFace<I extends object> =
 /** Selector-hook share synthesized from an entry inject hooks compartment. */
 export type PropsHooks<HS extends HooksSources> = {
   [N in keyof HS & string as `use${Capitalize<N>}`]:
-  SnapshotSelectorHook<HS[N] extends HostObservable<infer T> ? T : never>
+  SnapshotSelectorHook<NonNullable<HS[N]> extends HostObservable<infer T> ? T : never>
 }
 
 /** Selector-hook share synthesized from an entry inject keyed-hooks compartment. */

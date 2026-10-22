@@ -47,7 +47,7 @@ async function roster(config: Partial<Config> = {}): Promise<Context> {
   ctx.loader.builtins.include = Include
   await ctx.plugin(SessionProjectionRegistry)
   await ctx.plugin(AgentPresets, {
-    default: 'standard',
+    default: 'diaosi',
     roots: [],
     includeShippedRoot: true,
     includeUserRoot: true,
@@ -90,7 +90,7 @@ describe('the shipped preset root', () => {
     const ctx = await roster({ includeUserRoot: false })
 
     const listed = await ctx.agentPresets.list()
-    expect(listed.map(preset => preset.id).sort()).toEqual(['cordis', 'diaosi', 'minimal', 'ptc', 'standard'])
+    expect(listed.map(preset => preset.id).sort()).toEqual(['diaosi'])
     expect(listed.every(preset => preset.trust === 'system')).toBe(true)
     // Not `broken === undefined`: health asks whether each row's package is
     // installed above the base, and the shipped rows name packages the
@@ -112,9 +112,9 @@ describe('the shipped preset root', () => {
     expect(ctx.agentPresets.roots[0]).toEqual({ path: SHIPPED_PRESET_ROOT, trust: 'system' })
     // Prepended, so a configured directory claiming a shipped id is shadowed:
     // the fixture root also carries `minimal`, and the roster serves the
-    // shipped one.
-    const minimal = (await ctx.agentPresets.list()).find(preset => preset.id === 'minimal')
-    expect(minimal?.path.startsWith(SHIPPED_PRESET_ROOT)).toBe(true)
+    // shipped one when it exists there.
+    const shipped = (await ctx.agentPresets.list()).find(preset => preset.id === 'diaosi')
+    expect(shipped?.path.startsWith(SHIPPED_PRESET_ROOT)).toBe(true)
   })
 
   it('mounts a roster without the shipped set when includeShippedRoot is false', async () => {
@@ -130,7 +130,7 @@ describe('the shipped preset root', () => {
   })
 
   it('enables web_fetch in each tool-bearing Web app preset', async () => {
-    for (const id of ['cordis', 'ptc', 'standard']) {
+    for (const id of ['diaosi']) {
       const entries = await shippedEntries(id)
       const toolWeb: unknown = entries.find((entry: unknown) =>
         typeof entry === 'object' && entry !== null && 'id' in entry && entry.id === 'tool-web')
@@ -148,26 +148,11 @@ describe('the shipped preset root', () => {
     expect(findEntry(entries, 'tool-bash')?.config).toEqual({ toolTimeoutMs: 30000 })
   })
 
-  it('omits the general workflow tool and its unused engine only from PTC', async () => {
-    const ptc = await shippedEntries('ptc')
-    expect(findEntry(ptc, 'tool-workflow')?.disabled).toBe(true)
-    expect(findEntry(ptc, 'workflow-ptc')?.disabled).toBe(true)
-
-    for (const id of ['standard', 'cordis']) {
-      const entries = await shippedEntries(id)
-      expect(findEntry(entries, 'tool-workflow')?.disabled, id).not.toBe(true)
-      expect(findEntry(entries, 'workflow-ptc')?.disabled, id).not.toBe(true)
-    }
+  it('carries no ralph tool in the shipped preset', async () => {
+    expect(findEntry(await shippedEntries('diaosi'), 'tool-ralph')).toBeUndefined()
   })
 
-  it('disables the ralph tool in every shipped preset that carries it', async () => {
-    for (const id of ['cordis', 'ptc', 'standard']) {
-      expect(findEntry(await shippedEntries(id), 'tool-ralph')?.disabled, id).toBe(true)
-    }
-    expect(findEntry(await shippedEntries('minimal'), 'tool-ralph')).toBeUndefined()
-  })
-
-  it.each(['standard', 'ptc', 'cordis'])('omits shared global skills from %s by default', async (id) => {
+  it.each(['diaosi'])('omits shared global skills from %s by default', async (id) => {
     expect(findEntry(await shippedEntries(id), 'skill-filesystem')?.config)
       .toMatchObject({ includeAgentsHome: false })
   })

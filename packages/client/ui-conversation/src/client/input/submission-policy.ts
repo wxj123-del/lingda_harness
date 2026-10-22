@@ -10,7 +10,7 @@ import type { SettingsScope } from '@deepseek-ai/dsh-client-ui-settings/client'
 import type {
   BusyEnterBehavior, ComposerSubmitGesture, InputSubmitMode,
 } from '../contract/composer-submission.ts'
-import { BUSY_ENTER_FIELD, DEFAULT_BUSY_ENTER_BEHAVIOR } from '../../submission-settings.ts'
+import { BUSY_ENTER_FIELD, DEFAULT_BUSY_ENTER_BEHAVIOR, SHOW_VIEW_TABS_FIELD } from '../../submission-settings.ts'
 import type { ConversationSettings } from '../../submission-settings.ts'
 
 export { DEFAULT_BUSY_ENTER_BEHAVIOR } from '../../submission-settings.ts'
@@ -39,13 +39,19 @@ export function resolveSubmitMode(
 }
 
 /**
- * Busy-Enter preference shared by the composer bar inject face and its
- * Settings row: one live store the bar's submission gestures and Send label
- * read, backed by the Host user-settings document when one is composed.
+ * Conversation preferences shared by the composer bar, the Session header, and
+ * the Settings rows: live stores backed by the Host user-settings document when
+ * one is composed.
  */
 export class ComposerSubmissionPolicy {
   /** Reactive preference source for the composer bar and the Settings row. */
   readonly busyEnter: SnapshotStore<BusyEnterBehavior> = createSnapshotStore(DEFAULT_BUSY_ENTER_BEHAVIOR)
+  /**
+   * Whether the Session View switcher renders above the conversation. Off by
+   * default: an ordinary chat keeps the reading column, and the switcher is
+   * one Settings row away.
+   */
+  readonly showViewTabs: SnapshotStore<boolean> = createSnapshotStore(false)
   private readonly host: SettingsScope<ConversationSettings> | undefined
 
   /**
@@ -74,12 +80,24 @@ export class ComposerSubmissionPolicy {
   }
 
   /**
-   * Adopt the scope's accepted durable behavior without writing it back.
+   * Show or hide the Session View switcher; the live value publishes before
+   * the durable write starts.
+   * @param visible - whether the tab bar renders.
+   */
+  setShowViewTabs(visible: boolean): void {
+    if (this.showViewTabs.getSnapshot() === visible) return
+    this.showViewTabs.set(visible)
+    void this.host?.set(SHOW_VIEW_TABS_FIELD, visible)
+  }
+
+  /**
+   * Adopt the scope's accepted durable preferences without writing them back.
    * @param host - the constructor-narrowed scope driving this adoption.
    */
   private adopt(host: SettingsScope<ConversationSettings>): void {
     const section = host.getSnapshot().value
-    if (section === undefined || this.busyEnter.getSnapshot() === section.busyEnter) return
-    this.busyEnter.set(section.busyEnter)
+    if (section === undefined) return
+    if (this.busyEnter.getSnapshot() !== section.busyEnter) this.busyEnter.set(section.busyEnter)
+    if (this.showViewTabs.getSnapshot() !== section.showViewTabs) this.showViewTabs.set(section.showViewTabs)
   }
 }

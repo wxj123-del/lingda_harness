@@ -44,6 +44,183 @@
   gap: 12px;
 }
 
+.visualMap {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  border: 0;
+  border-radius: 8px;
+  padding: 14px;
+  background: var(--dsw-alias-bg-layer-1);
+  box-shadow: var(--dsw-elevation-stroke);
+}
+
+.visualHeader {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 0 2px;
+}
+
+.visualHeader h3 {
+  margin: 0;
+}
+
+.visualHeader h3 {
+  font-size: 14px;
+  line-height: 20px;
+  font-weight: 600;
+}
+
+.visualGrid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 2px;
+  overflow: visible;
+  border-radius: 6px;
+  background: var(--dsw-alias-border-l3);
+}
+
+.visualTile {
+  --visual-accent: var(--dsw-alias-state-business-primary);
+  position: relative;
+  z-index: 0;
+  display: flex;
+  min-width: 0;
+  min-height: 82px;
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: space-between;
+  border: 0;
+  padding: 12px 14px;
+  /* Tint is a fixed low-alpha wash of the accent over the raised surface: the
+     earlier 19%-solid mix saturated whole tiles and made the tile field read
+     as four competing panels rather than one map. */
+  background: color-mix(in srgb, var(--visual-accent) 7%, var(--dsw-alias-bg-layer-1));
+  color: var(--dsw-alias-label-primary);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: background-color 120ms ease;
+}
+
+/* Blended connectors: the two overlapping circles are drawn with the tile's
+   own wash so adjacent tiles read as one linked band at the seam. */
+.visualTile::after {
+  position: absolute;
+  z-index: 1;
+  top: 50%;
+  right: -7px;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  corner-shape: round;
+  background: color-mix(in srgb, var(--visual-accent) 7%, var(--dsw-alias-bg-layer-1));
+  content: '';
+  transform: translateY(-50%);
+}
+
+.visualTile:nth-child(4n)::after {
+  display: none;
+}
+
+.visualTile:nth-child(n + 5)::before {
+  position: absolute;
+  z-index: 1;
+  top: 50%;
+  left: -7px;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  corner-shape: round;
+  background: color-mix(in srgb, var(--visual-accent) 7%, var(--dsw-alias-bg-layer-1));
+  content: '';
+  transform: translateY(-50%);
+}
+
+.visualTile:hover,
+.visualTile[data-active='true'] {
+  z-index: 2;
+  background: color-mix(in srgb, var(--visual-accent) 14%, var(--dsw-alias-bg-layer-1));
+}
+
+.visualTile:focus-visible {
+  z-index: 3;
+  outline: 2px solid var(--dsw-alias-state-business-primary);
+  outline-offset: -2px;
+}
+
+.visualTile[data-tone='model'] {
+  --visual-accent: var(--dsw-alias-state-business-primary);
+}
+
+.visualTile[data-tone='skill'] {
+  --visual-accent: var(--dsw-alias-state-success-primary);
+}
+
+.visualTile[data-tone='tools'] {
+  --visual-accent: var(--dsw-alias-state-business-primary);
+}
+
+.visualTile[data-tone='session'] {
+  --visual-accent: var(--dsw-alias-label-secondary);
+}
+
+.visualTile[data-tone='sandbox'] {
+  --visual-accent: var(--dsw-alias-state-success-primary);
+}
+
+.visualTile[data-tone='agentLoop'] {
+  --visual-accent: var(--dsw-alias-label-primary);
+}
+
+/* UI leans on the warning hue rather than error red: in the map these are
+   category accents, and a red tile reads as a failure state for a healthy
+   plugin category. Red stays reserved for real errors. */
+.visualTile[data-tone='ui'] {
+  --visual-accent: var(--dsw-alias-state-warn-primary);
+}
+
+.visualTile[data-tone='storage'] {
+  --visual-accent: var(--dsw-alias-state-success-primary);
+}
+
+.visualTileTop {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.visualIcon {
+  display: inline-flex;
+  color: var(--visual-accent);
+}
+
+.visualVersion {
+  color: var(--dsw-alias-label-tertiary);
+  font-size: 11px;
+  line-height: 16px;
+  font-variant-numeric: tabular-nums;
+}
+
+.visualTile strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 14px;
+  line-height: 20px;
+  font-weight: 600;
+}
+
+.visualCount {
+  color: var(--dsw-alias-label-tertiary);
+  font-size: 11px;
+  line-height: 16px;
+  font-variant-numeric: tabular-nums;
+}
+
 .search {
   position: relative;
   display: flex;
@@ -476,6 +653,26 @@
 }
 
 @media (max-width: 680px) {
+  .visualGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .visualTile:nth-child(4n)::after {
+    display: block;
+  }
+
+  .visualTile:nth-child(2n)::after {
+    display: none;
+  }
+
+  .visualTile:nth-child(n + 5)::before {
+    display: block;
+  }
+
+  .visualTile:nth-child(2n + 1)::before {
+    display: none;
+  }
+
   .cards {
     grid-template-columns: minmax(0, 1fr);
   }

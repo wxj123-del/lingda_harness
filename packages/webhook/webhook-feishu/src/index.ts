@@ -50,20 +50,41 @@ export const inject = [
 export const FEISHU_SETTINGS_NAMESPACE = 'webhook-feishu'
 
 export interface Config {
+  /** Inbound transport used to receive Feishu events. */
   readonly transport: 'websocket' | 'webhook'
+  /** HTTP path used when webhook transport is selected. */
   readonly path: string
+  /** Environment variable containing the Feishu app id. */
   readonly appIdEnv: string
+  /** Environment variable containing the Feishu app secret. */
   readonly appSecretEnv: string
+  /** Optional environment variable containing the webhook verification token. */
   readonly verificationTokenEnv?: string
+  /** Optional environment variable containing the event encryption key. */
   readonly encryptKeyEnv?: string
+  /** Workspace path used for sessions created by the webhook. */
   readonly workspacePath: string
+  /** Agent preset applied to newly created sessions. */
   readonly agentPreset: string
+  /** Permission preset applied to newly created sessions. */
   readonly permissionPreset: string
+  /** Stable source label recorded on inbound messages. */
   readonly source: string
+  /** Maximum accepted request body size in bytes. */
   readonly maxBodyBytes: number
+  /** Whether webhook events must mention the bot. */
   readonly requireMention: boolean
+  /** Feishu open ids allowed to invoke the webhook. */
   readonly allowedOpenIds: string[]
-  readonly model?: { provider: string; model: string; maxTokens?: number }
+  /** Optional provider/model override for webhook-created sessions. */
+  readonly model?: {
+    /** Provider adapter name used for webhook-created sessions. */
+    provider: string
+    /** Model identifier passed to the provider adapter. */
+    model: string
+    /** Optional output-token limit for webhook-created sessions. */
+    maxTokens?: number
+  }
 }
 
 export const Config: z<Config> = z.object({
@@ -74,7 +95,7 @@ export const Config: z<Config> = z.object({
   verificationTokenEnv: z.string().role('credential-ref').default(undefined as never),
   encryptKeyEnv: z.string().role('credential-ref').default(undefined as never),
   workspacePath: z.string().default('.'),
-  agentPreset: z.string().default('standard'),
+  agentPreset: z.string().default('diaosi'),
   permissionPreset: z.string().default('read-only'),
   source: z.string().default('primary-feishu'),
   maxBodyBytes: z.number().step(1).min(1).max(Number.MAX_SAFE_INTEGER).default(1048576),
@@ -348,17 +369,17 @@ export function apply(ctx: Context, config: Config): void {
         outbound: { textChunkLimit: 4000 },
         source: 'dsh-webhook-feishu',
         logger: {
-          debug: (...args) => credentialsCtx.logger.debug(`webhook-feishu: ${args.map(String).join(' ')}`),
-          info: (...args) => credentialsCtx.logger.info(`webhook-feishu: ${args.map(String).join(' ')}`),
-          warn: (...args) => credentialsCtx.logger.warn(`webhook-feishu: ${args.map(String).join(' ')}`),
-          error: (...args) => credentialsCtx.logger.error(`webhook-feishu: ${args.map(String).join(' ')}`),
-          trace: (...args) => credentialsCtx.logger.debug(`webhook-feishu: ${args.map(String).join(' ')}`),
+          debug: (...args) =>{  credentialsCtx.logger.debug(`webhook-feishu: ${args.map(String).join(' ')}`) },
+          info: (...args) =>{  credentialsCtx.logger.info(`webhook-feishu: ${args.map(String).join(' ')}`) },
+          warn: (...args) =>{  credentialsCtx.logger.warn(`webhook-feishu: ${args.map(String).join(' ')}`) },
+          error: (...args) =>{  credentialsCtx.logger.error(`webhook-feishu: ${args.map(String).join(' ')}`) },
+          trace: (...args) =>{  credentialsCtx.logger.debug(`webhook-feishu: ${args.map(String).join(' ')}`) },
         },
       })
-      channel.on('error', error => credentialsCtx.logger.error(`webhook-feishu: channel error (${error.code}): ${error.message}`))
-      channel.on('reject', event => credentialsCtx.logger.warn(`webhook-feishu: message rejected (${event.reason})`))
-      channel.on('reconnecting', () => credentialsCtx.logger.warn('webhook-feishu: WebSocket reconnecting'))
-      channel.on('reconnected', () => credentialsCtx.logger.info('webhook-feishu: WebSocket reconnected'))
+      channel.on('error', (error) =>{  credentialsCtx.logger.error(`webhook-feishu: channel error (${error.code}): ${error.message}`) })
+      channel.on('reject', (event) =>{  credentialsCtx.logger.warn(`webhook-feishu: message rejected (${event.reason})`) })
+      channel.on('reconnecting', () =>{  credentialsCtx.logger.warn('webhook-feishu: WebSocket reconnecting') })
+      channel.on('reconnected', () =>{  credentialsCtx.logger.info('webhook-feishu: WebSocket reconnected') })
       sendReply = async (binding, text) => { await channel.send(binding.receiveId, { markdown: text }) }
       const stopMessages = channel.on('message', async (message) => {
         credentialsCtx.logger.info(`webhook-feishu: message received (type=${message.rawContentType}, chat=${message.chatType})`)
@@ -372,7 +393,7 @@ export function apply(ctx: Context, config: Config): void {
           messageId: message.messageId,
           messageType: message.rawContentType,
           text: message.content.trim(),
-          raw: null as never,
+          raw: null,
         }
         try {
           await dispatchMessage(parsed)

@@ -104,14 +104,14 @@ describe('V2 content admission', () => {
 
   it.each([0, 1] as const)('routes historical V%s queued content through V2 admission', (version) => {
     const good = carriers.find(carrier => carrier.type === 'team/message/queued')!.rows([text])
-    expect(catalog([...opening, ...good, ...closing], version).header.version).toBe(3)
+    expect(catalog([...opening, ...good, ...closing], version).header.version).toBe(sessionFormatCatalog.currentVersion)
     const bad = carriers.find(carrier => carrier.type === 'team/message/queued')!.rows([nested([future])])
     expect(() => catalog([...opening, ...bad, ...closing], version)).toThrow('format v2 team/message/queued at seq 3 data.message.content[0].content[0]')
   })
 
   it.each([0, 1] as const)('routes historical V%s chunk starts and ends through V2 admission', (version) => {
     for (const chunk of [{ type: 'block-start', index: 987, blockType: 'text' }, { type: 'block-end', index: 987, block: text }]) {
-      expect(catalog([...opening, event('assistant/chunk', { turn: 1, step: 1, chunk })], version).header.version).toBe(3)
+      expect(catalog([...opening, event('assistant/chunk', { turn: 1, step: 1, chunk })], version).header.version).toBe(sessionFormatCatalog.currentVersion)
     }
     for (const chunk of [{ type: 'block-start', index: 987, blockType: 'future-content' }, { type: 'block-end', index: 987, block: nested([future]) }]) {
       expect(() => catalog([...opening, event('assistant/chunk', { turn: 1, step: 1, chunk })], version)).toThrow('format v2 assistant/attempt at seq 3 data.stream[0].chunk')

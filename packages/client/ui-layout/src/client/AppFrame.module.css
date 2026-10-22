@@ -29,11 +29,21 @@
   border-right: 0.5px solid var(--dsw-alias-border-l3);
 }
 
+/* The center column holds the selected main panel, which owns its own
+   scrolling; the wrapper keeps the flex slot the frame sizes. */
 .centerCol {
   min-width: 0;
   display: flex;
   flex-direction: column;
   overflow: hidden;
+}
+
+.centerBody {
+  flex: 1 1 auto;
+  min-height: 0;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
 }
 
 /* Drag handles are frame children (columns clip overflow): an 8px hit strip

@@ -1,9 +1,9 @@
 /** Visual workflow editor with a draggable node canvas and a property inspector. */
 import { useEffect, useMemo, useRef, useState, type DragEvent as ReactDragEvent, type PointerEvent as ReactPointerEvent, type WheelEvent as ReactWheelEvent } from 'react'
 import { Button, IconCheckOutline16, IconChevronLeftOutline14, IconCloseOutline16, IconDownloadOutline16, IconNewChatOutline16, IconPlusOutline16, IconSearchOutline16 } from '@deepseek-ai/dsh-client-ui-primitives'
-import type { AuthoringItem, WorkflowEdge, WorkflowNode, WorkflowNodeKind, WorkflowVersion, WorkflowViewport } from '../../authoring-settings.ts'
+import { latestWorkflowVersion, type AuthoringItem, type WorkflowEdge, type WorkflowNode, type WorkflowNodeKind, type WorkflowVersion, type WorkflowViewport } from '../../authoring-settings.ts'
 import type { LayoutKey } from '../locales.ts'
-import { workflowRuntimeName, type SubscribeWorkflowDebug, type WorkflowDebugEvent, type WorkflowRunControls, type WorkflowRunInput, type WorkflowRunStartHandler, type WorkflowRunView } from './workflow-debug.ts'
+import { workflowRuntimeName, type SubscribeWorkflowDebug, type WorkflowCredentialControls, type WorkflowCredentialInfo, type WorkflowDebugEvent, type WorkflowRunControls, type WorkflowRunInput, type WorkflowRunStartHandler, type WorkflowRunView } from './workflow-debug.ts'
 import { downloadWorkflow } from '../../workflow-io.ts'
 import { analyzeWorkflowGraph, type WorkflowGraphIssue } from '../../workflow-graph.ts'
 import css from './WorkflowPanel.module.css'
@@ -15,6 +15,7 @@ const CANVAS_HEIGHT = 1100
 const MIN_ZOOM = .45
 const MAX_ZOOM = 1.8
 const DEFAULT_VIEWPORT: WorkflowViewport = { x: 24, y: 24, zoom: 1 }
+const CREDENTIAL_REF_PATTERN = /^[A-Za-z_][A-Za-z0-9_]*$/
 
 type PaletteGroup = 'trigger' | 'ai' | 'logic' | 'data'
 type PendingSource = { id: string; handle?: 'true' | 'false' }
@@ -43,8 +44,8 @@ function nodeLabel(kind: WorkflowNodeKind, t: (key: LayoutKey) => string): strin
 }
 
 function debugEventText(event: WorkflowDebugEvent, t: (key: LayoutKey) => string): string {
-  const runStatus = (status: 'completed' | 'cancelled' | 'failed' | 'error'): string => t(`workflow.runStatus.${status === 'failed' ? 'error' : status}` as LayoutKey)
-  const nodeStatus = (status: 'completed' | 'failed' | 'skipped' | 'blocked' | 'cancelled'): string => t(`workflow.nodeStatus.${status}` as LayoutKey)
+  const runStatus = (status: 'completed' | 'cancelled' | 'failed' | 'error'): string => t(`workflow.runStatus.${status === 'failed' ? 'error' : status}`)
+  const nodeStatus = (status: 'completed' | 'failed' | 'skipped' | 'blocked' | 'cancelled'): string => t(`workflow.nodeStatus.${status}`)
   switch (event.kind) {
     case 'phase': return event.title
     case 'log': return event.message
@@ -115,6 +116,18 @@ function publishedSnapshot(item: AuthoringItem, version: number, publishedAt: nu
   }
 }
 
+function workflowReleaseSignature(item: Pick<AuthoringItem, 'title' | 'description' | 'body' | 'nodes' | 'edges'>): string {
+  const nodes = item.nodes ?? []
+  return JSON.stringify({
+    title: item.title.trim(),
+    description: item.description,
+    body: item.body,
+    nodes,
+    edges: item.edges ?? [],
+    steps: orderedSteps(nodes),
+  })
+}
+
 function validateNodes(nodes: readonly WorkflowNode[], edges: readonly WorkflowEdge[], t: (key: LayoutKey) => string, body = ''): string[] {
   const messages: string[] = []
   const graph = analyzeWorkflowGraph(nodes, edges)
@@ -160,13 +173,14 @@ function point(node: WorkflowNode, side: 'left' | 'right', handle?: 'true' | 'fa
   return { x: node.x + (side === 'right' ? NODE_WIDTH : 0), y }
 }
 
-export function WorkflowEditor({ initial, writable, save, close, run, runControls, subscribeDebug, t }: {
+export function WorkflowEditor({ initial, writable, save, close, run, runControls, credentials, subscribeDebug, t }: {
   initial: AuthoringItem
   writable: boolean
   save: (item: AuthoringItem) => Promise<void>
   close: () => void
   run?: WorkflowRunStartHandler
   runControls?: WorkflowRunControls
+  credentials?: WorkflowCredentialControls
   subscribeDebug?: SubscribeWorkflowDebug
   t: (key: LayoutKey) => string
 }) {
@@ -178,6 +192,8 @@ export function WorkflowEditor({ initial, writable, save, close, run, runControl
     viewport: viewportOf(initial),
     steps: orderedSteps(initialGraph.nodes),
   }), [initial, initialGraph])
+  const releaseBaseline = useMemo(() => latestWorkflowVersion(normalizedInitial)
+    ?? (normalizedInitial.workflowStatus === 'published' ? normalizedInitial : undefined), [normalizedInitial])
   const [draft, setDraft] = useState<AuthoringItem>(normalizedInitial)
   const [selectedId, setSelectedId] = useState<string | null>(initialGraph.nodes.find(node => node.kind === 'llm')?.id ?? initialGraph.nodes[0]?.id ?? null)
   const [pendingSource, setPendingSource] = useState<PendingSource | null>(null)
@@ -200,18 +216,63 @@ export function WorkflowEditor({ initial, writable, save, close, run, runControl
   const [debugEvents, setDebugEvents] = useState<WorkflowDebugEvent[]>([])
   const [debugOpen, setDebugOpen] = useState(true)
   const [versionsOpen, setVersionsOpen] = useState(false)
+  const [credentialSecret, setCredentialSecret] = useState('')
+  const [credentialInfo, setCredentialInfo] = useState<WorkflowCredentialInfo | undefined>(undefined)
+  const [credentialLoading, setCredentialLoading] = useState(false)
+  const [credentialBusy, setCredentialBusy] = useState(false)
+  const [credentialError, setCredentialError] = useState(false)
   const debugRunId = useRef<string | null>(null)
   const canvasRef = useRef<HTMLDivElement>(null)
   const dirty = JSON.stringify(normalizedInitial) !== JSON.stringify(draft)
+  const releaseDirty = releaseBaseline === undefined || workflowReleaseSignature(releaseBaseline) !== workflowReleaseSignature(draft)
   const nodes = draft.nodes ?? []
   const edges = draft.edges ?? []
   const selected = nodes.find(node => node.id === selectedId)
   const auditByNode = useMemo(() => new Map((runView?.audit ?? []).map(entry => [entry.nodeId, entry])), [runView])
   const selectedAudit = selected === undefined ? undefined : auditByNode.get(selected.id)
+  const credentialRef = selected !== undefined && (selected.kind === 'tool' || selected.kind === 'http')
+    ? selected.config?.credential?.trim() ?? ''
+    : ''
+  const runMetrics = useMemo(() => {
+    const terminal = runHistory.filter(view => view.status !== 'running')
+    const durations = terminal.flatMap(view => view.endedAt === undefined ? [] : [Math.max(0, view.endedAt - view.startedAt)]).sort((a, b) => a - b)
+    const p95Index = durations.length === 0 ? -1 : Math.max(0, Math.ceil(durations.length * .95) - 1)
+    return {
+      total: runHistory.length,
+      successRate: terminal.length === 0 ? undefined : Math.round(terminal.filter(view => view.status === 'completed').length / terminal.length * 100),
+      failures: terminal.filter(view => view.status === 'error').length,
+      p95Duration: p95Index < 0 ? undefined : durations[p95Index],
+    }
+  }, [runHistory])
+
+  useEffect(() => {
+    let stale = false
+    setCredentialSecret('')
+    setCredentialInfo(undefined)
+    setCredentialError(false)
+    if (credentials === undefined || !CREDENTIAL_REF_PATTERN.test(credentialRef)) {
+      setCredentialLoading(false)
+      return
+    }
+    const load = async (): Promise<void> => {
+      setCredentialLoading(true)
+      try {
+        const info = await credentials.describe(credentialRef)
+        if (!stale) { setCredentialInfo(info); setCredentialError(false) }
+      } catch {
+        if (!stale) { setCredentialInfo(undefined); setCredentialError(true) }
+      } finally {
+        if (!stale) setCredentialLoading(false)
+      }
+    }
+    void load()
+    const dispose = credentials.subscribe?.((changed) => { if (changed === credentialRef) void load() })
+    return () => { stale = true; dispose?.() }
+  }, [credentials, credentialRef])
 
   const nodeStatusLabel = (status: NonNullable<WorkflowRunView['audit']>[number]['status'] | 'idle'): string => {
     if (status === 'idle') return t('workflow.nodeStatus.idle')
-    return t(`workflow.nodeStatus.${status}` as LayoutKey)
+    return t(`workflow.nodeStatus.${status}`)
   }
 
   useEffect(() => {
@@ -338,13 +399,13 @@ export function WorkflowEditor({ initial, writable, save, close, run, runControl
     return () => { window.removeEventListener('keydown', onKeyDown) }
   })
 
-  const updateNodes = (nextNodes: WorkflowNode[]) => commit(current => ({
+  const updateNodes = (nextNodes: WorkflowNode[]) =>{  commit(current => ({
     ...current,
     nodes: nextNodes,
     steps: orderedSteps(nextNodes),
     updatedAt: Date.now(),
-  }))
-  const updateConfig = (id: string, patch: WorkflowNode['config']) => updateNodes(nodes.map(node => node.id === id ? { ...node, config: { ...node.config, ...patch } } : node))
+  })) }
+  const updateConfig = (id: string, patch: WorkflowNode['config']) =>{  updateNodes(nodes.map(node => node.id === id ? { ...node, config: { ...node.config, ...patch } } : node)) }
   const addNode = (kind: Exclude<WorkflowNodeKind, 'start' | 'end'>, position?: { x: number; y: number }) => {
     const next: WorkflowNode = {
       id: nodeId(),
@@ -416,13 +477,21 @@ export function WorkflowEditor({ initial, writable, save, close, run, runControl
     updateNodes(next)
   }
   const back = () => { if (!dirty || window.confirm(t('workflow.discard'))) close() }
+  const persistedDraft = (updatedAt: number): AuthoringItem => ({
+    ...draft,
+    title: draft.title.trim(),
+    steps: orderedSteps(draft.nodes ?? []),
+    workflowStatus: draft.workflowStatus === 'draft' || releaseDirty ? 'draft' : draft.workflowStatus ?? 'draft',
+    version: draft.version ?? 0,
+    updatedAt,
+  })
   const submit = async () => {
     if (!writable || saving || !draft.title.trim()) return
     const issues = validateNodes(nodes, edges, t, draft.body)
     setValidation(issues)
     setSaving(true)
     setError(false)
-    try { await save({ ...draft, title: draft.title.trim(), steps: orderedSteps(draft.nodes ?? []), workflowStatus: dirty ? 'draft' : draft.workflowStatus ?? 'draft', version: draft.version ?? 0, updatedAt: Date.now() }); close() }
+    try { await save(persistedDraft(Date.now())); close() }
     catch { setError(true) }
     finally { setSaving(false) }
   }
@@ -466,9 +535,32 @@ export function WorkflowEditor({ initial, writable, save, close, run, runControl
     setSaving(true)
     setError(false)
     try {
-      await save({ ...draft, updatedAt: Date.now() })
+      await save(persistedDraft(Date.now()))
     } catch { setError(true) }
     finally { setSaving(false) }
+  }
+  const reloadCredential = async (): Promise<void> => {
+    if (credentials === undefined || !CREDENTIAL_REF_PATTERN.test(credentialRef)) return
+    setCredentialLoading(true)
+    try { setCredentialInfo(await credentials.describe(credentialRef)); setCredentialError(false) }
+    catch { setCredentialInfo(undefined); setCredentialError(true) }
+    finally { setCredentialLoading(false) }
+  }
+  const storeCredential = async (): Promise<void> => {
+    if (credentials === undefined || credentialBusy || credentialInfo?.writable !== true || !CREDENTIAL_REF_PATTERN.test(credentialRef) || credentialSecret.trim() === '') return
+    setCredentialBusy(true)
+    setCredentialError(false)
+    try { await credentials.set(credentialRef, credentialSecret); setCredentialSecret(''); await reloadCredential() }
+    catch { setCredentialError(true) }
+    finally { setCredentialBusy(false) }
+  }
+  const removeCredential = async (): Promise<void> => {
+    if (credentials === undefined || credentialBusy || credentialInfo?.configured !== true || !credentialInfo.writable || !window.confirm(t('workflow.credentialRemoveConfirm'))) return
+    setCredentialBusy(true)
+    setCredentialError(false)
+    try { await credentials.unset(credentialRef); setCredentialSecret(''); await reloadCredential() }
+    catch { setCredentialError(true) }
+    finally { setCredentialBusy(false) }
   }
   const testRun = async () => {
     if (run === undefined || !writable || saving || testing || activeRunId !== null || !draft.title.trim()) return
@@ -481,13 +573,14 @@ export function WorkflowEditor({ initial, writable, save, close, run, runControl
     debugRunId.current = null
     try {
       const input: WorkflowRunInput = { text: draft.testInput ?? '', mode: draft.testInputMode ?? 'text', ...(draft.testTimeoutMs === undefined ? {} : { timeoutMs: draft.testTimeoutMs }) }
-      const started = await run({ ...draft, title: draft.title.trim(), steps: orderedSteps(draft.nodes ?? []), updatedAt: Date.now() }, input)
+      const runnable = persistedDraft(Date.now())
+      const started = await run(runnable, input)
       if (started !== undefined) {
         const initialView: WorkflowRunView = {
           runId: started.runId,
-          workflowId: draft.id,
-          ...(draft.workflowStatus === 'published' && draft.version !== undefined && draft.version !== null ? { workflowVersion: draft.version } : {}),
-          name: workflowRuntimeName(draft.id),
+          workflowId: runnable.id,
+          ...(runnable.workflowStatus === 'published' && runnable.version !== undefined && runnable.version !== null ? { workflowVersion: runnable.version } : {}),
+          name: workflowRuntimeName(runnable.id),
           status: 'running',
           startedAt: started.startedAt,
           agentsStarted: 0,
@@ -519,7 +612,7 @@ export function WorkflowEditor({ initial, writable, save, close, run, runControl
   const runStatusLabel = (view: WorkflowRunView | null): string => {
     if (view === null) return t('workflow.runIdle')
     if (view.timedOut) return t('workflow.runTimedOut')
-    return t(`workflow.runStatus.${view.status}` as LayoutKey)
+    return t(`workflow.runStatus.${view.status}`)
   }
   const runDuration = (view: WorkflowRunView): string => {
     const end = view.endedAt ?? Date.now()
@@ -569,8 +662,8 @@ export function WorkflowEditor({ initial, writable, save, close, run, runControl
   }
   useEffect(() => {
     if (pan === null) return
-    const move = (event: PointerEvent): void => updateViewport({ ...viewport, x: event.clientX - pan.x, y: event.clientY - pan.y })
-    const stop = (): void => setPan(null)
+    const move = (event: PointerEvent): void =>{  updateViewport({ ...viewport, x: event.clientX - pan.x, y: event.clientY - pan.y }) }
+    const stop = (): void =>{  setPan(null) }
     window.addEventListener('pointermove', move)
     window.addEventListener('pointerup', stop, { once: true })
     return () => { window.removeEventListener('pointermove', move); window.removeEventListener('pointerup', stop) }
@@ -669,6 +762,15 @@ export function WorkflowEditor({ initial, writable, save, close, run, runControl
             {selected.kind === 'http' && <><label className={css.field}><span>{t('workflow.nodeUrl')}</span><input value={selected.config?.url ?? ''} placeholder={t('workflow.nodeUrlPlaceholder')} onChange={(event) => { updateConfig(selected.id, { url: event.target.value }) }} /></label><label className={css.field}><span>{t('workflow.nodeMethod')}</span><select value={selected.config?.method ?? 'GET'} onChange={(event) => { updateConfig(selected.id, { method: event.target.value }) }}><option value="GET">{t('workflow.method.GET')}</option><option value="POST">{t('workflow.method.POST')}</option><option value="PUT">{t('workflow.method.PUT')}</option><option value="PATCH">{t('workflow.method.PATCH')}</option><option value="DELETE">{t('workflow.method.DELETE')}</option></select></label><label className={css.field}><span>{t('workflow.nodeCredential')}</span><input value={selected.config?.credential ?? ''} placeholder={t('workflow.nodeCredentialPlaceholder')} autoComplete="off" onChange={(event) => { updateConfig(selected.id, { credential: event.target.value }) }} /></label></>}
             {selected.kind === 'template' && <label className={css.field}><span>{t('workflow.nodeTemplate')}</span><textarea value={selected.config?.template ?? ''} placeholder={t('workflow.nodeTemplatePlaceholder')} onChange={(event) => { updateConfig(selected.id, { template: event.target.value }) }} /></label>}
             {selected.kind === 'output' && <><label className={css.field}><span>{t('workflow.nodeOutput')}</span><textarea value={selected.config?.output ?? ''} onChange={(event) => { updateConfig(selected.id, { output: event.target.value }) }} /></label><label className={css.field}><span>{t('workflow.nodeFormat')}</span><input value={selected.config?.format ?? ''} placeholder={t('workflow.nodeFormatPlaceholder')} onChange={(event) => { updateConfig(selected.id, { format: event.target.value }) }} /></label></>}
+            {credentials !== undefined && CREDENTIAL_REF_PATTERN.test(credentialRef) && <section className={css.credentialManager} aria-label={t('workflow.credentialManager')}>
+              <div className={css.credentialStatus} data-state={credentialError ? 'error' : credentialLoading ? 'loading' : credentialInfo?.configured === true ? 'configured' : 'missing'}><span className={css.credentialDot} />
+                <strong>{credentialError ? t('workflow.credentialStatusError') : credentialLoading ? t('workflow.credentialStatusLoading') : credentialInfo?.configured === true ? t('workflow.credentialStatusConfigured') : t('workflow.credentialStatusMissing')}</strong>
+                {credentialInfo?.source !== undefined && <small>{credentialInfo.source}</small>}
+              </div>
+              <label><span>{t('workflow.credentialValue')}</span><input type="password" aria-label={t('workflow.credentialValue')} autoComplete="new-password" value={credentialSecret} placeholder={credentialInfo?.configured === true ? t('workflow.credentialReplacePlaceholder') : t('workflow.credentialValuePlaceholder')} onChange={(event) => { setCredentialSecret(event.target.value) }} /></label>
+              <div className={css.credentialActions}><Button size="sm" variant="outline" disabled={credentialBusy || credentialLoading || credentialInfo?.writable !== true || credentialSecret.trim() === ''} onClick={() => { void storeCredential() }}>{t(credentialBusy ? 'workflow.credentialSaving' : 'workflow.credentialSave')}</Button>{credentialInfo?.configured === true && <Button size="sm" variant="outline" disabled={credentialBusy || !credentialInfo.writable} onClick={() => { void removeCredential() }}>{t('workflow.credentialRemove')}</Button>}</div>
+              {credentialInfo !== undefined && !credentialInfo.writable && <p>{t('workflow.credentialReadOnly')}</p>}
+            </section>}
             <Button size="sm" icon={<IconPlusOutline16 />} disabled={selected.kind === 'start' || selected.kind === 'end'} onClick={duplicateSelected}>{t('workflow.copy')}</Button>
           </>}
           <label className={css.field}><span>{t('workflow.instructions')}</span><textarea aria-label={t('workflow.instructions')} value={draft.body} onChange={(event) => { commit(current => ({ ...current, body: event.target.value })) }} /></label>
@@ -688,6 +790,7 @@ export function WorkflowEditor({ initial, writable, save, close, run, runControl
             {runView.audit !== undefined && runView.audit.length > 0 && <section className={css.runAudit} aria-label={t('workflow.nodeTimeline')}><div className={css.debugHeader}><h4>{t('workflow.nodeTimeline')}</h4><span>{runView.audit.length}</span></div><ol className={css.runAuditList}>{runView.audit.map(entry => <li key={`${entry.nodeId}-${entry.startedAt}`}><button type="button" onClick={() => { if (nodes.some(node => node.id === entry.nodeId)) setSelectedId(entry.nodeId) }}><strong>{entry.label}</strong><span className={`${css.nodeAuditStatus} ${css[`audit_${entry.status}`]}`}>{nodeStatusLabel(entry.status)}</span><small>{entry.durationMs === undefined ? t('workflow.nodeInProgress') : t('workflow.nodeDuration').replace('{duration}', String(entry.durationMs))}{entry.retryCount > 0 ? ` · ${t('workflow.nodeRetriesUsed').replace('{count}', String(entry.retryCount))}` : ''}</small></button></li>)}</ol></section>}
             <div className={css.runActions}>{activeRunId !== null && <Button size="sm" variant="outline" disabled={runControls?.cancel === undefined || cancelling} onClick={() => { void cancelRun() }}>{t(cancelling ? 'workflow.cancelling' : 'workflow.stopRun')}</Button>}{activeRunId === null && <Button size="sm" variant="outline" disabled={testing || saving} onClick={() => { void testRun() }}>{t('workflow.retryRun')}</Button>}</div>
           </section>}
+          {runHistory.length > 0 && <section className={css.runMetrics} aria-label={t('workflow.runMetrics')}><div className={css.debugHeader}><h3>{t('workflow.runMetrics')}</h3><span>{t('workflow.runMetricsWindow').replace('{count}', String(runMetrics.total))}</span></div><div className={css.runMetricGrid}><div><span>{t('workflow.metricRuns')}</span><strong>{runMetrics.total}</strong></div><div><span>{t('workflow.metricSuccessRate')}</span><strong>{runMetrics.successRate === undefined ? '--' : `${runMetrics.successRate}%`}</strong></div><div><span>{t('workflow.metricFailures')}</span><strong className={runMetrics.failures > 0 ? css.metricWarning : undefined}>{runMetrics.failures}</strong></div><div><span>{t('workflow.metricP95')}</span><strong>{runMetrics.p95Duration === undefined ? '--' : t('workflow.metricDurationValue').replace('{duration}', String(runMetrics.p95Duration))}</strong></div></div></section>}
           {runHistory.length > 0 && <section className={css.runHistory} aria-label={t('workflow.runHistory')}><div className={css.debugHeader}><h3>{t('workflow.runHistory')}</h3><span>{runHistory.length}</span></div><ol className={css.runList}>{runHistory.map(view => <li key={view.runId} className={selectedRunId === view.runId ? css.runSelected : undefined}><button type="button" onClick={() => { selectRun(view) }}><strong>{runStatusLabel(view)}</strong><span>{new Date(view.startedAt).toLocaleString()} · {runDuration(view)}</span></button></li>)}</ol></section>}
           {debugOpen && <section className={css.debugDock} aria-label={t('workflow.debugTitle')}><div className={css.debugHeader}><h3>{t('workflow.debugTitle')}</h3><span>{debugEvents.length > 0 ? t('workflow.debugLive') : t('workflow.debugIdle')}</span><button type="button" onClick={() => { setDebugEvents([]) }} aria-label={t('workflow.clearDebug')}>×</button></div>{debugEvents.length === 0 ? <p className={css.debugEmpty}>{t('workflow.debugEmpty')}</p> : <ol className={css.debugList}>{debugEvents.slice(-12).map((event, index) => <li key={`${event.at}-${index}`} className={css[`debug_${event.kind}`]}><span className={css.debugTime}>{new Date(event.at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}</span><span>{debugEventText(event, t)}</span></li>)}</ol>}</section>}
           <button type="button" className={css.debugToggle} onClick={() => { setDebugOpen(value => !value) }}>{t(debugOpen ? 'workflow.hideDebug' : 'workflow.showDebug')}</button>

@@ -10,11 +10,13 @@ import type {} from '@deepseek-ai/dsh-session-persistence'
 import type {} from '@deepseek-ai/dsh-session-projection'
 import { scheduleProjectionDefinition } from './projection.ts'
 import { ScheduleRuntime } from './runtime.ts'
+import { WorkflowScheduleService } from './service.ts'
 import { registerScheduleTools } from './tools.ts'
 
 export type * from './types.ts'
 export {
   SCHEDULE_CHANGE_VERSION,
+  WORKFLOW_SCHEDULE_CHANGE_VERSION,
   MIN_EVERY_INTERVAL_SECONDS,
   ScheduleId,
   ScheduleInputError,
@@ -31,6 +33,8 @@ export {
   scheduleView,
 } from './domain.ts'
 export { registerScheduleTools } from './tools.ts'
+export { WorkflowScheduleService } from './service.ts'
+export type { WorkflowScheduleDispatcher } from './service.ts'
 
 /** Cordis function-plugin name. */
 export const name = 'schedule'
@@ -41,17 +45,18 @@ type OwnerCleanup = () => void | Promise<void>
 
 /** Install Schedule only for root agents published after this plugin loads. */
 export function apply(ctx: Context): void {
+  ctx.plugin(WorkflowScheduleService)
   ctx.inject(['sessionProjections'], (projectionCtx) => {
     projectionCtx.sessionProjections.register(scheduleProjectionDefinition)
   })
 
-  const runtimes = new Map<Agent, OwnerCleanup>()
-  let stopping = false
-
-  ctx.effect(() => {
+  ctx.inject(['workflowSchedules'], scheduleCtx => scheduleCtx.effect(() => {
+    const runtimes = new Map<Agent, { readonly cleanup: OwnerCleanup; readonly runtime: ScheduleRuntime }>()
+    let stopping = false
     const stopCreated = ctx.on('agent/created', ({ agent }) => {
       if (stopping || runtimes.has(agent) || !ctx.agents.roots().includes(agent)) return
-      const runtime = new ScheduleRuntime(ctx, agent)
+      const runtime = new ScheduleRuntime(ctx, agent, (record, occurrenceAt) =>
+        scheduleCtx.workflowSchedules.dispatch(agent, record.target, occurrenceAt))
       const cleanup: OwnerCleanup = agent.ctx.effect(() => {
         const disposeTools = registerScheduleTools(ctx, agent.ctx, agent, () => { runtime.requestDrive() })
         const stopStatus = agent.ctx.on('agent/status', ({ status }) => {
@@ -67,19 +72,25 @@ export function apply(ctx: Context): void {
           try {
             await runtime.dispose()
           } finally {
-            if (runtimes.get(agent) === cleanup) runtimes.delete(agent)
+            if (runtimes.get(agent)?.cleanup === cleanup) runtimes.delete(agent)
           }
         }
       }, 'schedule.runtime()')
-      runtimes.set(agent, cleanup)
+      runtimes.set(agent, { cleanup, runtime })
+    })
+    const stopRefresh = ctx.on('schedule/workflow-refresh', (agent) => { runtimes.get(agent)?.runtime.requestDrive() })
+    const stopDispatcher = ctx.on('schedule/workflow-dispatcher-ready', () => {
+      for (const entry of runtimes.values()) entry.runtime.requestDrive()
     })
 
     return async () => {
       stopping = true
       stopCreated()
-      const cleanups = [...runtimes.values()]
+      stopRefresh()
+      stopDispatcher()
+      const cleanups = [...runtimes.values()].map(entry => entry.cleanup)
       runtimes.clear()
       await Promise.allSettled(cleanups.map(cleanup => Promise.resolve(cleanup())))
     }
-  }, 'schedule.lifecycle()')
+  }, 'schedule.lifecycle()'))
 }

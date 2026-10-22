@@ -78,7 +78,7 @@ Host 与 Client 保持两个 aggregate program，是因为两侧在相同键下�
 ```sh
 tsc -b tsconfig.host.json
 tsdown --env.DSH_BUILD_FACE host
-tsc -b tsconfig.client.json # 已知的 Client 测试合约诊断不会阻断后续打包
+tsc -b tsconfig.client.json (known Client test-contract diagnostics are allowed to continue)
 tsdown --env.DSH_BUILD_FACE client
 pnpm run build:web
 ```

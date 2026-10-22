@@ -1,0 +1,146 @@
+/* The source-control panel inside the right Sidebar: one column, dense rows,
+ * no page margins. Every colour is an alias token so themes carry it. */
+
+.root { display: flex; flex-direction: column; gap: 8px; min-height: 0; height: 100%; padding: 10px 10px 14px; overflow: auto; }
+
+.branch { display: flex; align-items: center; gap: 6px; min-width: 0; }
+.branchName {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--dsw-alias-label-primary);
+  font: 12px/18px var(--dsw-font-mono, monospace);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.branchSpacer { flex: 1; }
+/* The reload affordance is icon-only, so the capsule's horizontal padding would
+ * only make it a lopsided 30x30; a square hit area reads as a control. */
+.tool {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--dsw-alias-label-secondary);
+  cursor: pointer;
+}
+.tool:hover:not(:disabled) { background: var(--dsw-alias-interactive-bg-hover); color: var(--dsw-alias-label-primary); }
+.tool:disabled { cursor: not-allowed; opacity: 0.4; }
+
+.sync { margin: 0; color: var(--dsw-alias-label-tertiary); font-size: 11px; line-height: 16px; }
+.error { margin: 0; color: var(--dsw-alias-state-error-primary); font-size: 11px; line-height: 16px; overflow-wrap: anywhere; }
+.notice { margin: 0; color: var(--dsw-alias-state-success-primary); font-size: 11px; line-height: 16px; }
+
+.group { display: flex; flex-direction: column; gap: 4px; }
+.groupHeader { display: flex; align-items: center; gap: 6px; padding: 2px 0; }
+.groupTitle { color: var(--dsw-alias-label-secondary); font-size: 11px; font-weight: 600; letter-spacing: 0.02em; text-transform: uppercase; }
+.groupCount {
+  padding: 0 5px;
+  border-radius: 7px;
+  background: var(--dsw-alias-bg-layer-1);
+  color: var(--dsw-alias-label-tertiary);
+  font-size: 10px;
+  font-variant-numeric: tabular-nums;
+  line-height: 14px;
+}
+/* Pushed to the far end so it never crowds the count. */
+.groupAction {
+  margin-left: auto;
+  padding: 0 4px;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--dsw-alias-label-tertiary);
+  font-size: 10px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.groupAction:hover:not(:disabled) { background: var(--dsw-alias-interactive-bg-hover); color: var(--dsw-alias-label-primary); }
+.groupAction:disabled { cursor: not-allowed; opacity: 0.4; }
+
+.list { display: flex; flex-direction: column; gap: 1px; margin: 0; padding: 0; list-style: none; }
+.row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  padding: 3px 4px;
+  border-radius: 5px;
+}
+.row:hover { background: var(--dsw-alias-interactive-bg-hover); }
+/* The porcelain code is the row's status letter; keep it tabular and quiet so a
+ * long path stays the thing the eye lands on. */
+.rowCode {
+  flex: 0 0 auto;
+  width: 12px;
+  color: var(--dsw-alias-label-tertiary);
+  font: 10px/16px var(--dsw-font-mono, monospace);
+  text-align: center;
+}
+.row[data-row-kind='added'] .rowCode, .row[data-row-kind='untracked'] .rowCode { color: var(--dsw-alias-state-success-primary); }
+.row[data-row-kind='deleted'] .rowCode, .row[data-row-kind='conflicted'] .rowCode { color: var(--dsw-alias-state-error-primary); }
+.row[data-row-kind='modified'] .rowCode, .row[data-row-kind='renamed'] .rowCode { color: var(--dsw-alias-state-business-primary); }
+.rowPath {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  align-items: baseline;
+  overflow: hidden;
+  font-size: 12px;
+  line-height: 18px;
+  white-space: nowrap;
+}
+/* The directory gives way first: the base name is what identifies the file. */
+.rowDirectory { flex: 0 1 auto; min-width: 0; overflow: hidden; color: var(--dsw-alias-label-tertiary); text-overflow: ellipsis; }
+.rowName { flex: 0 0 auto; color: var(--dsw-alias-label-primary); }
+.rowKind { flex: 0 0 auto; color: var(--dsw-alias-label-tertiary); font-size: 10px; }
+.rowAction {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--dsw-alias-label-secondary);
+  font-size: 13px;
+  line-height: 16px;
+  cursor: pointer;
+}
+.rowAction:hover:not(:disabled) { background: var(--dsw-alias-interactive-bg-hover); color: var(--dsw-alias-label-primary); }
+.rowAction:disabled { cursor: not-allowed; opacity: 0.4; }
+
+.commit { display: flex; align-items: center; gap: 6px; padding-top: 2px; }
+/* The message owns the free width; both capsules stay at their natural size. */
+.commit > :first-child { flex: 1; min-width: 0; }
+
+.history { display: flex; flex-direction: column; gap: 3px; margin: 0; padding: 0; list-style: none; }
+.historyRow { display: flex; align-items: baseline; gap: 6px; min-width: 0; padding: 2px 4px; border-radius: 5px; }
+.historyRow:hover { background: var(--dsw-alias-interactive-bg-hover); }
+.historySha { flex: 0 0 auto; color: var(--dsw-alias-label-tertiary); font: 10px/16px var(--dsw-font-mono, monospace); }
+.historyMessage { flex: 1 1 auto; min-width: 0; overflow: hidden; color: var(--dsw-alias-label-primary); font-size: 11px; line-height: 16px; text-overflow: ellipsis; white-space: nowrap; }
+.historyMeta { flex: 0 0 auto; color: var(--dsw-alias-label-tertiary); font-size: 10px; font-variant-numeric: tabular-nums; }
+
+.empty { margin: 0; padding: 2px 4px; color: var(--dsw-alias-label-tertiary); font-size: 11px; line-height: 16px; }
+
+.status { display: flex; flex-direction: column; align-items: flex-start; gap: 8px; padding: 14px 12px; }
+.statusLine { margin: 0; color: var(--dsw-alias-label-secondary); font-size: 12px; line-height: 18px; }
+.statusHint { margin: 0; color: var(--dsw-alias-label-tertiary); font-size: 11px; line-height: 16px; }
+
+/* The chip title's glyph: the live chip draws it inline before the label. */
+.titleIcon { flex: 0 0 auto; color: var(--dsw-alias-label-secondary); }
+
+/* Narrow columns drop the kind label first, then the author line: the path and
+ * the message are the two facts worth keeping. */
+@container (max-width: 260px) {
+  .rowKind { display: none; }
+  .historyMeta { display: none; }
+}

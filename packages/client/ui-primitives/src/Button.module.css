@@ -11,6 +11,11 @@
   cursor: pointer;
   font-size: 14px;
   line-height: 22px;
+  /* A flex row may squeeze the capsule below its label. CJK text breaks at any
+   * character, so the label can wrap to one glyph per line; keep it on one line
+   * and let the sibling text block take the shrink instead. */
+  flex-shrink: 0;
+  white-space: nowrap;
   color: var(--dsw-alias-label-primary);
   background: transparent;
   padding: 0 14px;

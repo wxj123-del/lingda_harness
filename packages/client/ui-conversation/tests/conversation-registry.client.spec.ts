@@ -57,6 +57,11 @@ function fakeSession(): SessionFace {
     loadOlder: () => Promise.reject(new Error('unused fake Session operation')),
     loadThrough: () => Promise.reject(new Error('unused fake Session operation')),
     command: () => Promise.reject(new Error('unused fake Session operation')),
+    workflowStart: () => Promise.reject(new Error('unused fake Session operation')),
+    workflowCancel: () => Promise.reject(new Error('unused fake Session operation')),
+    workflowStatus: () => Promise.reject(new Error('unused fake Session operation')),
+    workflowList: () => Promise.reject(new Error('unused fake Session operation')),
+    optimizePrompt: () => Promise.reject(new Error('unused fake Session operation')),
   }
 }
 

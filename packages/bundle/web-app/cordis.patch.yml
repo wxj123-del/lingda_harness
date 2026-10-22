@@ -103,6 +103,11 @@
     - id: knowledge
       name: '@deepseek-ai/dsh-host-knowledge'
 
+    # Chat-driven drafting for the workflow console and the knowledge panel.
+    # Every turn is one auxiliary model request; nothing is saved here.
+    - id: authoring-assistant
+      name: '@deepseek-ai/dsh-host-authoring-assistant'
+
     # Read-only discovery and bounded archive packaging for local Codex and
     # Agents Skills. The browser can only request candidates returned by a scan.
     - id: local-skill-import
@@ -111,6 +116,10 @@
     # Session commands, cold reads, and live control over Typert Remote.
     - id: session-controller
       name: '@deepseek-ai/dsh-api-session-controller'
+
+    # Durable Session-local workflow triggers and their direct execution dispatcher.
+    - id: schedule
+      name: '@deepseek-ai/dsh-schedule'
 
     # Workspace file service: bounded read, directory listing, and the
     # agent-write change feed inside the session workspace root.
@@ -272,6 +281,11 @@
     - id: ui-sidebar-files
       name: '@deepseek-ai/dsh-client-ui-sidebar-files'
 
+    # The right Sidebar's source-control tab type: branch state, staged and
+    # unstaged changes, staging actions, commit, and pull.
+    - id: ui-sidebar-repository
+      name: '@deepseek-ai/dsh-client-ui-sidebar-repository'
+
     - id: ui-settings
       name: '@deepseek-ai/dsh-client-ui-settings'
 
@@ -341,12 +355,9 @@
     - id: ui-reference
       name: '@deepseek-ai/dsh-client-ui-reference'
 
-    # Read-only active Schedule catalog. The shipped Web graph resolves the
-    # client package but leaves it disabled; the explicit Schedule overlay
-    # enables this same row together with the host Schedule services.
+    # Read-only active Schedule catalog for reminders and workflow triggers.
     - id: ui-schedule
       name: '@deepseek-ai/dsh-client-ui-schedule'
-      disabled: true
 
     # Background jobs: the session-header list over the jobsBySession mirror.
     - id: ui-jobs
@@ -388,6 +399,11 @@
 
     - id: ui-trajectory
       name: '@deepseek-ai/dsh-client-ui-trajectory'
+
+    # The Session map Conversation View: one spine of turns with the forks
+    # hanging off the turn each branched from.
+    - id: ui-session-map
+      name: '@deepseek-ai/dsh-client-ui-session-map'
 
     # Per-request Token ledger and the dedicated repository view. Keep this
     # browser plugin in the shipped Web profile so its conversation tabs are

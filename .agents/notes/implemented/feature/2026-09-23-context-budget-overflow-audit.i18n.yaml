@@ -2,5 +2,5 @@
 # side as of the last confirmed-consistent state. Both languages carry equal authority;
 # after editing either side, bring the other along and re-record with:
 #   pnpm run verify-translation-pairing --write .agents/notes/implemented/feature/2026-09-23-context-budget-overflow-audit.md
-2026-09-23-context-budget-overflow-audit.md: 882fcba3b50007830b5783660e84379a5bae07af
-2026-09-23-context-budget-overflow-audit.zh.md: b60570eff23e359ad99f68e38b62036cd2f65f43
+2026-09-23-context-budget-overflow-audit.md: 780765ddfde6585dbb55637e8e7fc8eb9f6dcd03
+2026-09-23-context-budget-overflow-audit.zh.md: 69f30cae3eed77bbbdfea1d179236728e953529b

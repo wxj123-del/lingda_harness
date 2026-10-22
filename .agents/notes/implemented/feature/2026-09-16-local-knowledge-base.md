@@ -14,6 +14,10 @@ Add a Host-owned `knowledge` service. Its editable manifest uses optimistic revi
 
 The web panel imports the previous `ui-authoring.knowledge` value once and leaves the source settings untouched. Search returns original excerpts, source identity, chunk ordinal, and cosine similarity; unfinished libraries are explicit in `skippedBases`.
 
+## Alternatives considered
+
+Keeping substring search in the UI was rejected because it could not scale across libraries or support semantic retrieval. A hosted embedding service was rejected to keep indexing local and avoid sending private documents to a provider.
+
 ## Consequences
 
 Indexing and embedding are local and do not spend provider tokens, while tool definitions and retrieved excerpts add context tokens when a model request carries them. First use requires a network download. The data directory is intended for one active Host process. Chunk sizes are character based and the similarity score is not a calibrated probability.

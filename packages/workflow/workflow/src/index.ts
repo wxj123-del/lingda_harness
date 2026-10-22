@@ -6,14 +6,6 @@
 
 import { Context, Service } from '@deepseek-ai/cordis'
 import { HarnessError } from '@deepseek-ai/dsh-llm'
-import type {
-  WorkflowAgentEndInfo,
-  WorkflowAgentInfo,
-  WorkflowNodeEndInfo,
-  WorkflowNodeStartInfo,
-  WorkflowResultInfo,
-  WorkflowRunInfo,
-} from './types.ts'
 import type { WorkflowRun, WorkflowStartRequest } from './runtime-types.ts'
 
 export { WorkflowRunId } from './types.ts'
@@ -36,66 +28,6 @@ export type { WorkflowRun, WorkflowStartRequest } from './runtime-types.ts'
 declare module '@deepseek-ai/cordis' {
   interface Context {
     workflowEngine: WorkflowEngine
-  }
-
-  interface Events {
-    /**
-     * A workflow run started — the script's meta block validated, the body
-     * about to execute. Paired with {@link Events['workflow/end']}.
-     * @param info - the run's identity snapshot (id + meta).
-     * @mode emit
-     */
-    'workflow/start'(info: WorkflowRunInfo): void
-    /**
-     * The script entered a phase (a `phase(title)` call) — progress grouping
-     * for observers; no execution semantics.
-     * @param info - the run's identity snapshot.
-     * @param title - the phase title, verbatim.
-     * @mode emit
-     */
-    'workflow/phase'(info: WorkflowRunInfo, title: string): void
-    /**
-     * The script emitted a narration line (a `log(message)` call).
-     * @param info - the run's identity snapshot.
-     * @param message - the logged message, verbatim.
-     * @mode emit
-     */
-    'workflow/log'(info: WorkflowRunInfo, message: string): void
-    /**
-     * One `agent()` call established a published child run. Paired with
-     * {@link Events['workflow/agent-end']} by `agent.seq`. A call that never
-     * receives a published run from the provider emits neither
-     * event in this pair.
-     * @param info - the run's identity snapshot.
-     * @param agent - the call's sequence number, label, phase, and child id.
-     * @mode emit
-     */
-    'workflow/agent-start'(info: WorkflowRunInfo, agent: WorkflowAgentInfo): void
-    /**
-     * One `agent()` call settled (clean result, child failure, or run
-     * cancellation). Paired with {@link Events['workflow/agent-start']} by
-     * `agent.seq`, exactly once per started call on every stop path — on an
-     * engine termination path the end is
-     * engine-synthesized with outcome `'cancelled'`.
-     * @param info - the run's identity snapshot.
-     * @param agent - the call identity plus its outcome.
-     * @mode emit
-     */
-    'workflow/agent-end'(info: WorkflowRunInfo, agent: WorkflowAgentEndInfo): void
-    /** A visual node began execution; consumers may persist this as audit state. */
-    'workflow/node-start'(info: WorkflowRunInfo, node: WorkflowNodeStartInfo): void
-    /** A visual node completed, failed, was skipped, blocked, or was cancelled. */
-    'workflow/node-end'(info: WorkflowRunInfo, node: WorkflowNodeEndInfo): void
-    /**
-     * A workflow run settled (any stop reason). Fired when
-     * {@link WorkflowRun.result} resolves. Paired with
-     * {@link Events['workflow/start']}.
-     * @param info - the run's identity snapshot.
-     * @param result - the outcome data (stop reason, error, agent count) —
-     *   deliberately WITHOUT the result value (see {@link WorkflowResultInfo}).
-     * @mode emit
-     */
-    'workflow/end'(info: WorkflowRunInfo, result: WorkflowResultInfo): void
   }
 }
 

@@ -44,3 +44,9 @@ worktrees/
 .agents/worktrees/
 .typert-*/
 native/system/test/bin/
+# Per-machine runtime state, not project content.
+.dsh/
+.game-studio/
+
+# typert test scratch output
+packages/typert/generator/tests/.rendered-model-*/

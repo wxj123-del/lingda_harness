@@ -27,7 +27,7 @@ Cancellation errors from in-flight HTTP nodes are classified separately and neve
 <a id="use-this-package"></a>
 ## Use this package
 
-The root slot composes the sidebar, main content, and right column. The sidebar spans 264–420px, defaults to 280px, and retains a 56px rail when collapsed; below 1024px it collapses automatically, and opening the right panel collapses a manually expanded sidebar. The right panel first opens at 45% of the viewport, then retains the user's pixel preference, capped at 70%. To protect 400px for the center, the frame first reduces the right panel to 300px, then reports insufficient room so its occupant closes it, and only then compresses the center further. Dragging has no transition delay; the right handle is absent while closed or fullscreen.
+The root slot composes the sidebar, main content, and right column. The sidebar spans 264–420px, defaults to 280px, and retains a 56px rail when collapsed; below 1024px it collapses automatically, and opening the right panel collapses a manually expanded sidebar. Selecting a main panel does not collapse it: the sidebar is the column the user navigates from. The right panel first opens at 45% of the viewport, then retains the user's pixel preference, capped at 70%. To protect 400px for the center, the frame first reduces the right panel to 300px, then reports insufficient room so its occupant closes it, and only then compresses the center further. Dragging has no transition delay; the right handle is absent while closed or fullscreen.
 
 Global panels occupy the root-scoped `main` keyed slot; `conversation` is the reserved key for the Conversation. `ctx.layout.selectPanel(id)` selects a registered panel, and `null` selects the Conversation without changing the current Session. The authoring pages register their own global panel keys.
 
@@ -39,7 +39,7 @@ The presenter consumes resolved theme snapshots and projects them onto the docum
 
 The metrics band shows settled requests, tool exposures, hits and aggregate hit rate across the retained corpus, independent of search and filters. Cards show each tool's exposures and hit rate; details add the hit count. Exposure and ascending hit-rate sorts help find frequently carried tools with few calls. A dash means no measured exposure, while missing catalogs have a separate coverage notice. These metrics are read-only and do not change tool selection.
 
-Select **Tools** in the navigation rail to browse one card per recorded or user-authored tool. Cards show the name, description, cumulative calls, and most recent call. Filters separate called, unused, and custom tools; search covers names and descriptions, and sorting supports usage or tool name. Details show the full description, recorded parameter schema, direct and internal call counts, and involved Sessions. Custom tools retain creation and editing, with saved instructions and steps; their usage joins the registered name rather than the display title.
+Select **Tool** in the sidebar's product navigation to browse one card per recorded or user-authored tool. Cards show the name, description, cumulative calls, and most recent call. Filters separate called, unused, and custom tools; search covers names and descriptions, and sorting supports usage or tool name. Details show the full description, recorded parameter schema, direct and internal call counts, and involved Sessions. Custom tools retain creation and editing, with saved instructions and steps; their usage joins the registered name rather than the display title.
 
 Known tools use locale-owned descriptions in cards and details, with the recorded original available in a disclosure. Search matches both localized and original descriptions. Custom and unrecognized tools retain their supplied descriptions. Display translations neither invoke a model nor change model-facing tool definitions.
 
@@ -53,7 +53,9 @@ The Skill marketplace combines the built-in Create Skill (`make-skill`) and Crea
 
 Upload Skill accepts one ZIP containing exactly one `SKILL.md`, at the root or inside a folder. YAML frontmatter must declare a lowercase hyphenated `name` and a non-empty `description`, followed by non-empty instructions. A preview allows editing the recognized fields and category before confirmation; importing the same name updates that record after confirmation. Existing entries remain editable. The original ZIP preserves scripts, references and assets. Limits are 2 MiB compressed, 8 MiB expanded and 256 entries; invalid metadata, multiple Skills, duplicate paths and path traversal are rejected. Uploading never executes bundled scripts.
 
-The Workflow workspace provides a template library, search and source filters, three built-in test workflows, one-click import, duplication and deletion, plus a visual editor with a draggable node canvas, node palette, connection handles, and a property inspector. The canvas supports auto-layout, zoom, selecting and deleting connections, validation, and save-and-test execution. Node types include input, model, tool, knowledge, condition, code, HTTP request, template transformation, and output; their properties are also serialized into runtime-compatible step instructions. Independent nodes run in dependency waves; a failed wave waits for its peers to settle and stops all downstream waves. HTTP nodes retry thrown request errors only for `GET` and `HEAD`; mutating methods stay single-shot. Imported workflows can be launched into the composer or edited in place; enabled workflows are registered as instruction tools for the model. Legacy ordered steps are converted into a linear graph on first edit and remain available as the runtime instruction list.
+The Workflow workspace provides a template library, search and source filters, three built-in test workflows, one-click import, duplication and deletion, plus a visual editor with a draggable node canvas, node palette, connection handles, and a property inspector. The canvas supports auto-layout, zoom, selecting and deleting connections, validation, and direct save-and-test execution. Node types include input, model, tool, knowledge, condition, code, HTTP request, template transformation, and output; their properties are also serialized into runtime-compatible step instructions. Independent nodes run in dependency waves; a failed wave waits for its peers to settle and stops all downstream waves. HTTP nodes retry thrown request errors only for `GET` and `HEAD`; mutating methods stay single-shot. Run history retains status, version, result, node audit and timing data; the editor summarizes recent volume, success rate, failures and P95 latency.
+
+Publishing records immutable version snapshots. A fresh draft is unavailable to ordinary conversations; unpublished edits on a previously released workflow keep the latest release live until the next publish. Save-and-test always runs the current editor content without replacing that live release. Tool and HTTP nodes name credential references, and the inspector reads only redacted configured/source/writable metadata while sending new values through the write-only `credentials` Remote. Secret values never enter workflow settings or a credential read response. Legacy ordered steps are converted into a linear graph on first edit and remain available as the runtime instruction list.
 
 -----
 
@@ -87,13 +89,11 @@ Read these pages when the layout surface is not enough. They move from the frame
 <a id="model-experience"></a>
 ## Model Experience
 
-The Host registers two built-in authoring Skills and enabled user Skills. Names and descriptions enter the Skill catalog through `tool-skill`; full instructions are loaded on demand or by explicit `/name` invocation. User descriptions include their display title so natural-language references can match it. The built-ins produce reusable editor content and do not claim to save or execute it. User workflows and tools return instructions; the knowledge Host owns semantic retrieval and its tools.
-
-Imported Skills retain `disable-model-invocation` and `user-invocable`. On first load, the Host validates the stored archive again and materializes its resources beside the settings document, normally under `$DSH_HOME/skill-imports/<sha256>`, exposed as the Skill's resource directory. Non-file settings providers use a process-specific temporary cache. Only metadata enters the catalog; attachments are not injected automatically. Create Skill produces upload-compatible `SKILL.md` content and may package it when file tools are available.
+Indirectly, through Host-owned Skill, workflow, tool, and knowledge services selected by the authoring surface.
 
 #### KV Cache effect
 
-Browsing and editing do not send provider requests. Registered Skill summaries consume catalog context, and loaded instructions consume conversation context; changing a title or description can update the catalog. Categories are presentation metadata and do not enter model instructions.
+Authoring itself is browser state, but selected Skills, workflows, tools, and knowledge libraries can add catalog or retrieval context through their Host services.
 
 ## Known Limitations and Deferred Work
 
@@ -108,6 +108,7 @@ These limits define the current layout behavior. They are current package constr
 - **No scroll anchoring during squeeze reflow** — layout changes may move the reader's viewport.
 - **Imported resources are local to the Host** — a remote or sandbox filesystem must have access to that directory before it can read attachments. ZIP import does not install dependencies, execute scripts, or remove cached resources when an entry is disabled.
 - **Tool usage follows retained logs** — new calls appear after refresh. Recorded descriptions and schemas use the newest available request header, not a live capability probe; tools absent from history and saved custom entries have no card. A historical card does not guarantee availability in the currently selected preset.
+- **Workflow automation is still interactive** — schedules, webhook/event triggers, resumable human approval nodes, and organization role assignments are not yet part of this authoring surface.
 
 <a id="dev-note"></a>
 ### Dev Note

@@ -20,10 +20,10 @@ describe('media configuration and HTTP', () => {
     expect(selectRoute({ ...config, provider: 'test', model: 'image2', providers: { ...config.providers, b: { ...provider, models: [{ ...model, id: 'other' }] } } }, { provider: 'b' }).model.id).toBe('other')
   })
   it('rejects invalid API, model, and credential configuration at load', () => {
-    expect(() => validateConfig({ providers: { bad: { ...provider, api: 'typo' } } }, ['openai-images'], ['text-to-image'])).toThrow('Unsupported')
-    expect(() => validateConfig({ providers: { bad: { ...provider, models: [model, model] } } }, ['openai-images'], ['text-to-image'])).toThrow('Duplicate')
-    expect(() => validateConfig({ providers: { bad: { ...provider, anonymous: false } } }, ['openai-images'], ['text-to-image'])).toThrow('apiKeyEnv')
-    expect(() => validateConfig({ ...config, provider: 'missing' }, ['openai-images'], ['text-to-image'])).toThrow('does not exist')
+    expect(() =>{  validateConfig({ providers: { bad: { ...provider, api: 'typo' } } }, ['openai-images'], ['text-to-image']) }).toThrow('Unsupported')
+    expect(() =>{  validateConfig({ providers: { bad: { ...provider, models: [model, model] } } }, ['openai-images'], ['text-to-image']) }).toThrow('Duplicate')
+    expect(() =>{  validateConfig({ providers: { bad: { ...provider, anonymous: false } } }, ['openai-images'], ['text-to-image']) }).toThrow('apiKeyEnv')
+    expect(() =>{  validateConfig({ ...config, provider: 'missing' }, ['openai-images'], ['text-to-image']) }).toThrow('does not exist')
   })
   it('keeps credentials and endpoints out of catalogs', () => {
     const value = JSON.stringify(catalog({ providers: { test: { ...provider, apiKeyEnv: 'PRIVATE_MEDIA_KEY' } } }))

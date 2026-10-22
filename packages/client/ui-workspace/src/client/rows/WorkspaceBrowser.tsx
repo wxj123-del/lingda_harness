@@ -189,6 +189,8 @@ type SessionTreeProps = Pick<
   setSessionOrder: (accountKey: string, order: readonly string[]) => void
   /** Registry-global archive set (hidden rows). */
   archivedSessionIds: readonly SessionNode['id'][]
+  /** Open the browser-owned flow overview for a real Workspace group. */
+  onFlowRequest: (workspaceId: WorkspaceId) => void
   /** Open the browser-owned rename dialog for a real Workspace group. */
   onRenameRequest: (workspaceId: WorkspaceId, currentTitle: string) => void
   /** Open the browser-owned delete-confirmation dialog for a real Workspace group. */
@@ -208,7 +210,7 @@ function SessionTree({
   list, useSessionPendingInteraction, startSession, open, forkSession, workspaces, ungroupedSessionIds,
   archivedSessionIds,
   workspaceReady, usePanelInfo,
-  onRenameRequest, onDeleteRequest, onSessionRename, onSessionArchive,
+  onFlowRequest, onRenameRequest, onDeleteRequest, onSessionRename, onSessionArchive,
   insertWorkspaceBefore,
   groupExpansion, setGroupExpanded,
   setSessionOrder, home, t,
@@ -421,6 +423,10 @@ function SessionTree({
                 actions={group.workspaceId === undefined
                   ? undefined
                   : {
+                    flow: () => {
+                    /* v8 ignore next -- narrowing guard: the actions object exists only for real-workspace groups. */
+                      if (group.workspaceId !== undefined) onFlowRequest(group.workspaceId)
+                    },
                     rename: () => {
                     /* v8 ignore next -- narrowing guard: the actions object exists only for real-workspace groups. */
                       if (group.workspaceId !== undefined) onRenameRequest(group.workspaceId, group.label)
@@ -704,6 +710,7 @@ export function WorkspaceBrowser({
   actions,
   startSession,
   open,
+  openFlow,
   renameSession,
   forkSession,
   renameWorkspace,
@@ -1225,6 +1232,10 @@ export function WorkspaceBrowser({
                 onSessionRevealed={acknowledgeSessionReveal}
                 home={home}
                 t={t}
+                onFlowRequest={(workspaceId) => {
+                  actions.setFlowTarget(workspaceId)
+                  openFlow()
+                }}
                 onRenameRequest={(workspaceId, currentTitle) => {
                   setRenameTarget({ workspaceId, currentTitle })
                   setRenameDraft(currentTitle)

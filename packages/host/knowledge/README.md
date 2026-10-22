@@ -11,6 +11,14 @@ English | [中文](README.zh.md)
 
 This Host plugin provides `knowledge`, a local multi-library knowledge capability. Library metadata, documents, revisions, and index manifests are stored under one data directory; chunk vectors are stored in LanceDB. The web authoring surface uses the `knowledge/*` Remotes, while agents use `knowledge_list` and `knowledge_search`.
 
+## Table of Contents
+
+- [Use this package](#use-this-package)
+- [Understand the implementation](#understand-the-implementation)
+- [Model Experience](#model-experience)
+- [Known Limitations and Deferred Work](#known-limitations-and-deferred-work)
+- [Dev Note](#dev-note)
+
 ## Use this package
 
 The web bundle mounts this package automatically. A library has a title, description, enablement, documents, and split settings. Saving starts a background index job. The UI can preview recursive, Markdown, or fixed-length chunks before saving and can run a search test that displays source excerpts and cosine similarity. Retrieval tools are registered while at least one library is enabled and removed when the last enabled library is disabled or deleted.
@@ -25,15 +33,33 @@ The plugin imports legacy `ui-authoring.knowledge` records once when the web sur
 
 ## Model Experience
 
-`knowledge_list` and `knowledge_search` are model-visible tools. Retrieved source text enters the model context after an explicit tool call or after a user checks libraries in the current conversation and automatic retrieval runs. Indexing and embedding happen locally and do not consume provider tokens. Tool descriptions and returned excerpts do consume context tokens when sent to a model.
+### Automatic retrieval in conversations
 
-#### Automatic retrieval in conversations
+#### What the model sees
 
-The knowledge-base menu in the composer stores the selection for the current Session instead of changing a global enable flag shared by every Session. After a user checks one or more libraries, the next new user message is searched before the model request and the selected sources are added as attributed context with the library, document, excerpt, similarity, and index status. With no selection, no automatic search runs. Models may still call `knowledge_list` and `knowledge_search` explicitly, but Diaosi mode no longer needs to discover those tools first to use the libraries selected by the user.
+The composer stores selected library ids in the current Session. Before the next user message reaches the model, the Host searches those libraries and adds attributed excerpts with the library, document, similarity, and index status. With no selection, no automatic search runs.
+
+#### Token effect
+
+Indexing and embedding run locally. Returned excerpts and the `knowledge_search` tool description consume context tokens only when they are included in a model request.
 
 #### KV Cache effect
 
-The plugin does not change the model cache policy. A search result is ordinary tool output and follows the existing request assembly and cache behavior.
+Selected-library context is appended through the existing request assembly, so changing the selection can change the reusable request prefix for later turns.
+
+### Explicit knowledge tools
+
+#### What the model sees
+
+The model can call `knowledge_list` to inspect enabled libraries and `knowledge_search` to retrieve bounded source excerpts. The tools return library and document attribution instead of exposing local index paths.
+
+#### Token effect
+
+Tool schemas and returned excerpts consume provider context tokens. LanceDB lookup and embedding work stay local and do not consume provider completion tokens.
+
+#### KV Cache effect
+
+Explicit tool calls are ordinary appended tool turns and follow the existing request assembly and cache behavior.
 
 ## Known Limitations and Deferred Work
 
@@ -42,6 +68,8 @@ The plugin does not change the model cache policy. A search result is ordinary t
 - **Local single-process ownership** — LanceDB is opened by the Host process and is intended for one active DSH process using a data directory at a time.
 - **Per-Session selection** — the selection is recorded in the Session log so it can be reconstructed after resume and inherited by a fork; disabled libraries do not participate in automatic retrieval.
 
-## Dev Note
+No runtime invariant companion is published because this package's durable contract is the knowledge manifest and indexed documents.
+
+### Dev Note
 
 The package is a Host service with Typert generated `./typert` and `./remote` faces. It is mounted by `dsh-web-app`; the Remote assembly is owned by `dsh-api-remotes`. Deletion uses `knowledge/deleteBase` because `remove` is reserved by the Client namespace service.

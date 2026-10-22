@@ -1,7 +1,7 @@
 /** Durable EOF refusals preserve historical generations and never fall back from native V3. */
 
 import { Context } from '@deepseek-ai/cordis'
-import { SessionId } from '@deepseek-ai/dsh-session'
+import { SESSION_FORMAT_VERSION, SessionId } from '@deepseek-ai/dsh-session'
 import type { SessionFormatJsonObject } from '@deepseek-ai/dsh-session-format'
 import { SessionFormatUnsupportedError } from '@deepseek-ai/dsh-session-persistence'
 import JsonlSessionPersistence from '@deepseek-ai/dsh-session-persistence-jsonl'
@@ -140,8 +140,12 @@ async function observe(path: string) {
 async function expectRefusal(ctx: Context, access: 'read' | 'write', path: string, message: string) {
   // Close an unexpectedly successful open before the rejection assertion fails.
   const opened = ctx.sessionPersistence.open(id, access).then(async (handle) => { await handle.close() })
-  await expect(opened).rejects.toBeInstanceOf(SessionFormatUnsupportedError)
-  await expect(opened).rejects.toMatchObject({ message, location: { kind: 'jsonl', path } })
+  const error = await opened.then(
+    () => { throw new Error('expected session open to refuse the stored format') },
+    (reason: unknown) => reason,
+  )
+  expect(error).toBeInstanceOf(SessionFormatUnsupportedError)
+  expect(error).toMatchObject({ message, location: { kind: 'jsonl', path } })
 }
 
 async function expectOnlyGenerations(paths: readonly string[]) {
@@ -162,7 +166,7 @@ describe.each(modes)('EOF migration refusal ($compression, $access)', ({ compres
       expect(await observe(path)).toEqual(original)
       await expectOnlyGenerations([path])
       for (const targetCompression of ['none', 'zstd'] as const) {
-        await expect(stat(generationLogPath(root, undefined, id, 3, targetCompression)))
+        await expect(stat(generationLogPath(root, undefined, id, SESSION_FORMAT_VERSION, targetCompression)))
           .rejects.toMatchObject({ code: 'ENOENT' })
       }
     }
@@ -174,7 +178,7 @@ describe.each(modes)('EOF migration refusal ($compression, $access)', ({ compres
     const ctx = await mount(compression)
     const reader = await ctx.sessionPersistence.open(id, 'read')
     try {
-      expect(reader.header.version).toBe(3)
+      expect(reader.header.version).toBe(SESSION_FORMAT_VERSION)
       const restored = await reader.read()
       expect(restored.events.map(event => event.type)).toEqual([
         'turn/start', 'step/start', 'system/message', 'user/message', 'system/message', 'request/header',
@@ -188,7 +192,7 @@ describe.each(modes)('EOF migration refusal ($compression, $access)', ({ compres
 
     const path = await store(3, compression, [...nativePrefix, tail])
     const original = await observe(path)
-    const message = diagnostic + ' (raw log: ' + path + ')'
+    const message = diagnostic + '; source v3 artifact remains unchanged (raw log: ' + path + ')'
     for (let attempt = 0; attempt < 2; attempt += 1) {
       await expectRefusal(ctx, access, path, message)
       expect(await observe(path)).toEqual(original)

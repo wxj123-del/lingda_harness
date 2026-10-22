@@ -128,6 +128,31 @@ export class FixtureSession implements SessionFace {
     throw new Error(`test session "${this.sessionId}": updateQueue is not stubbed — supply it on the fixture's session face`)
   }
 
+  /** Fail-loud stub; supply `workflowStart` on the fixture's session face to exercise it. */
+  workflowStart(): never {
+    throw new Error(`test session "${this.sessionId}": workflowStart is not stubbed — supply it on the fixture's session face`)
+  }
+
+  /** Fail-loud stub; supply `workflowCancel` on the fixture's session face to exercise it. */
+  workflowCancel(): never {
+    throw new Error(`test session "${this.sessionId}": workflowCancel is not stubbed — supply it on the fixture's session face`)
+  }
+
+  /** Fail-loud stub; supply `workflowStatus` on the fixture's session face to exercise it. */
+  workflowStatus(): never {
+    throw new Error(`test session "${this.sessionId}": workflowStatus is not stubbed — supply it on the fixture's session face`)
+  }
+
+  /** Fail-loud stub; supply `workflowList` on the fixture's session face to exercise it. */
+  workflowList(): never {
+    throw new Error(`test session "${this.sessionId}": workflowList is not stubbed — supply it on the fixture's session face`)
+  }
+
+  /** Fail-loud stub; supply `optimizePrompt` on the fixture's session face to exercise it. */
+  optimizePrompt(): never {
+    throw new Error(`test session "${this.sessionId}": optimizePrompt is not stubbed — supply it on the fixture's session face`)
+  }
+
   /**
    * Fail-loud stub; supply `cancel` on the fixture's session face to exercise it.
    * @returns never — always throws.

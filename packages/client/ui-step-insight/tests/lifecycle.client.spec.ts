@@ -11,16 +11,18 @@ it('shadows the trajectory view and restores it after plugin disposal', async ()
     const slots = new SlotRegistry(ctx)
     ctx.provide('sessions', {} as never)
     ctx.provide('locale', { register: () => () => {}, bind: () => (key: keyof typeof zh) => zh[key] } as never)
+    ctx.provide('remote', {} as never)
+    ctx.provide('remote.gitWorkspace', {} as never)
     slots.register({ name: 'root', children: { 'conversation.view': { kind: 'list', scope: 'session' } } }, (_props: { renderSlot?: unknown }) => null)
     slots.register({ name: 'conversation.view', id: 'trajectory', label: 'Original' }, () => null)
     const fiber = ctx.plugin(plugin)
     await fiber.await()
-    expect(slots.entries('conversation.view').find(entry => entry.options.id === 'trajectory')?.options.priority).toBe(-10)
-    const repositoryLabel = slots.entries('conversation.view').find(entry => entry.options.id === 'git-workspace')?.options.label
+    expect(slots.entriesOfSlot('conversation.view').find(entry => entry.options.id === 'trajectory')?.options.priority).toBe(-10)
+    const repositoryLabel = slots.entriesOfSlot('conversation.view').find(entry => entry.options.id === 'git-workspace')?.options.label
     expect(typeof repositoryLabel === 'function' ? repositoryLabel() : repositoryLabel).toBe('仓库')
     await fiber.dispose()
-    expect(slots.entries('conversation.view').find(entry => entry.options.id === 'trajectory')?.options.label).toBe('Original')
-    expect(slots.entries('conversation.view').some(entry => entry.options.id === 'git-workspace')).toBe(false)
+    expect(slots.entriesOfSlot('conversation.view').find(entry => entry.options.id === 'trajectory')?.options.label).toBe('Original')
+    expect(slots.entriesOfSlot('conversation.view').some(entry => entry.options.id === 'git-workspace')).toBe(false)
   } finally {
     await ctx.fiber.dispose()
   }

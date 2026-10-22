@@ -17,7 +17,7 @@ import {
 import type { CompactionResult } from '@deepseek-ai/dsh-compaction'
 import type { CommandId } from '@deepseek-ai/dsh-commands/brand'
 import { createUserMessage, errorChain } from '@deepseek-ai/dsh-llm'
-import type { Message, UserMessage } from '@deepseek-ai/dsh-llm'
+import type { ContentBlock, Message, UserMessage } from '@deepseek-ai/dsh-llm'
 import type { TokenMeasurement, TokenMeter } from '@deepseek-ai/dsh-token-meter'
 import { SessionSeq, type Session, type SessionEvent } from '@deepseek-ai/dsh-session'
 import type { Agent } from '@deepseek-ai/dsh-agent'
@@ -28,6 +28,20 @@ interface RegionDependencies {
   readonly meter: TokenMeter
   summarize(input: SummarizationInput, agent: Agent, signal?: AbortSignal): Promise<SummaryResult>
   recover(error: unknown, agent: Agent, sourceEventSeqs: readonly SessionSeq[], signal?: AbortSignal): boolean
+  /**
+   * Persist one summary to a re-readable sidecar and return its path, or
+   * `undefined` when sidecars are disabled or the write failed.
+   */
+  writeSidecar?(input: SidecarInput): string | undefined
+}
+
+/** One summary about to be framed into a checkpoint. */
+export interface SidecarInput {
+  readonly sessionId: Session['id']
+  readonly compactionId: string
+  readonly turn: number | null
+  readonly shadowedRange: { start: SessionSeq; end: SessionSeq }
+  readonly summary: readonly ContentBlock[]
 }
 
 /** One validated inclusive span of current surface positions. */
@@ -228,6 +242,7 @@ export async function compactSurfaceRegion(
       compactionId,
       options.sourceCommandId,
       assertStable,
+      owner,
       signal,
     )
     if (options.owner === null) signal?.throwIfAborted()
@@ -392,6 +407,7 @@ async function summarizeCompaction(
   compactionId: CompactionResult['compactionId'],
   sourceCommandId: CommandId | undefined,
   assertStable: StabilityCheck,
+  turn: number | null,
   signal?: AbortSignal,
 ): Promise<SummarizedCompaction> {
   let summaryResult: SummaryResult
@@ -408,8 +424,18 @@ async function summarizeCompaction(
         validateSurfaceRegion(agent.session, prepared.start, prepared.end))
     }
   }
+  // The sidecar is written before the checkpoint so the checkpoint can name
+  // its path. A failed or disabled write leaves the checkpoint exactly as it
+  // was before sidecars existed.
+  const sidecarPath = dependencies.writeSidecar?.({
+    sessionId: agent.session.id,
+    compactionId,
+    turn,
+    shadowedRange: { start: prepared.start, end: prepared.end },
+    summary: summaryResult.summary,
+  })
   const checkpointMessage = createUserMessage({
-    content: frameSummary(summaryResult.summary),
+    content: frameSummary(summaryResult.summary, sidecarPath),
     source: compactCheckpointSource(compactionId, sourceCommandId),
   })
   // The checkpoint is text-only, so its fixed-heuristic price IS its route

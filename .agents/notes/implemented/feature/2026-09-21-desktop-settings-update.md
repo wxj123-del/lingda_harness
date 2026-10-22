@@ -1,8 +1,8 @@
 # Agent Note: Desktop settings update action
 
-English | [中文](2026-09-21-desktop-settings-update.zh.md)
-
 Status: implemented
+
+English | [中文](2026-09-21-desktop-settings-update.zh.md)
 
 ## Problem
 
@@ -11,6 +11,10 @@ Desktop already had a signed Electron release updater, but the application UI ex
 ## Decision
 
 Expose a narrow update-only bridge to the trusted `dsh-app://app` renderer and register a General settings row that reuses the existing `DesktopUpdateCoordinator`. The row checks the configured signed Desktop release stream and can install an available release, while non-Electron browsers render nothing. Source checkouts continue to use the documented Git and build workflow.
+
+## Alternatives considered
+
+Keeping updates only in the native menu was rejected because it left the trusted Desktop settings surface without a discoverable action. Exposing a general-purpose filesystem or shell bridge was rejected because it would enlarge the renderer privilege boundary beyond update coordination.
 
 ## Consequences
 

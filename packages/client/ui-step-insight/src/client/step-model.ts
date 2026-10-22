@@ -48,6 +48,15 @@ export interface ContextRouteMetrics {
   calibrated: number
   averageDroppedMessages: number
   signals: Record<ContextRouteSignal, number>
+  candidateHistoryMessages: number
+  selectedHistoryMessages: number
+  lowRecallRequests: number
+  fallbackRequests: number
+  averageConfidence: number | null
+  compactedToolResults: number
+  deduplicatedToolResults: number
+  toolResultCharsBefore: number
+  toolResultCharsAfter: number
 }
 
 const CONTEXT_ROUTE_SIGNALS: readonly ContextRouteSignal[] = [
@@ -63,6 +72,9 @@ const CONTEXT_ROUTE_SIGNALS: readonly ContextRouteSignal[] = [
 export function summarizeContextRoutes(rows: readonly StepRow[]): ContextRouteMetrics {
   const routed = rows.flatMap(row => row.contextRoute === undefined ? [] : [row.contextRoute])
   const dropped = routed.reduce((sum, route) => sum + route.droppedMessages, 0)
+  const evidence = routed.flatMap(route => route.routeEvidence === undefined ? [] : [route.routeEvidence])
+  const toolAudits = routed.flatMap(route => route.toolAudit === undefined ? [] : [route.toolAudit])
+  const lowRecallRequests = evidence.filter(item => item.candidateHistoryMessages > 0 && item.selectedHistoryMessages === 0).length
   const signals = Object.fromEntries(CONTEXT_ROUTE_SIGNALS.map(signal => [
     signal,
     routed.filter(route => route.signal === signal).length,
@@ -78,6 +90,18 @@ export function summarizeContextRoutes(rows: readonly StepRow[]): ContextRouteMe
     calibrated: routed.filter(route => (route.calibrationSampleCount ?? 0) > 0).length,
     averageDroppedMessages: routed.length === 0 ? 0 : dropped / routed.length,
     signals,
+    candidateHistoryMessages: evidence.reduce((sum, item) => sum + item.candidateHistoryMessages, 0),
+    selectedHistoryMessages: evidence.reduce((sum, item) => sum + item.selectedHistoryMessages, 0),
+    lowRecallRequests,
+    fallbackRequests: routed.filter(route => route.fallback === true).length,
+    averageConfidence: routed.some(route => route.confidence !== undefined)
+      ? routed.reduce((sum, route) => sum + (route.confidence ?? 0), 0)
+        / routed.filter(route => route.confidence !== undefined).length
+      : null,
+    compactedToolResults: toolAudits.reduce((sum, audit) => sum + audit.compactedToolResults, 0),
+    deduplicatedToolResults: toolAudits.reduce((sum, audit) => sum + audit.deduplicatedToolResults, 0),
+    toolResultCharsBefore: toolAudits.reduce((sum, audit) => sum + audit.toolResultCharsBefore, 0),
+    toolResultCharsAfter: toolAudits.reduce((sum, audit) => sum + audit.toolResultCharsAfter, 0),
   }
 }
 

@@ -386,7 +386,7 @@ export interface LaunchOptions {
   }
   /**
    * Replace the roster row the scaffold pins by default (no configured roots,
-   * default `standard` — the plugin's own shipped presets). Supply this only
+   * default `diaosi` — the plugin's own shipped presets). Supply this only
    * to change WHICH presets a scenario sees beyond the shipped set — a
    * writable user root, a different default. The patch lands after the
    * default, so it wins.
@@ -542,7 +542,7 @@ export async function launchWebScaffold(options: LaunchOptions = {}): Promise<We
     {
       id: 'agent-presets',
       config: {
-        default: 'standard',
+        default: 'diaosi',
         includeUserRoot: false,
       },
     },

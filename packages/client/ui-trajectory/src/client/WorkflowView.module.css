@@ -37,7 +37,7 @@
   display: flex;
   align-items: stretch;
   min-height: 34px;
-  border-left: 1px solid var(--dsw-alias-border-l2);
+  border-left: 0.5px solid var(--dsw-alias-border-l2);
 }
 
 .stat {
@@ -46,7 +46,7 @@
   justify-content: center;
   min-width: 76px;
   padding: 0 14px;
-  border-right: 1px solid var(--dsw-alias-border-l2);
+  border-right: 0.5px solid var(--dsw-alias-border-l2);
   text-align: center;
 }
 
@@ -121,6 +121,7 @@
   width: 8px;
   height: 8px;
   border-radius: 50%;
+  corner-shape: round;
   background: var(--workflow-accent);
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--workflow-accent) 12%, transparent);
 }
@@ -129,6 +130,8 @@
   flex: 1;
   min-height: 0;
   overflow: auto;
+  --dsh-scrollbar-thumb: var(--dsw-alias-scrollbar-bg-l2);
+  --dsh-scrollbar-thumb-hover: var(--dsw-alias-scrollbar-hover-l2);
   padding: 18px 24px 96px;
   scrollbar-width: thin;
 }
@@ -151,7 +154,7 @@
   top: 18px;
   min-width: 0;
   overflow: hidden;
-  border: 1px solid var(--dsw-alias-border-l2);
+  border: 0.5px solid var(--dsw-alias-border-l2);
   border-radius: 8px;
   background: var(--dsw-alias-bg-layer-2);
 }
@@ -162,7 +165,7 @@
   justify-content: space-between;
   min-height: 42px;
   padding: 0 14px;
-  border-bottom: 1px solid var(--dsw-alias-border-l2);
+  border-bottom: 0.5px solid var(--dsw-alias-border-l2);
   color: var(--dsw-alias-label-primary);
   font: var(--dsw-font-s-14);
   font-weight: 600;
@@ -217,7 +220,7 @@
   width: calc(100% - 16px);
   margin: 8px;
   padding: 11px 10px 10px;
-  border: 1px solid color-mix(in srgb, #5b7cfa 55%, var(--dsw-alias-border-l2));
+  border: 0.5px solid color-mix(in srgb, #5b7cfa 55%, var(--dsw-alias-border-l2));
   border-radius: 8px;
   color: var(--dsw-alias-label-primary);
   background: color-mix(in srgb, #5b7cfa 7%, var(--dsw-alias-bg-layer-2));
@@ -316,6 +319,7 @@
   width: 6px;
   height: 6px;
   border-radius: 50%;
+  corner-shape: round;
   background: currentColor;
 }
 
@@ -387,7 +391,7 @@
 
 .workspace[data-canvas-collapsed='true'] .canvas {
   padding: 0;
-  border-right: 1px solid var(--dsw-alias-border-l2);
+  border-right: 0.5px solid var(--dsw-alias-border-l2);
   background: var(--dsw-alias-bg-layer-2);
 }
 
@@ -427,7 +431,7 @@
   box-sizing: border-box;
   margin: 0 auto;
   padding: 12px 14px 14px;
-  border: 1px solid var(--dsw-alias-border-l2);
+  border: 0.5px solid var(--dsw-alias-border-l2);
   border-radius: 9px;
   background: var(--dsw-alias-bg-layer-2);
 }
@@ -441,7 +445,7 @@
   align-items: center;
   min-height: 26px;
   padding: 0 2px 10px;
-  border-bottom: 1px solid var(--dsw-alias-border-l3);
+  border-bottom: 0.5px solid var(--dsw-alias-border-l3);
   color: var(--dsw-alias-label-primary);
   font: var(--dsw-font-s-14);
   font-weight: 600;
@@ -501,7 +505,7 @@
   top: 0;
   bottom: 14px;
   left: 14px;
-  width: 1px;
+  width: 0.5px;
   background: color-mix(in srgb, var(--dsw-alias-brand-primary) 18%, var(--dsw-alias-border-l3));
   content: '';
 }
@@ -511,7 +515,7 @@
   top: 30px;
   left: -28px;
   width: 28px;
-  border-top: 1px solid color-mix(in srgb, var(--dsw-alias-brand-primary) 18%, var(--dsw-alias-border-l3));
+  border-top: 0.5px solid color-mix(in srgb, var(--dsw-alias-brand-primary) 18%, var(--dsw-alias-border-l3));
   content: '';
 }
 
@@ -545,7 +549,7 @@
   top: 50%;
   right: -12px;
   width: 12px;
-  height: 1px;
+  height: 0.5px;
   background: color-mix(in srgb, var(--dsw-alias-brand-primary) 28%, var(--dsw-alias-border-l3));
 }
 
@@ -555,8 +559,8 @@
   right: -1px;
   width: 7px;
   height: 7px;
-  border-top: 1px solid color-mix(in srgb, var(--dsw-alias-brand-primary) 42%, var(--dsw-alias-border-l3));
-  border-right: 1px solid color-mix(in srgb, var(--dsw-alias-brand-primary) 42%, var(--dsw-alias-border-l3));
+  border-top: 0.5px solid color-mix(in srgb, var(--dsw-alias-brand-primary) 42%, var(--dsw-alias-border-l3));
+  border-right: 0.5px solid color-mix(in srgb, var(--dsw-alias-brand-primary) 42%, var(--dsw-alias-border-l3));
   transform: rotate(45deg);
   content: '';
 }
@@ -572,7 +576,7 @@
   box-sizing: border-box;
   min-height: 46px;
   padding: 8px 10px 8px 8px;
-  border: 1px solid var(--dsw-alias-border-l2);
+  border: 0.5px solid var(--dsw-alias-border-l2);
   border-left: 2px solid var(--workflow-accent);
   border-radius: 8px;
   color: var(--dsw-alias-label-primary);
@@ -649,6 +653,7 @@ button.node:hover {
   width: 22px;
   height: 22px;
   border-radius: 50%;
+  corner-shape: round;
   color: var(--workflow-accent);
   background: color-mix(in srgb, var(--workflow-accent) 14%, transparent);
   font: var(--dsw-font-xxs-12);
@@ -718,6 +723,7 @@ button.node:hover {
   white-space: nowrap;
   padding: 3px 6px;
   border-radius: 999px;
+  corner-shape: round;
   background: color-mix(in srgb, var(--workflow-accent) 10%, transparent);
 }
 
@@ -747,7 +753,7 @@ button.node:hover {
   min-width: 0;
   min-height: 0;
   height: 100%;
-  border-left: 1px solid var(--dsw-alias-border-l2);
+  border-left: 0.5px solid var(--dsw-alias-border-l2);
   background: var(--dsw-alias-bg-layer-2);
 }
 
@@ -757,7 +763,7 @@ button.node:hover {
   justify-content: space-between;
   gap: 12px;
   padding: 18px 20px 15px;
-  border-bottom: 1px solid var(--dsw-alias-border-l2);
+  border-bottom: 0.5px solid var(--dsw-alias-border-l2);
   background: var(--dsw-alias-bg-layer-2);
 }
 
@@ -810,7 +816,7 @@ button.node:hover {
   gap: 7px;
   margin-bottom: 20px;
   padding: 8px 10px;
-  border: 1px solid var(--dsw-alias-border-l2);
+  border: 0.5px solid var(--dsw-alias-border-l2);
   border-radius: 6px;
   background: var(--dsw-alias-bg-layer-2);
   color: var(--dsw-alias-state-success-primary);
@@ -823,6 +829,7 @@ button.node:hover {
   width: 7px;
   height: 7px;
   border-radius: 50%;
+  corner-shape: round;
   background: currentColor;
 }
 
@@ -850,7 +857,7 @@ button.node:hover {
   margin: 0;
   overflow: auto;
   padding: 12px 13px;
-  border: 1px solid var(--dsw-alias-border-l2);
+  border: 0.5px solid var(--dsw-alias-border-l2);
   border-radius: 6px;
   color: var(--dsw-alias-label-secondary);
   background: var(--dsw-alias-bg-layer-1);
@@ -874,7 +881,7 @@ button.node:hover {
   gap: 10px;
   width: 100%;
   padding: 8px 9px;
-  border: 1px solid var(--dsw-alias-border-l2);
+  border: 0.5px solid var(--dsw-alias-border-l2);
   border-radius: 5px;
   color: var(--dsw-alias-label-primary);
   background: transparent;

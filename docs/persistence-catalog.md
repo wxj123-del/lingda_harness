@@ -17,7 +17,7 @@ The [format references](persistence-changes/historical-formats/README.md) cover 
 
 | Root | Kind | SHA-256 | Resolved type |
 |---|---|---|---|
-| `SessionHeader` | header | `2a8b114637e66faab5fae1c6e2fba65320db6224c80f5f36c5bf32f937154d03` | [`packages/core/session/src/types.ts#SessionHeader`](#persistence-type-packagescoresessionsrctypestssessionheader) |
+| `SessionHeader` | header | `1a3440e3577382704d42a6263aa463504eb74c566734a55e9503a63efcd02445` | [`packages/core/session/src/types.ts#SessionHeader`](#persistence-type-packagescoresessionsrctypestssessionheader) |
 | `JsonlHeaderLine` | header | `18ee62b8900a4c3d046700f05d7a4d49d6cab2a660a020c87481d1603dd8bd4f` | [`packages/session/session-persistence-jsonl/src/format.ts#HeaderLine`](#persistence-type-packagessessionsession-persistence-jsonlsrcformattsheaderline) |
 | `SessionEventEnvelope` | envelope | `5776e5553ff2dfe3f5bc202dbb1e7c9f93e35a531aebb7764c23b2b6153b2ccc` | [`SessionEventEnvelope`](#persistence-type-sessioneventenvelope) |
 | `event:agent-preset/selected` | event | `a10c17474eaf2ddab7095a099e0fe3d046fc18e56c3e344fc8894c05ff9ef97b` | [`event:agent-preset/selected`](#persistence-type-eventagent-presetselected) |
@@ -31,6 +31,8 @@ The [format references](persistence-changes/historical-formats/README.md) cover 
 | `event:approval/policy` | event | `26718e15e7e395bce9642dba5bbe09b3b1a4ce2213d20d566cd9207d7fc5fb78` | [`event:approval/policy`](#persistence-type-eventapprovalpolicy) |
 | `event:assistant/attempt` | event | `c80c89da83c46db7a454f034c10f969e03cfb574859c7316e5bff683f5a14b0e` | [`event:assistant/attempt`](#persistence-type-eventassistantattempt) |
 | `event:assistant/message` | event | `1169b301aaabcd992657b93ec93750c43175dda81ada5cac086f14f2eaaeed6d` | [`event:assistant/message`](#persistence-type-eventassistantmessage) |
+| `event:auto-resume/attempt` | event | `549118926ab67f04de9f4ea263d626c1da3d85045a43e7ad5c72f34bcdce6855` | [`event:auto-resume/attempt`](#persistence-type-eventauto-resumeattempt) |
+| `event:budget/stop` | event | `47bdbb71ae1b61fcb3d72e8e668e62a39003a8e25b4c8620292625d74df8cc34` | [`event:budget/stop`](#persistence-type-eventbudgetstop) |
 | `event:command/done` | event | `15196447222782e773eb943c92b18316ce96b9af0f0cfddb6e57ba8274ecc5ff` | [`event:command/done`](#persistence-type-eventcommanddone) |
 | `event:command/run` | event | `37184378c6439257d105c4e2022d80fc9c3a3f7c7f6ac661b00bc9f18d871006` | [`event:command/run`](#persistence-type-eventcommandrun) |
 | `event:compaction/end` | event | `b0127044ab31a702bddfd785d345f5abd7a70876746e895ce443afa3e60ddf2d` | [`event:compaction/end`](#persistence-type-eventcompactionend) |
@@ -38,7 +40,7 @@ The [format references](persistence-changes/historical-formats/README.md) cover 
 | `event:compaction/start` | event | `db874d463b0fdec77e9da1c4568f37cb70bd6596781eb93800db44fb8a116965` | [`event:compaction/start`](#persistence-type-eventcompactionstart) |
 | `event:compaction/summary` | event | `f6f3f30109e9008fccf7da2a3268a63da8646b59dd7cf7b75bcd9cf08ac08a59` | [`event:compaction/summary`](#persistence-type-eventcompactionsummary) |
 | `event:context/calibration` | event | `49095060824d56fc0f640ea2c29ca9e43cc7b9c04deeadf1e179e7092e11fb1d` | [`event:context/calibration`](#persistence-type-eventcontextcalibration) |
-| `event:context/router` | event | `384002eebcea45869d53e7f1bed56a84bea7a74e0024b9e8875d0d643c4f0c03` | [`event:context/router`](#persistence-type-eventcontextrouter) |
+| `event:context/router` | event | `bb7fe4c07667dd19ddaf95f78a457ac33af270c756c35a9116b6eff357cebec2` | [`event:context/router`](#persistence-type-eventcontextrouter) |
 | `event:deliverables/presented` | event | `13d3d180f977bf78081d487ffa0ecb75857349bcab29a5a3fb48189fca2a6176` | [`event:deliverables/presented`](#persistence-type-eventdeliverablespresented) |
 | `event:feedback/message-delete` | event | `3ee93b06f3a125850337602bcdf155d2538c43a5c944ec55b1b3c365152d6796` | [`event:feedback/message-delete`](#persistence-type-eventfeedbackmessage-delete) |
 | `event:feedback/message-put` | event | `b5086d249e8502e9ead1d39156bb8d559bde7951cac0f14ce150345b4e42a2bf` | [`event:feedback/message-put`](#persistence-type-eventfeedbackmessage-put) |
@@ -57,7 +59,7 @@ The [format references](persistence-changes/historical-formats/README.md) cover 
 | `event:request/context` | event | `37cbc9cf06d494cfe5c67f078af1605eacb8e4c2c853e9e26455b73de0ee7ccf` | [`event:request/context`](#persistence-type-eventrequestcontext) |
 | `event:request/header` | event | `8ea13bcd983eab596dbfd41c5c2b62a0b318b71cd2a987a6fd752c6ced7e4489` | [`event:request/header`](#persistence-type-eventrequestheader) |
 | `event:sandbox/mode` | event | `516da4cdd6d2f1e5ce488e648578ca51f40e458f707b803e5b24de870e799415` | [`event:sandbox/mode`](#persistence-type-eventsandboxmode) |
-| `event:schedule/change` | event | `2a7f86849ae54b3398ee49661a757c4fcb59a6192b7036ee2ff514617e13fb42` | [`event:schedule/change`](#persistence-type-eventschedulechange) |
+| `event:schedule/change` | event | `6994abb4371f4ed5044d3feb0a492a2050237563e6d26c6cf3e9d9d94857103c` | [`event:schedule/change`](#persistence-type-eventschedulechange) |
 | `event:session-log-deepseek/delivery-accepted` | event | `d63b8b8ffad9c02fd80c43a17df4f240c1fe8118ecca9de34f9d5871838ab5b9` | [`event:session-log-deepseek/delivery-accepted`](#persistence-type-eventsession-log-deepseekdelivery-accepted) |
 | `event:session/end-seed` | event | `5e6db6e24948d4a853c71cb9fabd252ad051ce93d4672c1266cf837c1c17b84e` | [`event:session/end-seed`](#persistence-type-eventsessionend-seed) |
 | `event:session/title` | event | `1b912703e2d64f91c99c675b8f805b01076c8325b905c1218ad81ef0b24909d5` | [`event:session/title`](#persistence-type-eventsessiontitle) |
@@ -73,6 +75,7 @@ The [format references](persistence-changes/historical-formats/README.md) cover 
 | `event:task/failed` | event | `1969f58989122497d3d8e1731940f7b34b2bf015441fd72a6afd2f06c4693538` | [`event:task/failed`](#persistence-type-eventtaskfailed) |
 | `event:task/planned` | event | `4aa65dac12a686eeaeeabc727b383da3d8619c5ff0c98a9bc6aa0e4c420eaed1` | [`event:task/planned`](#persistence-type-eventtaskplanned) |
 | `event:task/running` | event | `2dde4581e88305e75afe04f8dde5b601b09be267131b7cce1a5c78f8be916c72` | [`event:task/running`](#persistence-type-eventtaskrunning) |
+| `event:task/state` | event | `e875ca56b3d556b7e172d7edefc67e68ad63bfba7abe8c34ec07afee964d472d` | [`event:task/state`](#persistence-type-eventtaskstate) |
 | `event:task/succeeded` | event | `052e010d8aacaf68bff0313a0e25bf21d21395010ffd3320b23260017751cf3e` | [`event:task/succeeded`](#persistence-type-eventtasksucceeded) |
 | `event:task/waiting-human` | event | `a4d4b0db312ffa29b34e21c22f1f7bcf32305b447f5c2220edab34bce18ec765` | [`event:task/waiting-human`](#persistence-type-eventtaskwaiting-human) |
 | `event:team/member` | event | `4fb59762612c3e3ac3a3bd4f84c9c148d3c3893bd422ba2b201cc039fabd49bc` | [`event:team/member`](#persistence-type-eventteammember) |
@@ -92,7 +95,7 @@ The [format references](persistence-changes/historical-formats/README.md) cover 
 | `event:turn/start` | event | `aa0957eca50aeb28bcd2e6930b95809926edacb550c8c340ba526ba6b861b3d8` | [`event:turn/start`](#persistence-type-eventturnstart) |
 | `event:user/message` | event | `33d7360537702223e68e495f2b05befe9692cc7724837ec3b4fbe897bae468ca` | [`event:user/message`](#persistence-type-eventusermessage) |
 | `event:visual-workflow/node` | event | `ff2ee66479a0a60bd141972b78adf9c8bfca4b36d262ca17c8c234f15d78dc76` | [`event:visual-workflow/node`](#persistence-type-eventvisual-workflownode) |
-| `event:visual-workflow/run` | event | `cb09a795adca8a7463c0222634d4758ca2bc173809c97de75fa08b37d1001bde` | [`event:visual-workflow/run`](#persistence-type-eventvisual-workflowrun) |
+| `event:visual-workflow/run` | event | `e5f1783273336e038605b79bbb69e2e569cf19f9ba8f3d604672ffb1b0f0dbc2` | [`event:visual-workflow/run`](#persistence-type-eventvisual-workflowrun) |
 | `event:web/deepseek-search-llm-request` | event | `cf6e3aaf1e2de6480aa0157730a41b9a492108a55304100b0f7e112711dd4331` | [`event:web/deepseek-search-llm-request`](#persistence-type-eventwebdeepseek-search-llm-request) |
 
 ## Event envelope
@@ -169,7 +172,7 @@ export type SessionEvent<T extends SessionEventType = SessionEventType> = {
 }[T]
 ```
 
-Sources: [`packages/core/session/src/types.ts:409`](../packages/core/session/src/types.ts) · [`packages/core/session/src/types.ts:417`](../packages/core/session/src/types.ts) · [`packages/core/session/src/types.ts:439`](../packages/core/session/src/types.ts) · [`packages/core/session/src/types.ts:470`](../packages/core/session/src/types.ts)
+Sources: [`packages/core/session/src/types.ts:424`](../packages/core/session/src/types.ts) · [`packages/core/session/src/types.ts:432`](../packages/core/session/src/types.ts) · [`packages/core/session/src/types.ts:454`](../packages/core/session/src/types.ts) · [`packages/core/session/src/types.ts:485`](../packages/core/session/src/types.ts)
 
 ## Events
 
@@ -184,7 +187,7 @@ Sources: [`packages/core/session/src/types.ts:409`](../packages/core/session/src
 'agent/git-checkpoint': GitCheckpoint
 ```
 
-Source: [`packages/interaction/git-workspace/src/index.ts:153`](../packages/interaction/git-workspace/src/index.ts)
+Source: [`packages/interaction/git-workspace/src/index.ts:102`](../packages/interaction/git-workspace/src/index.ts)
 
 <a id="agentinboxspliced--log-only"></a>
 
@@ -216,7 +219,7 @@ Source: [`packages/core/agent/src/types.ts:87`](../packages/core/agent/src/types
 'agent/mode': { mode: AgentMode }
 ```
 
-Source: [`packages/interaction/personal-agent/src/index.ts:116`](../packages/interaction/personal-agent/src/index.ts)
+Source: [`packages/interaction/personal-agent/src/types.ts:77`](../packages/interaction/personal-agent/src/types.ts)
 
 <a id="agentrequest-context--log-only"></a>
 
@@ -234,7 +237,6 @@ Source: [`packages/interaction/personal-agent/src/index.ts:116`](../packages/int
   outputMessages: number
   clippedToolResults: number
   droppedMessages: number
-  /** Heuristic input composition, recorded per model request. */
   systemPromptTokens?: number
   toolSchemaTokens?: number
   historyTokens?: number
@@ -248,7 +250,7 @@ Source: [`packages/interaction/personal-agent/src/index.ts:116`](../packages/int
 }
 ```
 
-Source: [`packages/interaction/personal-agent/src/index.ts:118`](../packages/interaction/personal-agent/src/index.ts)
+Source: [`packages/interaction/personal-agent/src/types.ts:79`](../packages/interaction/personal-agent/src/types.ts)
 
 <a id="agenttool-denied--log-only"></a>
 
@@ -265,7 +267,7 @@ Source: [`packages/interaction/personal-agent/src/index.ts:118`](../packages/int
 }
 ```
 
-Source: [`packages/interaction/personal-agent/src/index.ts:141`](../packages/interaction/personal-agent/src/index.ts)
+Source: [`packages/interaction/personal-agent/src/types.ts:101`](../packages/interaction/personal-agent/src/types.ts)
 
 ### `agent-preset/*`
 
@@ -398,6 +400,45 @@ Source: [`packages/core/session/src/types.ts:335`](../packages/core/session/src/
 Types: [TokenUsage](subsystems/llm-streaming.md)
 
 Source: [`packages/core/session/src/types.ts:321`](../packages/core/session/src/types.ts)
+
+### `auto-resume/*`
+
+<a id="auto-resumeattempt--log-only"></a>
+
+#### `auto-resume/attempt` — log-only
+
+```ts persistence-catalog
+/** One automatic continuation queued after a non-model stop. */
+'auto-resume/attempt': AutoResumeAttempt
+```
+
+Source: [`packages/guard/auto-resume/src/index.ts:65`](../packages/guard/auto-resume/src/index.ts)
+
+### `budget/*`
+
+<a id="budgetstop--log-only"></a>
+
+#### `budget/stop` — log-only
+
+```ts persistence-catalog
+/**
+ * One turn stopped at a step boundary because a runtime or mode budget was
+ * exhausted: the configured guards and the personal-agent mode caps both
+ * write this shape, so a continuation policy has one signal to read.
+ */
+'budget/stop': {
+  /** Turn that stopped. */
+  turn: number
+  /** Which ceiling was hit. */
+  reason: 'steps' | 'tokens' | 'wall-clock'
+  /** The configured ceiling. */
+  limit: number
+  /** The observed value at the stop. */
+  observed: number
+}
+```
+
+Source: [`packages/core/session/src/types.ts:347`](../packages/core/session/src/types.ts)
 
 ### `command/*`
 
@@ -573,7 +614,7 @@ Source: [`packages/compaction/compaction/src/types.ts:34`](../packages/compactio
 }
 ```
 
-Source: [`packages/context/context-router/src/index.ts:428`](../packages/context/context-router/src/index.ts)
+Source: [`packages/context/context-router/src/index.ts:452`](../packages/context/context-router/src/index.ts)
 
 <a id="contextrouter--log-only"></a>
 
@@ -586,6 +627,10 @@ Source: [`packages/context/context-router/src/index.ts:428`](../packages/context
   step: number
   scope: 'fresh' | 'recent' | 'task' | 'full'
   signal?: import('./router.ts').ContextRouteSignal
+  confidence?: number
+  fallback?: boolean
+  routeEvidence?: import('./router.ts').ContextRouteEvidence
+  toolAudit?: import('./router.ts').ContextToolAudit
   reason: string
   inputMessages: number
   outputMessages: number
@@ -624,7 +669,7 @@ Source: [`packages/context/context-router/src/index.ts:428`](../packages/context
 }
 ```
 
-Source: [`packages/context/context-router/src/index.ts:386`](../packages/context/context-router/src/index.ts)
+Source: [`packages/context/context-router/src/index.ts:406`](../packages/context/context-router/src/index.ts)
 
 ### `deliverables/*`
 
@@ -839,7 +884,7 @@ Source: [`packages/llm/llm-retry/src/types.ts:11`](../packages/llm/llm-retry/src
 'model/selection': ModelSelection
 ```
 
-Source: [`packages/api/session-controller/src/types.ts:124`](../packages/api/session-controller/src/types.ts)
+Source: [`packages/api/session-controller/src/types.ts:126`](../packages/api/session-controller/src/types.ts)
 
 ### `permission/*`
 
@@ -892,7 +937,7 @@ Source: [`packages/plan/plan-mode/src/index.ts:47`](../packages/plan/plan-mode/s
 'request/context': RequestContext
 ```
 
-Source: [`packages/core/session/src/types.ts:382`](../packages/core/session/src/types.ts)
+Source: [`packages/core/session/src/types.ts:397`](../packages/core/session/src/types.ts)
 
 <a id="requestheader--log-only"></a>
 
@@ -911,7 +956,7 @@ Source: [`packages/core/session/src/types.ts:382`](../packages/core/session/src/
 }
 ```
 
-Source: [`packages/core/session/src/types.ts:370`](../packages/core/session/src/types.ts)
+Source: [`packages/core/session/src/types.ts:385`](../packages/core/session/src/types.ts)
 
 ### `sandbox/*`
 
@@ -952,7 +997,7 @@ Source: [`packages/sandbox/sandbox-policy/src/session-mode.ts:33`](../packages/s
 
 Types: [ScheduleChange](subsystems/schedule.md)
 
-Source: [`packages/schedule/schedule/src/types.ts:219`](../packages/schedule/schedule/src/types.ts)
+Source: [`packages/schedule/schedule/src/types.ts:252`](../packages/schedule/schedule/src/types.ts)
 
 ### `session/*`
 
@@ -986,7 +1031,7 @@ Source: [`packages/schedule/schedule/src/types.ts:219`](../packages/schedule/sch
 'session/end-seed': { inherited?: true }
 ```
 
-Source: [`packages/core/session/src/types.ts:405`](../packages/core/session/src/types.ts)
+Source: [`packages/core/session/src/types.ts:420`](../packages/core/session/src/types.ts)
 
 <a id="sessiontitle--log-only"></a>
 
@@ -1148,7 +1193,7 @@ Source: [`packages/core/session/src/types.ts:310`](../packages/core/session/src/
 'task/cancelled': AgentTaskSnapshot
 ```
 
-Source: [`packages/interaction/personal-agent/src/index.ts:161`](../packages/interaction/personal-agent/src/index.ts)
+Source: [`packages/interaction/personal-agent/src/types.ts:121`](../packages/interaction/personal-agent/src/types.ts)
 
 <a id="taskcreated--log-only"></a>
 
@@ -1159,7 +1204,7 @@ Source: [`packages/interaction/personal-agent/src/index.ts:161`](../packages/int
 'task/created': AgentTaskSnapshot
 ```
 
-Source: [`packages/interaction/personal-agent/src/index.ts:149`](../packages/interaction/personal-agent/src/index.ts)
+Source: [`packages/interaction/personal-agent/src/types.ts:109`](../packages/interaction/personal-agent/src/types.ts)
 
 <a id="taskfailed--log-only"></a>
 
@@ -1170,7 +1215,7 @@ Source: [`packages/interaction/personal-agent/src/index.ts:149`](../packages/int
 'task/failed': AgentTaskSnapshot
 ```
 
-Source: [`packages/interaction/personal-agent/src/index.ts:159`](../packages/interaction/personal-agent/src/index.ts)
+Source: [`packages/interaction/personal-agent/src/types.ts:119`](../packages/interaction/personal-agent/src/types.ts)
 
 <a id="taskplanned--log-only"></a>
 
@@ -1181,7 +1226,7 @@ Source: [`packages/interaction/personal-agent/src/index.ts:159`](../packages/int
 'task/planned': AgentTaskSnapshot
 ```
 
-Source: [`packages/interaction/personal-agent/src/index.ts:151`](../packages/interaction/personal-agent/src/index.ts)
+Source: [`packages/interaction/personal-agent/src/types.ts:111`](../packages/interaction/personal-agent/src/types.ts)
 
 <a id="taskrunning--log-only"></a>
 
@@ -1192,7 +1237,18 @@ Source: [`packages/interaction/personal-agent/src/index.ts:151`](../packages/int
 'task/running': AgentTaskSnapshot
 ```
 
-Source: [`packages/interaction/personal-agent/src/index.ts:153`](../packages/interaction/personal-agent/src/index.ts)
+Source: [`packages/interaction/personal-agent/src/types.ts:113`](../packages/interaction/personal-agent/src/types.ts)
+
+<a id="taskstate--log-only"></a>
+
+#### `task/state` — log-only
+
+```ts persistence-catalog
+/** Complete post-mutation task snapshot; latest write wins on replay. */
+'task/state': { task: TaskState | null }
+```
+
+Source: [`packages/todo/task-state/src/types.ts:71`](../packages/todo/task-state/src/types.ts)
 
 <a id="tasksucceeded--log-only"></a>
 
@@ -1203,7 +1259,7 @@ Source: [`packages/interaction/personal-agent/src/index.ts:153`](../packages/int
 'task/succeeded': AgentTaskSnapshot
 ```
 
-Source: [`packages/interaction/personal-agent/src/index.ts:157`](../packages/interaction/personal-agent/src/index.ts)
+Source: [`packages/interaction/personal-agent/src/types.ts:117`](../packages/interaction/personal-agent/src/types.ts)
 
 <a id="taskwaiting-human--log-only"></a>
 
@@ -1214,7 +1270,7 @@ Source: [`packages/interaction/personal-agent/src/index.ts:157`](../packages/int
 'task/waiting-human': AgentTaskSnapshot
 ```
 
-Source: [`packages/interaction/personal-agent/src/index.ts:155`](../packages/interaction/personal-agent/src/index.ts)
+Source: [`packages/interaction/personal-agent/src/types.ts:115`](../packages/interaction/personal-agent/src/types.ts)
 
 ### `team/*`
 
@@ -1388,7 +1444,7 @@ Source: [`packages/core/tools/src/types.ts:42`](../packages/core/tools/src/types
 }
 ```
 
-Source: [`packages/core/session/src/types.ts:355`](../packages/core/session/src/types.ts)
+Source: [`packages/core/session/src/types.ts:370`](../packages/core/session/src/types.ts)
 
 ### `tool-workflow/*`
 
@@ -1516,7 +1572,7 @@ Source: [`packages/core/session/src/types.ts:297`](../packages/core/session/src/
 'visual-workflow/node': WorkflowNodeAudit
 ```
 
-Source: [`packages/api/session-controller/src/types.ts:119`](../packages/api/session-controller/src/types.ts)
+Source: [`packages/api/session-controller/src/types.ts:121`](../packages/api/session-controller/src/types.ts)
 
 <a id="visual-workflowrun--log-only"></a>
 
@@ -1527,7 +1583,7 @@ Source: [`packages/api/session-controller/src/types.ts:119`](../packages/api/ses
 'visual-workflow/run': WorkflowRemoteRunView
 ```
 
-Source: [`packages/api/session-controller/src/types.ts:117`](../packages/api/session-controller/src/types.ts)
+Source: [`packages/api/session-controller/src/types.ts:119`](../packages/api/session-controller/src/types.ts)
 
 ### `web/*`
 
@@ -1570,13 +1626,13 @@ SHA-256: `a0f906856fc06f1c6f2083eb970e5a657a82b1a84c06c095445e5d6d161cda80`
 
 `2`
 
-<a id="persistence-type-3"></a>
+<a id="persistence-type-4"></a>
 
-### `3`
+### `4`
 
-SHA-256: `137ac60e26bcb192210d9a32a704b73b0924ed34019323defa1b787be95bd45e`
+SHA-256: `af6e173f7be819bcd0a5c8d77918649c10ce761d8a184ff472f2e01ce64eb2e0`
 
-`3`
+`4`
 
 <a id="persistence-type-aborted"></a>
 
@@ -1762,6 +1818,14 @@ SHA-256: `17aae616ef020b8b9f011ec398ec935450fb06d3e2a0722c456f63aeaf5ff728`
 
 `"at"`
 
+<a id="persistence-type-auto-resumeattempt"></a>
+
+### `"auto-resume/attempt"`
+
+SHA-256: `b56c8429c4abf6ac9fb31e8fb24e393f34f92bec1a08aa53d4a1a3aff22168b5`
+
+`"auto-resume/attempt"`
+
 <a id="persistence-type-before"></a>
 
 ### `"before"`
@@ -1809,6 +1873,14 @@ SHA-256: `254dce209e735f9cb6f6b7aec0354712b1611759ec02af4d35a96f2081e666f6`
 SHA-256: `aa93010d0e521ad7c42273f58d5c9b8bf1dfc94edf1b805a3971b364a35c1877`
 
 `boolean`
+
+<a id="persistence-type-budgetstop"></a>
+
+### `"budget/stop"`
+
+SHA-256: `db71854616b7afc6b851d1daba6262629fc0385b955748c39a5cd7c039fd9f68`
+
+`"budget/stop"`
 
 <a id="persistence-type-canceled"></a>
 
@@ -1889,6 +1961,14 @@ SHA-256: `15495614ccfa9cbdeefb0ec2abd76406435f4c6ff3dae42acae8e09ef42025c9`
 SHA-256: `4988b03f86756a2d24567b5c1a6b2ad17a1cc5558d5b6d2e23e809a00bf445c5`
 
 `"coding"`
+
+<a id="persistence-type-command"></a>
+
+### `"command"`
+
+SHA-256: `c2ebc21942a0cc9ab804555cf917e6b3b10a5ec9d88fc2ac6e44dd8ba21b9d2b`
+
+`"command"`
 
 <a id="persistence-type-commanddone"></a>
 
@@ -2136,7 +2216,7 @@ SHA-256: `c555ad0edd8ac898d69feea20b054aa1720d2efa4ae4b65be69f5b2ae0913c70`
 
 SHA-256: `7bc6a4c59877c8bbddd8454531d60f968e5734813bbeb71a5511d0a24e33cb39`
 
-Array of [`packages/interaction/git-workspace/src/index.ts#GitCommitAudit`](#persistence-type-packagesinteractiongit-workspacesrcindextsgitcommitaudit).
+Array of [`packages/interaction/git-workspace/src/types.ts#GitCommitAudit`](#persistence-type-packagesinteractiongit-workspacesrctypestsgitcommitaudit).
 
 <a id="persistence-type-eventagentgit-checkpointdatacommits0date"></a>
 
@@ -2271,7 +2351,7 @@ SHA-256: `0ddab4577db37a3e0d9e3a91761735c8ef6f5629d526ab8ecaeeea19c097c8f8`
 
 SHA-256: `6a4f72e2e179e17b922f2a9392c0e1c8f8c707f32494372454850a3eb184a6e7`
 
-Sources: [`packages/api/session-controller/src/types.ts:465`](../packages/api/session-controller/src/types.ts)
+Sources: [`packages/api/session-controller/src/types.ts:483`](../packages/api/session-controller/src/types.ts)
 
 | Property | Presence | Type |
 |---|---|---|
@@ -2486,11 +2566,11 @@ SHA-256: `b35ceaaccf4e97b9051dce0f8d2caaef86abe66012a42c01b076f1a3a3fc6faa`
 
 SHA-256: `52cebfa3a29bb262013807b0b0d679fb6705ec1b883f0e0b794da6a6678854ae`
 
-Sources: [`packages/interaction/personal-agent/src/index.ts:116`](../packages/interaction/personal-agent/src/index.ts)
+Sources: [`packages/interaction/personal-agent/src/types.ts:77`](../packages/interaction/personal-agent/src/types.ts)
 
 | Property | Presence | Type |
 |---|---|---|
-| `mode` | required | [`packages/interaction/personal-agent/src/index.ts#AgentMode`](#persistence-type-packagesinteractionpersonal-agentsrcindextsagentmode) |
+| `mode` | required | [`packages/interaction/personal-agent/src/types.ts#AgentMode`](#persistence-type-packagesinteractionpersonal-agentsrctypestsagentmode) |
 
 <a id="persistence-type-eventagentrequest-context"></a>
 
@@ -2512,7 +2592,7 @@ SHA-256: `bbae7a06c6d6a0c6d564389db65fe37975ae248152c931d04b59da9d6e16035a`
 
 SHA-256: `22a6a3b655443e1503d1030e614dc99423d54ebb555d1d6e0ed5ea906e6f2fd6`
 
-Sources: [`packages/interaction/personal-agent/src/index.ts:118`](../packages/interaction/personal-agent/src/index.ts)
+Sources: [`packages/interaction/personal-agent/src/types.ts:79`](../packages/interaction/personal-agent/src/types.ts)
 
 | Property | Presence | Type |
 |---|---|---|
@@ -2525,7 +2605,7 @@ Sources: [`packages/interaction/personal-agent/src/index.ts:118`](../packages/in
 | `inputMessages` | required | `number` |
 | `knowledgeBaseTokens` | optional | `number` |
 | `maxSteps` | required | `number` |
-| `mode` | required | [`packages/interaction/personal-agent/src/index.ts#AgentMode`](#persistence-type-packagesinteractionpersonal-agentsrcindextsagentmode) |
+| `mode` | required | [`packages/interaction/personal-agent/src/types.ts#AgentMode`](#persistence-type-packagesinteractionpersonal-agentsrctypestsagentmode) |
 | `outputBudgetTokens` | optional | `number` |
 | `outputMessages` | required | `number` |
 | `skillTokens` | optional | `number` |
@@ -2542,7 +2622,7 @@ Sources: [`packages/interaction/personal-agent/src/index.ts:118`](../packages/in
 
 SHA-256: `9a49e4332fef6131659c412c65f772eb7aa93845d2b78121eb0315acb13bc595`
 
-Array of [`packages/interaction/personal-agent/src/index.ts#ToolPolicyAudit`](#persistence-type-packagesinteractionpersonal-agentsrcindextstoolpolicyaudit).
+Array of [`packages/interaction/personal-agent/src/types.ts#ToolPolicyAudit`](#persistence-type-packagesinteractionpersonal-agentsrctypeststoolpolicyaudit).
 
 <a id="persistence-type-eventagenttool-denied"></a>
 
@@ -2564,7 +2644,7 @@ SHA-256: `95a88c6c191f903e893fb0f2cc59d22267e8e81aa1ab62ed1ba064811bc439f7`
 
 SHA-256: `825c3be55a8260742a2a5cc34bb9b51aff5b3ca8750d931c9c6c377778d07aeb`
 
-Sources: [`packages/interaction/personal-agent/src/index.ts:141`](../packages/interaction/personal-agent/src/index.ts)
+Sources: [`packages/interaction/personal-agent/src/types.ts:101`](../packages/interaction/personal-agent/src/types.ts)
 
 | Property | Presence | Type |
 |---|---|---|
@@ -2703,7 +2783,7 @@ Sources: [`packages/llm/llm/src/assistant-stream.ts:21`](../packages/llm/llm/src
 
 | Property | Presence | Type |
 |---|---|---|
-| `dt` | required | [`SessionEventEnvelope[47].sourceEventSeqs`](#persistence-type-sessioneventenvelope47sourceeventseqs) |
+| `dt` | required | [`SessionEventEnvelope[49].sourceEventSeqs`](#persistence-type-sessioneventenvelope49sourceeventseqs) |
 | `index` | required | `number` |
 | `texts` | required | [`event:agent/git-checkpoint.data.commits[0].files`](#persistence-type-eventagentgit-checkpointdatacommits0files) |
 | `time0` | required | `number` |
@@ -2719,7 +2799,7 @@ Sources: [`packages/llm/llm/src/assistant-stream.ts:28`](../packages/llm/llm/src
 
 | Property | Presence | Type |
 |---|---|---|
-| `dt` | required | [`SessionEventEnvelope[47].sourceEventSeqs`](#persistence-type-sessioneventenvelope47sourceeventseqs) |
+| `dt` | required | [`SessionEventEnvelope[49].sourceEventSeqs`](#persistence-type-sessioneventenvelope49sourceeventseqs) |
 | `index` | required | `number` |
 | `texts` | required | [`event:agent/git-checkpoint.data.commits[0].files`](#persistence-type-eventagentgit-checkpointdatacommits0files) |
 | `time0` | required | `number` |
@@ -2736,7 +2816,7 @@ Sources: [`packages/llm/llm/src/assistant-stream.ts:35`](../packages/llm/llm/src
 | Property | Presence | Type |
 |---|---|---|
 | `args` | required | [`event:agent/git-checkpoint.data.commits[0].files`](#persistence-type-eventagentgit-checkpointdatacommits0files) |
-| `dt` | required | [`SessionEventEnvelope[47].sourceEventSeqs`](#persistence-type-sessioneventenvelope47sourceeventseqs) |
+| `dt` | required | [`SessionEventEnvelope[49].sourceEventSeqs`](#persistence-type-sessioneventenvelope49sourceeventseqs) |
 | `id` | required | `string` |
 | `index` | required | `number` |
 | `name` | optional | `string` |
@@ -2958,6 +3038,61 @@ Sources: [`packages/core/session/src/types.ts:321`](../packages/core/session/src
 | `turn` | required | `number` |
 | `usage` | optional | [`packages/llm/llm/src/types.ts#TokenUsage`](#persistence-type-packagesllmllmsrctypeststokenusage) |
 
+<a id="persistence-type-eventauto-resumeattempt"></a>
+
+### `event:auto-resume/attempt`
+
+SHA-256: `549118926ab67f04de9f4ea263d626c1da3d85045a43e7ad5c72f34bcdce6855`
+
+| Property | Presence | Type |
+|---|---|---|
+| `data` | required | [`packages/guard/auto-resume/src/index.ts#AutoResumeAttempt`](#persistence-type-packagesguardauto-resumesrcindextsautoresumeattempt) |
+| `ignorable` | optional | `true` |
+| `seq` | required | `number` |
+| `time` | required | `number` |
+| `type` | required | `"auto-resume/attempt"` |
+
+<a id="persistence-type-eventbudgetstop"></a>
+
+### `event:budget/stop`
+
+SHA-256: `47bdbb71ae1b61fcb3d72e8e668e62a39003a8e25b4c8620292625d74df8cc34`
+
+| Property | Presence | Type |
+|---|---|---|
+| `data` | required | [`event:budget/stop.data`](#persistence-type-eventbudgetstopdata) |
+| `ignorable` | optional | `true` |
+| `seq` | required | `number` |
+| `time` | required | `number` |
+| `type` | required | `"budget/stop"` |
+
+<a id="persistence-type-eventbudgetstopdata"></a>
+
+### `event:budget/stop.data`
+
+SHA-256: `51170001def90bb671499fe5d16741e8cb135cd1e1b37bb6146c057a65afd24a`
+
+Sources: [`packages/core/session/src/types.ts:347`](../packages/core/session/src/types.ts)
+
+| Property | Presence | Type |
+|---|---|---|
+| `limit` | required | `number` |
+| `observed` | required | `number` |
+| `reason` | required | [`event:budget/stop.data.reason`](#persistence-type-eventbudgetstopdatareason) |
+| `turn` | required | `number` |
+
+<a id="persistence-type-eventbudgetstopdatareason"></a>
+
+### `event:budget/stop.data.reason`
+
+SHA-256: `64107d3b25c74fffec206cb3b51bac41ffa08ffc750df24ea46f4c80df3dcaad`
+
+One of:
+
+- `"steps"`
+- `"tokens"`
+- `"wall-clock"`
+
 <a id="persistence-type-eventcommanddone"></a>
 
 ### `event:command/done`
@@ -3094,7 +3229,7 @@ Sources: [`packages/compaction/compaction/src/types.ts:82`](../packages/compacti
 | Property | Presence | Type |
 |---|---|---|
 | `shadowedRange` | required | [`event:compaction/prune.data.shadowedRange`](#persistence-type-eventcompactionprunedatashadowedrange) |
-| `shadowedSeqs` | required | [`SessionEventEnvelope[47].sourceEventSeqs`](#persistence-type-sessioneventenvelope47sourceeventseqs) |
+| `shadowedSeqs` | required | [`SessionEventEnvelope[49].sourceEventSeqs`](#persistence-type-sessioneventenvelope49sourceeventseqs) |
 | `shadowedTokenCount` | required | `number` |
 
 <a id="persistence-type-eventcompactionprunedatashadowedrange"></a>
@@ -3178,7 +3313,7 @@ SHA-256: `9ff2ad8dddb836f75e8f6197fff2371323dfc396c3c6fb667e6e0b42fda79a5c`
 | `provider` | required | `string` |
 | `rawOutput` | required | [`event:agent/inbox/spliced.data.inserted[0].content`](#persistence-type-eventagentinboxspliceddatainserted0content) |
 | `shadowedRange` | required | [`event:compaction/prune.data.shadowedRange`](#persistence-type-eventcompactionprunedatashadowedrange) |
-| `shadowedSeqs` | required | [`SessionEventEnvelope[47].sourceEventSeqs`](#persistence-type-sessioneventenvelope47sourceeventseqs) |
+| `shadowedSeqs` | required | [`SessionEventEnvelope[49].sourceEventSeqs`](#persistence-type-sessioneventenvelope49sourceeventseqs) |
 | `shadowedTokenCount` | required | `number` |
 | `sourceCommandId` | optional | `string` |
 | `summary` | required | [`event:agent/inbox/spliced.data.inserted[0].content`](#persistence-type-eventagentinboxspliceddatainserted0content) |
@@ -3198,7 +3333,7 @@ SHA-256: `3aa261c8516b5c955ed12080e6257a56cbe513f6c9f0ac9274c12e96c196ebca`
 | `provider` | required | `string` |
 | `rawOutput` | optional | [`event:agent/inbox/spliced.data.inserted[0].content`](#persistence-type-eventagentinboxspliceddatainserted0content) |
 | `shadowedRange` | required | [`event:compaction/prune.data.shadowedRange`](#persistence-type-eventcompactionprunedatashadowedrange) |
-| `shadowedSeqs` | required | [`SessionEventEnvelope[47].sourceEventSeqs`](#persistence-type-sessioneventenvelope47sourceeventseqs) |
+| `shadowedSeqs` | required | [`SessionEventEnvelope[49].sourceEventSeqs`](#persistence-type-sessioneventenvelope49sourceeventseqs) |
 | `shadowedTokenCount` | required | `number` |
 | `sourceCommandId` | optional | `string` |
 | `summary` | required | [`event:agent/inbox/spliced.data.inserted[0].content`](#persistence-type-eventagentinboxspliceddatainserted0content) |
@@ -3224,11 +3359,11 @@ SHA-256: `49095060824d56fc0f640ea2c29ca9e43cc7b9c04deeadf1e179e7092e11fb1d`
 
 SHA-256: `a18cd0f5e8cb00d3218bcdfbe87a59b76532a3e448d1a23f6c2ea99e09882869`
 
-Sources: [`packages/context/context-router/src/index.ts:428`](../packages/context/context-router/src/index.ts)
+Sources: [`packages/context/context-router/src/index.ts:452`](../packages/context/context-router/src/index.ts)
 
 | Property | Presence | Type |
 |---|---|---|
-| `deltas` | required | [`SessionEventEnvelope[47].sourceEventSeqs`](#persistence-type-sessioneventenvelope47sourceeventseqs) |
+| `deltas` | required | [`SessionEventEnvelope[49].sourceEventSeqs`](#persistence-type-sessioneventenvelope49sourceeventseqs) |
 | `lastDeltaTokens` | required | `number` |
 | `lastEstimatedRequestTokens` | required | `number` |
 | `lastProviderInputTokens` | required | `number` |
@@ -3241,7 +3376,7 @@ Sources: [`packages/context/context-router/src/index.ts:428`](../packages/contex
 
 ### `event:context/router`
 
-SHA-256: `384002eebcea45869d53e7f1bed56a84bea7a74e0024b9e8875d0d643c4f0c03`
+SHA-256: `bb7fe4c07667dd19ddaf95f78a457ac33af270c756c35a9116b6eff357cebec2`
 
 | Property | Presence | Type |
 |---|---|---|
@@ -3255,9 +3390,9 @@ SHA-256: `384002eebcea45869d53e7f1bed56a84bea7a74e0024b9e8875d0d643c4f0c03`
 
 ### `event:context/router.data`
 
-SHA-256: `e462f5e40f8316e81fc80f970ff6a786b80ac7084fe56dcb157332b57eec557a`
+SHA-256: `6947eb6a9940b98d5cb2d1da51d7828d0a921a79630380427246bc9b48fc0637`
 
-Sources: [`packages/context/context-router/src/index.ts:386`](../packages/context/context-router/src/index.ts)
+Sources: [`packages/context/context-router/src/index.ts:406`](../packages/context/context-router/src/index.ts)
 
 | Property | Presence | Type |
 |---|---|---|
@@ -3265,12 +3400,14 @@ Sources: [`packages/context/context-router/src/index.ts:386`](../packages/contex
 | `budgetExceeded` | required | `boolean` |
 | `calibrationDeltaTokens` | optional | `number` |
 | `calibrationSampleCount` | optional | `number` |
+| `confidence` | optional | `number` |
 | `contextWindow` | optional | `number` |
 | `droppedMessages` | required | `number` |
 | `estimateBasis` | optional | [`event:context/router.data.estimateBasis`](#persistence-type-eventcontextrouterdataestimatebasis) |
 | `estimatedInputTokens` | required | `number` |
 | `estimatedRequestTokens` | optional | `number` |
 | `estimatedWindowTokens` | optional | `number` |
+| `fallback` | optional | `boolean` |
 | `finalPayload` | optional | `boolean` |
 | `inputMessages` | required | `number` |
 | `maxInputTokens` | optional | `number` |
@@ -3282,6 +3419,7 @@ Sources: [`packages/context/context-router/src/index.ts:386`](../packages/contex
 | `providerReportedInputTokens` | optional | `number` |
 | `reason` | required | `string` |
 | `requestOverflowTokens` | optional | `number` |
+| `routeEvidence` | optional | [`packages/context/context-router/src/router.ts#ContextRouteEvidence`](#persistence-type-packagescontextcontext-routersrcroutertscontextrouteevidence) |
 | `safetyReserveTokens` | optional | `number` |
 | `scope` | required | [`event:context/router.data.scope`](#persistence-type-eventcontextrouterdatascope) |
 | `selectedMessageIds` | required | [`event:agent/git-checkpoint.data.commits[0].files`](#persistence-type-eventagentgit-checkpointdatacommits0files) |
@@ -3291,6 +3429,7 @@ Sources: [`packages/context/context-router/src/index.ts:386`](../packages/contex
 | `step` | required | `number` |
 | `taskId` | optional | `string` |
 | `taskRecallMessages` | optional | `number` |
+| `toolAudit` | optional | [`packages/context/context-router/src/router.ts#ContextToolAudit`](#persistence-type-packagescontextcontext-routersrcroutertscontexttoolaudit) |
 | `toolSchemaTokens` | optional | `number` |
 | `turn` | required | `number` |
 
@@ -3300,7 +3439,7 @@ Sources: [`packages/context/context-router/src/index.ts:386`](../packages/contex
 
 SHA-256: `2d70007abcb616dbe2178bf3c4dd87688cc1f455bd8a9ae1bf62b15c62c698d9`
 
-Sources: [`packages/context/context-router/src/index.ts:409`](../packages/context/context-router/src/index.ts)
+Sources: [`packages/context/context-router/src/index.ts:433`](../packages/context/context-router/src/index.ts)
 
 | Property | Presence | Type |
 |---|---|---|
@@ -3828,7 +3967,7 @@ SHA-256: `8ea13bcd983eab596dbfd41c5c2b62a0b318b71cd2a987a6fd752c6ced7e4489`
 
 SHA-256: `2f0aefb72ab453c4bf21a6687f436775d359dc6f8f10410fd4c0615b20bd9d76`
 
-Sources: [`packages/core/session/src/types.ts:370`](../packages/core/session/src/types.ts)
+Sources: [`packages/core/session/src/types.ts:385`](../packages/core/session/src/types.ts)
 
 | Property | Presence | Type |
 |---|---|---|
@@ -3885,7 +4024,7 @@ Sources: [`packages/sandbox/sandbox-policy/src/session-mode.ts:33`](../packages/
 
 ### `event:schedule/change`
 
-SHA-256: `2a7f86849ae54b3398ee49661a757c4fcb59a6192b7036ee2ff514617e13fb42`
+SHA-256: `6994abb4371f4ed5044d3feb0a492a2050237563e6d26c6cf3e9d9d94857103c`
 
 | Property | Presence | Type |
 |---|---|---|
@@ -3894,6 +4033,98 @@ SHA-256: `2a7f86849ae54b3398ee49661a757c4fcb59a6192b7036ee2ff514617e13fb42`
 | `seq` | required | `number` |
 | `time` | required | `number` |
 | `type` | required | `"schedule/change"` |
+
+<a id="persistence-type-eventschedulechangedata0schedule0targetargs"></a>
+
+### `event:schedule/change.data[0].schedule[0].target.args`
+
+SHA-256: `c592ce75aab73fcab19c1d7845684c72cf402b78d2e1f2833a58ecf9f3598ed6`
+
+Sources: [`packages/util/values/src/index.ts:4`](../packages/util/values/src/index.ts)
+
+One of:
+
+- [`event:schedule/change.data[0].schedule[0].target.args[5]`](#persistence-type-eventschedulechangedata0schedule0targetargs5)
+- [`event:schedule/change.data[0].schedule[0].target.args[5][0][6]`](#persistence-type-eventschedulechangedata0schedule0targetargs506)
+- `string`
+- `boolean`
+- `null`
+- `number`
+
+<a id="persistence-type-eventschedulechangedata0schedule0targetargs5"></a>
+
+### `event:schedule/change.data[0].schedule[0].target.args[5]`
+
+SHA-256: `72ec79127a9c0d0241b1106a74cc2b24c81ce467170f1c3c93f7b71a9496d227`
+
+Array of [`event:schedule/change.data[0].schedule[0].target.args`](#persistence-type-eventschedulechangedata0schedule0targetargs).
+
+<a id="persistence-type-eventschedulechangedata0schedule0targetargs506"></a>
+
+### `event:schedule/change.data[0].schedule[0].target.args[5][0][6]`
+
+SHA-256: `529e0ccd0e34079ab4ff21ed87f810cee0388246263bf22e8aba5986b56fae05`
+
+Sources: [`packages/util/values/src/index.ts:4`](../packages/util/values/src/index.ts)
+
+| Property | Presence | Type |
+|---|---|---|
+| [`string`] | index signature | [`event:schedule/change.data[0].schedule[0].target.args`](#persistence-type-eventschedulechangedata0schedule0targetargs) |
+
+<a id="persistence-type-eventschedulechangedata1schedule0"></a>
+
+### `event:schedule/change.data[1].schedule[0]`
+
+SHA-256: `b9e24bbe7c590383ed830af38d06fb8171fc68bf8693e17e1e3aa0f7daafef80`
+
+| Property | Presence | Type |
+|---|---|---|
+| `afterSeconds` | required | `number` |
+| `id` | required | `string` |
+| `kind` | required | `"after"` |
+| `prompt` | required | `string` |
+| `scheduledAt` | required | `string` |
+| `target` | required | [`packages/schedule/schedule/src/types.ts#WorkflowScheduleTarget`](#persistence-type-packagesscheduleschedulesrctypestsworkflowscheduletarget) |
+
+<a id="persistence-type-eventschedulechangedata1schedule1"></a>
+
+### `event:schedule/change.data[1].schedule[1]`
+
+SHA-256: `09c8bb8f14424047d48a3151116df2ed07e2c0883ebd2ae44eacf07d05026b51`
+
+| Property | Presence | Type |
+|---|---|---|
+| `id` | required | `string` |
+| `kind` | required | `"at"` |
+| `prompt` | required | `string` |
+| `scheduledAt` | required | `string` |
+| `target` | required | [`packages/schedule/schedule/src/types.ts#WorkflowScheduleTarget`](#persistence-type-packagesscheduleschedulesrctypestsworkflowscheduletarget) |
+
+<a id="persistence-type-eventschedulechangedata1schedule2"></a>
+
+### `event:schedule/change.data[1].schedule[2]`
+
+SHA-256: `3ad234e6cfccc0a906a8e8035f99deaa49cd9e93943dd060e19ef9ec97775261`
+
+| Property | Presence | Type |
+|---|---|---|
+| `everySeconds` | required | `number` |
+| `id` | required | `string` |
+| `kind` | required | `"every"` |
+| `prompt` | required | `string` |
+| `scheduledAt` | required | `string` |
+| `target` | required | [`packages/schedule/schedule/src/types.ts#WorkflowScheduleTarget`](#persistence-type-packagesscheduleschedulesrctypestsworkflowscheduletarget) |
+
+<a id="persistence-type-eventschedulechangedata2version"></a>
+
+### `event:schedule/change.data[2].version`
+
+SHA-256: `0a010ecef52e6f3d200c4fe5659463594a67f6de23133dc0a90d87ddc5b461b6`
+
+One of:
+
+- `1`
+- `2`
 
 <a id="persistence-type-eventsession-log-deepseekdelivery-accepted"></a>
 
@@ -3943,7 +4174,7 @@ SHA-256: `5e6db6e24948d4a853c71cb9fabd252ad051ce93d4672c1266cf837c1c17b84e`
 
 SHA-256: `17d1afb770d9941936130996da00dc86782cfef731d8d6526162c301256a4ac3`
 
-Sources: [`packages/core/session/src/types.ts:405`](../packages/core/session/src/types.ts)
+Sources: [`packages/core/session/src/types.ts:420`](../packages/core/session/src/types.ts)
 
 | Property | Presence | Type |
 |---|---|---|
@@ -4165,7 +4396,7 @@ SHA-256: `69becfb6b2d3fd5da91518089454cae8ef33f1835637ec44dde35dd077fd4bae`
 | `data` | required | [`event:system/message.data`](#persistence-type-eventsystemmessagedata) |
 | `ignorable` | optional | `true` |
 | `seq` | required | `number` |
-| `sourceEventSeqs` | optional | [`SessionEventEnvelope[47].sourceEventSeqs`](#persistence-type-sessioneventenvelope47sourceeventseqs) |
+| `sourceEventSeqs` | optional | [`SessionEventEnvelope[49].sourceEventSeqs`](#persistence-type-sessioneventenvelope49sourceeventseqs) |
 | `surfaceOp` | required | [`packages/core/session/src/types.ts#SurfaceOp`](#persistence-type-packagescoresessionsrctypestssurfaceop) |
 | `time` | required | `number` |
 | `type` | required | `"system/message"` |
@@ -4208,7 +4439,7 @@ SHA-256: `c2517349361edf26b29f088bbb2b3dc4a255d6f98cf5845492c679c52ff1cef4`
 
 | Property | Presence | Type |
 |---|---|---|
-| `data` | required | [`packages/interaction/personal-agent/src/index.ts#AgentTaskSnapshot`](#persistence-type-packagesinteractionpersonal-agentsrcindextsagenttasksnapshot) |
+| `data` | required | [`packages/interaction/personal-agent/src/types.ts#AgentTaskSnapshot`](#persistence-type-packagesinteractionpersonal-agentsrctypestsagenttasksnapshot) |
 | `ignorable` | optional | `true` |
 | `seq` | required | `number` |
 | `time` | required | `number` |
@@ -4222,7 +4453,7 @@ SHA-256: `a5c054e888fe194baa2ff9ede075fa0724041e964784ab12e16be2f440af05f1`
 
 | Property | Presence | Type |
 |---|---|---|
-| `data` | required | [`packages/interaction/personal-agent/src/index.ts#AgentTaskSnapshot`](#persistence-type-packagesinteractionpersonal-agentsrcindextsagenttasksnapshot) |
+| `data` | required | [`packages/interaction/personal-agent/src/types.ts#AgentTaskSnapshot`](#persistence-type-packagesinteractionpersonal-agentsrctypestsagenttasksnapshot) |
 | `ignorable` | optional | `true` |
 | `seq` | required | `number` |
 | `time` | required | `number` |
@@ -4236,7 +4467,7 @@ SHA-256: `1969f58989122497d3d8e1731940f7b34b2bf015441fd72a6afd2f06c4693538`
 
 | Property | Presence | Type |
 |---|---|---|
-| `data` | required | [`packages/interaction/personal-agent/src/index.ts#AgentTaskSnapshot`](#persistence-type-packagesinteractionpersonal-agentsrcindextsagenttasksnapshot) |
+| `data` | required | [`packages/interaction/personal-agent/src/types.ts#AgentTaskSnapshot`](#persistence-type-packagesinteractionpersonal-agentsrctypestsagenttasksnapshot) |
 | `ignorable` | optional | `true` |
 | `seq` | required | `number` |
 | `time` | required | `number` |
@@ -4250,7 +4481,7 @@ SHA-256: `4aa65dac12a686eeaeeabc727b383da3d8619c5ff0c98a9bc6aa0e4c420eaed1`
 
 | Property | Presence | Type |
 |---|---|---|
-| `data` | required | [`packages/interaction/personal-agent/src/index.ts#AgentTaskSnapshot`](#persistence-type-packagesinteractionpersonal-agentsrcindextsagenttasksnapshot) |
+| `data` | required | [`packages/interaction/personal-agent/src/types.ts#AgentTaskSnapshot`](#persistence-type-packagesinteractionpersonal-agentsrctypestsagenttasksnapshot) |
 | `ignorable` | optional | `true` |
 | `seq` | required | `number` |
 | `time` | required | `number` |
@@ -4264,11 +4495,64 @@ SHA-256: `2dde4581e88305e75afe04f8dde5b601b09be267131b7cce1a5c78f8be916c72`
 
 | Property | Presence | Type |
 |---|---|---|
-| `data` | required | [`packages/interaction/personal-agent/src/index.ts#AgentTaskSnapshot`](#persistence-type-packagesinteractionpersonal-agentsrcindextsagenttasksnapshot) |
+| `data` | required | [`packages/interaction/personal-agent/src/types.ts#AgentTaskSnapshot`](#persistence-type-packagesinteractionpersonal-agentsrctypestsagenttasksnapshot) |
 | `ignorable` | optional | `true` |
 | `seq` | required | `number` |
 | `time` | required | `number` |
 | `type` | required | `"task/running"` |
+
+<a id="persistence-type-eventtaskstate"></a>
+
+### `event:task/state`
+
+SHA-256: `e875ca56b3d556b7e172d7edefc67e68ad63bfba7abe8c34ec07afee964d472d`
+
+| Property | Presence | Type |
+|---|---|---|
+| `data` | required | [`event:task/state.data`](#persistence-type-eventtaskstatedata) |
+| `ignorable` | optional | `true` |
+| `seq` | required | `number` |
+| `time` | required | `number` |
+| `type` | required | `"task/state"` |
+
+<a id="persistence-type-eventtaskstatedata"></a>
+
+### `event:task/state.data`
+
+SHA-256: `1fe198154595c17649acf02ca50f2f997eefaaa6edb466c38618d4c4becd6ad8`
+
+Sources: [`packages/todo/task-state/src/types.ts:71`](../packages/todo/task-state/src/types.ts)
+
+| Property | Presence | Type |
+|---|---|---|
+| `task` | required | [`event:task/state.data.task`](#persistence-type-eventtaskstatedatatask) |
+
+<a id="persistence-type-eventtaskstatedatatask"></a>
+
+### `event:task/state.data.task`
+
+SHA-256: `f17f7a4bceee997202b81a802dd7befc79a25db9aa74bedeb4b1d73503b7c4b9`
+
+One of:
+
+- `null`
+- [`packages/todo/task-state/src/types.ts#TaskState`](#persistence-type-packagestodotask-statesrctypeststaskstate)
+
+<a id="persistence-type-eventtaskstatedatatask1decisions"></a>
+
+### `event:task/state.data.task[1].decisions`
+
+SHA-256: `ece3f8ef40faed9e52f9f63e457183f2ff7ccb15f7bdf4e2dd781136c8cb5e50`
+
+Array of [`packages/todo/task-state/src/types.ts#TaskDecision`](#persistence-type-packagestodotask-statesrctypeststaskdecision).
+
+<a id="persistence-type-eventtaskstatedatatask1evidence"></a>
+
+### `event:task/state.data.task[1].evidence`
+
+SHA-256: `26e54611a519693a22fb0c362e68ad9857159ba296f54c617b9621ff012475fa`
+
+Array of [`packages/todo/task-state/src/types.ts#TaskEvidence`](#persistence-type-packagestodotask-statesrctypeststaskevidence).
 
 <a id="persistence-type-eventtasksucceeded"></a>
 
@@ -4278,7 +4562,7 @@ SHA-256: `052e010d8aacaf68bff0313a0e25bf21d21395010ffd3320b23260017751cf3e`
 
 | Property | Presence | Type |
 |---|---|---|
-| `data` | required | [`packages/interaction/personal-agent/src/index.ts#AgentTaskSnapshot`](#persistence-type-packagesinteractionpersonal-agentsrcindextsagenttasksnapshot) |
+| `data` | required | [`packages/interaction/personal-agent/src/types.ts#AgentTaskSnapshot`](#persistence-type-packagesinteractionpersonal-agentsrctypestsagenttasksnapshot) |
 | `ignorable` | optional | `true` |
 | `seq` | required | `number` |
 | `time` | required | `number` |
@@ -4292,7 +4576,7 @@ SHA-256: `a4d4b0db312ffa29b34e21c22f1f7bcf32305b447f5c2220edab34bce18ec765`
 
 | Property | Presence | Type |
 |---|---|---|
-| `data` | required | [`packages/interaction/personal-agent/src/index.ts#AgentTaskSnapshot`](#persistence-type-packagesinteractionpersonal-agentsrcindextsagenttasksnapshot) |
+| `data` | required | [`packages/interaction/personal-agent/src/types.ts#AgentTaskSnapshot`](#persistence-type-packagesinteractionpersonal-agentsrctypestsagenttasksnapshot) |
 | `ignorable` | optional | `true` |
 | `seq` | required | `number` |
 | `time` | required | `number` |
@@ -4588,7 +4872,7 @@ SHA-256: `ec38b5949af8eacaf00df002f4acbe344f934f8a061e9cdc65a52a48e5f6dd93`
 
 SHA-256: `a81059ca06999da1e712414520c2c65e491d052fcf9640fae20aa38f0a5dc735`
 
-Sources: [`packages/core/session/src/types.ts:363`](../packages/core/session/src/types.ts) · [`packages/core/tools/src/types.ts:24`](../packages/core/tools/src/types.ts)
+Sources: [`packages/core/session/src/types.ts:378`](../packages/core/session/src/types.ts) · [`packages/core/tools/src/types.ts:24`](../packages/core/tools/src/types.ts)
 
 | Property | Presence | Type |
 |---|---|---|
@@ -4607,7 +4891,7 @@ SHA-256: `29af48b840d0cd9e48b6f50bf3b354f8f6340607c5b99220a48e74f60beac9e2`
 | `data` | required | [`event:tool/result.data`](#persistence-type-eventtoolresultdata) |
 | `ignorable` | optional | `true` |
 | `seq` | required | `number` |
-| `sourceEventSeqs` | optional | [`SessionEventEnvelope[47].sourceEventSeqs`](#persistence-type-sessioneventenvelope47sourceeventseqs) |
+| `sourceEventSeqs` | optional | [`SessionEventEnvelope[49].sourceEventSeqs`](#persistence-type-sessioneventenvelope49sourceeventseqs) |
 | `surfaceOp` | required | [`packages/core/session/src/types.ts#SurfaceOp`](#persistence-type-packagescoresessionsrctypestssurfaceop) |
 | `time` | required | `number` |
 | `type` | required | `"tool/result"` |
@@ -4618,13 +4902,13 @@ SHA-256: `29af48b840d0cd9e48b6f50bf3b354f8f6340607c5b99220a48e74f60beac9e2`
 
 SHA-256: `356aad27134a0e31af67c994ff8b9e4b91acfb6c4917b3bc1f7a62bbf82794d5`
 
-Sources: [`packages/core/session/src/types.ts:355`](../packages/core/session/src/types.ts)
+Sources: [`packages/core/session/src/types.ts:370`](../packages/core/session/src/types.ts)
 
 | Property | Presence | Type |
 |---|---|---|
 | `error` | optional | [`event:tool/ptc-dispatch.data.error`](#persistence-type-eventtoolptc-dispatchdataerror) |
 | `message` | required | [`packages/llm/llm/src/message.ts#ToolResultMessage`](#persistence-type-packagesllmllmsrcmessagetstoolresultmessage) |
-| `meta` | optional | [`event:tool/result.data.meta`](#persistence-type-eventtoolresultdatameta) |
+| `meta` | optional | [`event:schedule/change.data[0].schedule[0].target.args`](#persistence-type-eventschedulechangedata0schedule0targetargs) |
 | `step` | required | `number` |
 | `turn` | required | `number` |
 
@@ -4637,43 +4921,6 @@ SHA-256: `8d6a011f3ef7096a4a922ef420458419ff6b20e1eaeece5d331db7585d2f08d6`
 | Position | Presence | Type |
 |---|---|---|
 | 0 | required | [`packages/llm/llm/src/types.ts#ToolResultBlock`](#persistence-type-packagesllmllmsrctypeststoolresultblock) |
-
-<a id="persistence-type-eventtoolresultdatameta"></a>
-
-### `event:tool/result.data.meta`
-
-SHA-256: `c592ce75aab73fcab19c1d7845684c72cf402b78d2e1f2833a58ecf9f3598ed6`
-
-Sources: [`packages/util/values/src/index.ts:4`](../packages/util/values/src/index.ts)
-
-One of:
-
-- [`event:tool/result.data.meta[5]`](#persistence-type-eventtoolresultdatameta5)
-- [`event:tool/result.data.meta[5][0][6]`](#persistence-type-eventtoolresultdatameta506)
-- `string`
-- `boolean`
-- `null`
-- `number`
-
-<a id="persistence-type-eventtoolresultdatameta5"></a>
-
-### `event:tool/result.data.meta[5]`
-
-SHA-256: `72ec79127a9c0d0241b1106a74cc2b24c81ce467170f1c3c93f7b71a9496d227`
-
-Array of [`event:tool/result.data.meta`](#persistence-type-eventtoolresultdatameta).
-
-<a id="persistence-type-eventtoolresultdatameta506"></a>
-
-### `event:tool/result.data.meta[5][0][6]`
-
-SHA-256: `529e0ccd0e34079ab4ff21ed87f810cee0388246263bf22e8aba5986b56fae05`
-
-Sources: [`packages/util/values/src/index.ts:4`](../packages/util/values/src/index.ts)
-
-| Property | Presence | Type |
-|---|---|---|
-| [`string`] | index signature | [`event:tool/result.data.meta`](#persistence-type-eventtoolresultdatameta) |
 
 <a id="persistence-type-eventturnend"></a>
 
@@ -4850,7 +5097,7 @@ SHA-256: `33d7360537702223e68e495f2b05befe9692cc7724837ec3b4fbe897bae468ca`
 | `data` | required | [`packages/llm/llm/src/message.ts#UserMessage`](#persistence-type-packagesllmllmsrcmessagetsusermessage) |
 | `ignorable` | optional | `true` |
 | `seq` | required | `number` |
-| `sourceEventSeqs` | optional | [`SessionEventEnvelope[47].sourceEventSeqs`](#persistence-type-sessioneventenvelope47sourceeventseqs) |
+| `sourceEventSeqs` | optional | [`SessionEventEnvelope[49].sourceEventSeqs`](#persistence-type-sessioneventenvelope49sourceeventseqs) |
 | `surfaceOp` | required | [`packages/core/session/src/types.ts#SurfaceOp`](#persistence-type-packagescoresessionsrctypestssurfaceop) |
 | `time` | required | `number` |
 | `type` | required | `"user/message"` |
@@ -4873,7 +5120,7 @@ SHA-256: `ff2ee66479a0a60bd141972b78adf9c8bfca4b36d262ca17c8c234f15d78dc76`
 
 ### `event:visual-workflow/run`
 
-SHA-256: `cb09a795adca8a7463c0222634d4758ca2bc173809c97de75fa08b37d1001bde`
+SHA-256: `e5f1783273336e038605b79bbb69e2e569cf19f9ba8f3d604672ffb1b0f0dbc2`
 
 | Property | Presence | Type |
 |---|---|---|
@@ -4890,6 +5137,17 @@ SHA-256: `cb09a795adca8a7463c0222634d4758ca2bc173809c97de75fa08b37d1001bde`
 SHA-256: `3f4bf37da1779de68bb056a7e3098cca1e7b012b98b17f411a651b42cd2fd820`
 
 Array of [`packages/api/session-controller/src/types.ts#WorkflowNodeAudit`](#persistence-type-packagesapisession-controllersrctypestsworkflownodeaudit).
+
+<a id="persistence-type-eventvisual-workflowrundatasource"></a>
+
+### `event:visual-workflow/run.data.source`
+
+SHA-256: `8a6b5f94784ed22e6ee5209186d5e206b68716cafb2c689f2542fa765c96abda`
+
+One of:
+
+- `"schedule"`
+- `"visual-editor"`
 
 <a id="persistence-type-eventwebdeepseek-search-llm-request"></a>
 
@@ -5021,6 +5279,14 @@ SHA-256: `f1d59acdc87c8ec1f32639a2a48714a316524f8c1f69faa322514360144fa7d5`
 SHA-256: `22d8254cbc8f187652c9a3120980f0e94610ab061ace04b5db2823d3d578445a`
 
 `"explicit-full"`
+
+<a id="persistence-type-fail"></a>
+
+### `"fail"`
+
+SHA-256: `40d75cbad88519a8e5d957d0d5876d9835b80727c96ce4271028fc77c49a654f`
+
+`"fail"`
 
 <a id="persistence-type-failed"></a>
 
@@ -5336,6 +5602,14 @@ SHA-256: `cf2e46d6bd37ead0246a9276ca8f1cd3ebf60b12bc7d33752e86c217cc9f7add`
 
 `"local-ahead"`
 
+<a id="persistence-type-manual"></a>
+
+### `"manual"`
+
+SHA-256: `5f4349a8d9d3fbb35b8a8147c21c9111ac5077dc1cc5d3b88d353074c20632ee`
+
+`"manual"`
+
 <a id="persistence-type-max-tokens"></a>
 
 ### `"max-tokens"`
@@ -5456,7 +5730,7 @@ SHA-256: `9d80129e13edfb6feb03ed327e6085c6ef60b97ad074244b2f5fd4667424a6a4`
 
 SHA-256: `f09e5e7acf5ff5ccd193ff2eeec015fa2ff7c29d98bc465f8c3302058d47e29b`
 
-Sources: [`packages/api/session-controller/src/types.ts:170`](../packages/api/session-controller/src/types.ts)
+Sources: [`packages/api/session-controller/src/types.ts:172`](../packages/api/session-controller/src/types.ts)
 
 | Property | Presence | Type |
 |---|---|---|
@@ -5470,7 +5744,7 @@ Sources: [`packages/api/session-controller/src/types.ts:170`](../packages/api/se
 
 SHA-256: `316798a9443e50a4003111240c0801ea4499fc7ffa75320cac9d63e22c2304f3`
 
-Sources: [`packages/api/session-controller/src/types.ts:47`](../packages/api/session-controller/src/types.ts)
+Sources: [`packages/api/session-controller/src/types.ts:49`](../packages/api/session-controller/src/types.ts)
 
 | Property | Presence | Type |
 |---|---|---|
@@ -5492,7 +5766,7 @@ Sources: [`packages/api/session-controller/src/types.ts:47`](../packages/api/ses
 
 SHA-256: `844625e467bdf49d9cfd0662c4984b54bf56220ca0e6338db4fc02d7c74af346`
 
-Sources: [`packages/api/session-controller/src/types.ts:44`](../packages/api/session-controller/src/types.ts)
+Sources: [`packages/api/session-controller/src/types.ts:46`](../packages/api/session-controller/src/types.ts)
 
 One of:
 
@@ -5505,9 +5779,9 @@ One of:
 
 ### `packages/api/session-controller/src/types.ts#WorkflowRemoteRunView`
 
-SHA-256: `a9f21da6f264e30628e926424fb203e0260368beacfedd43bcbdc902b5810c2f`
+SHA-256: `974b42d382716da8538c507ceb1250535d16b4ca34a39ff755fbfe5c0c388348`
 
-Sources: [`packages/api/session-controller/src/types.ts:62`](../packages/api/session-controller/src/types.ts)
+Sources: [`packages/api/session-controller/src/types.ts:64`](../packages/api/session-controller/src/types.ts)
 
 | Property | Presence | Type |
 |---|---|---|
@@ -5518,12 +5792,12 @@ Sources: [`packages/api/session-controller/src/types.ts:62`](../packages/api/ses
 | `inputBytes` | optional | `number` |
 | `name` | required | `string` |
 | `runId` | required | `string` |
-| `source` | required | `"visual-editor"` |
+| `source` | required | [`event:visual-workflow/run.data.source`](#persistence-type-eventvisual-workflowrundatasource) |
 | `startedAt` | required | `number` |
 | `status` | required | [`packages/api/session-controller/src/types.ts#WorkflowRemoteRunStatus`](#persistence-type-packagesapisession-controllersrctypestsworkflowremoterunstatus) |
 | `timedOut` | optional | `boolean` |
 | `timeoutMs` | optional | `number` |
-| `value` | optional | [`event:tool/result.data.meta`](#persistence-type-eventtoolresultdatameta) |
+| `value` | optional | [`event:schedule/change.data[0].schedule[0].target.args`](#persistence-type-eventschedulechangedata0schedule0targetargs) |
 | `workflowId` | required | `string` |
 | `workflowVersion` | optional | `number` |
 
@@ -5584,7 +5858,7 @@ Sources: [`packages/compaction/compaction-image-offload/src/projection.ts:9`](..
 
 | Property | Presence | Type |
 |---|---|---|
-| `imageIndexes` | required | [`SessionEventEnvelope[47].sourceEventSeqs`](#persistence-type-sessioneventenvelope47sourceeventseqs) |
+| `imageIndexes` | required | [`SessionEventEnvelope[49].sourceEventSeqs`](#persistence-type-sessioneventenvelope49sourceeventseqs) |
 | `seq` | required | `number` |
 
 <a id="persistence-type-packagescontextagent-instructionssrcrendertsagentinstructionchange"></a>
@@ -5624,7 +5898,7 @@ Sources: [`packages/context/agent-instructions/src/state.ts:37`](../packages/con
 
 SHA-256: `e8c10f93bcdc3a2e527daa497a408f7e29d465babf32cd00590c0ecadc938854`
 
-Sources: [`packages/context/context-router/src/router.ts:84`](../packages/context/context-router/src/router.ts)
+Sources: [`packages/context/context-router/src/router.ts:116`](../packages/context/context-router/src/router.ts)
 
 | Property | Presence | Type |
 |---|---|---|
@@ -5650,6 +5924,38 @@ One of:
 - `"tool"`
 - `"unknown"`
 - `"user"`
+
+<a id="persistence-type-packagescontextcontext-routersrcroutertscontextrouteevidence"></a>
+
+### `packages/context/context-router/src/router.ts#ContextRouteEvidence`
+
+SHA-256: `4c3b91fa0e317ee4b2bc96e474bd94c77b0fac8103915e06880107e84773e9e3`
+
+Sources: [`packages/context/context-router/src/router.ts:98`](../packages/context/context-router/src/router.ts)
+
+| Property | Presence | Type |
+|---|---|---|
+| `candidateHistoryMessages` | required | `number` |
+| `matchedHistoryTerms` | required | `number` |
+| `queryTerms` | required | `number` |
+| `selectedHistoryMessages` | required | `number` |
+
+<a id="persistence-type-packagescontextcontext-routersrcroutertscontexttoolaudit"></a>
+
+### `packages/context/context-router/src/router.ts#ContextToolAudit`
+
+SHA-256: `447302c8e3f1ee14f183770bc5f87eb729a541fe3eb28676d027ee1ffff97ba7`
+
+Sources: [`packages/context/context-router/src/router.ts:106`](../packages/context/context-router/src/router.ts)
+
+| Property | Presence | Type |
+|---|---|---|
+| `compactedToolResults` | required | `number` |
+| `deduplicatedToolResults` | required | `number` |
+| `toolCallMessages` | required | `number` |
+| `toolResultCharsAfter` | required | `number` |
+| `toolResultCharsBefore` | required | `number` |
+| `toolResultMessages` | required | `number` |
 
 <a id="persistence-type-packagescontextsession-referencesrctypestssessionreferencesource"></a>
 
@@ -5727,7 +6033,7 @@ One of:
 
 ### `packages/core/session/src/types.ts#SessionHeader`
 
-SHA-256: `2a8b114637e66faab5fae1c6e2fba65320db6224c80f5f36c5bf32f937154d03`
+SHA-256: `1a3440e3577382704d42a6263aa463504eb74c566734a55e9503a63efcd02445`
 
 Sources: [`packages/core/session/src/types.ts:93`](../packages/core/session/src/types.ts)
 
@@ -5741,7 +6047,7 @@ Sources: [`packages/core/session/src/types.ts:93`](../packages/core/session/src/
 | `isSeeded` | required | `boolean` |
 | `origin` | optional | `"subagent"` |
 | `parentSession` | optional | `string` |
-| `version` | required | `3` |
+| `version` | required | `4` |
 
 <a id="persistence-type-packagescoresessionsrctypestssurfaceop"></a>
 
@@ -5749,7 +6055,7 @@ Sources: [`packages/core/session/src/types.ts:93`](../packages/core/session/src/
 
 SHA-256: `335e242de1fcc17b6ca920fc420d71bec2d76e53e37955c00948b65ab77f05c5`
 
-Sources: [`packages/core/session/src/types.ts:439`](../packages/core/session/src/types.ts)
+Sources: [`packages/core/session/src/types.ts:454`](../packages/core/session/src/types.ts)
 
 One of:
 
@@ -6138,6 +6444,21 @@ Sources: [`packages/goal/goal/src/types.ts:60`](../packages/goal/goal/src/types.
 | `phase` | required | [`packages/goal/goal/src/types.ts#GoalPhase`](#persistence-type-packagesgoalgoalsrctypestsgoalphase) |
 | `revision` | required | `number` |
 
+<a id="persistence-type-packagesguardauto-resumesrcindextsautoresumeattempt"></a>
+
+### `packages/guard/auto-resume/src/index.ts#AutoResumeAttempt`
+
+SHA-256: `2baaf8b70dadf9dd6c348f1229a4a2a723c3aca8fb81cc6b344c10f1a4c792d8`
+
+Sources: [`packages/guard/auto-resume/src/index.ts:51`](../packages/guard/auto-resume/src/index.ts)
+
+| Property | Presence | Type |
+|---|---|---|
+| `at` | required | `number` |
+| `attempt` | required | `number` |
+| `reason` | required | `string` |
+| `taskRevision` | required | `number` |
+
 <a id="persistence-type-packageshookshook-protocolsrctypestshookdialect"></a>
 
 ### `packages/hooks/hook-protocol/src/types.ts#HookDialect`
@@ -6174,7 +6495,7 @@ Sources: [`packages/host/knowledge/src/types.ts:77`](../packages/host/knowledge/
 
 SHA-256: `4790006a8dbc61a833a000d1cdb8e538cfb9ed31a0bff135f62b4b16c7c7011e`
 
-Sources: [`packages/interaction/git-workspace/src/index.ts:118`](../packages/interaction/git-workspace/src/index.ts)
+Sources: [`packages/interaction/git-workspace/src/index.ts:67`](../packages/interaction/git-workspace/src/index.ts)
 
 | Property | Presence | Type |
 |---|---|---|
@@ -6198,13 +6519,13 @@ Sources: [`packages/interaction/git-workspace/src/index.ts:118`](../packages/int
 | `upstreamBranch` | optional | `string` |
 | `upstreamHead` | optional | `string` |
 
-<a id="persistence-type-packagesinteractiongit-workspacesrcindextsgitcommitaudit"></a>
+<a id="persistence-type-packagesinteractiongit-workspacesrctypestsgitcommitaudit"></a>
 
-### `packages/interaction/git-workspace/src/index.ts#GitCommitAudit`
+### `packages/interaction/git-workspace/src/types.ts#GitCommitAudit`
 
 SHA-256: `470bf32d878dab23e8a4e2ce105c51b82ea9ce9c384599136d21741245fb166f`
 
-Sources: [`packages/interaction/git-workspace/src/index.ts:29`](../packages/interaction/git-workspace/src/index.ts)
+Sources: [`packages/interaction/git-workspace/src/types.ts:76`](../packages/interaction/git-workspace/src/types.ts)
 
 | Property | Presence | Type |
 |---|---|---|
@@ -6214,13 +6535,13 @@ Sources: [`packages/interaction/git-workspace/src/index.ts:29`](../packages/inte
 | `message` | required | `string` |
 | `sha` | required | `string` |
 
-<a id="persistence-type-packagesinteractionpersonal-agentsrcindextsagentmode"></a>
+<a id="persistence-type-packagesinteractionpersonal-agentsrctypestsagentmode"></a>
 
-### `packages/interaction/personal-agent/src/index.ts#AgentMode`
+### `packages/interaction/personal-agent/src/types.ts#AgentMode`
 
 SHA-256: `e791051f9a075d2fc8f7e11339ed30bc535cd7a83269116946b8a2ec2fab1ee0`
 
-Sources: [`packages/interaction/personal-agent/src/index.ts:37`](../packages/interaction/personal-agent/src/index.ts)
+Sources: [`packages/interaction/personal-agent/src/types.ts:4`](../packages/interaction/personal-agent/src/types.ts)
 
 One of:
 
@@ -6229,13 +6550,13 @@ One of:
 - `"qa"`
 - `"research"`
 
-<a id="persistence-type-packagesinteractionpersonal-agentsrcindextsagenttaskbudget"></a>
+<a id="persistence-type-packagesinteractionpersonal-agentsrctypestsagenttaskbudget"></a>
 
-### `packages/interaction/personal-agent/src/index.ts#AgentTaskBudget`
+### `packages/interaction/personal-agent/src/types.ts#AgentTaskBudget`
 
 SHA-256: `b5d7dfb266e27b49e407831b5b62ab4d6bc65b8dff963d9c295c401466c2dd5e`
 
-Sources: [`packages/interaction/personal-agent/src/index.ts:66`](../packages/interaction/personal-agent/src/index.ts)
+Sources: [`packages/interaction/personal-agent/src/types.ts:42`](../packages/interaction/personal-agent/src/types.ts)
 
 | Property | Presence | Type |
 |---|---|---|
@@ -6245,36 +6566,36 @@ Sources: [`packages/interaction/personal-agent/src/index.ts:66`](../packages/int
 | `maxTokens` | optional | `number` |
 | `timeoutMs` | optional | `number` |
 
-<a id="persistence-type-packagesinteractionpersonal-agentsrcindextsagenttasksnapshot"></a>
+<a id="persistence-type-packagesinteractionpersonal-agentsrctypestsagenttasksnapshot"></a>
 
-### `packages/interaction/personal-agent/src/index.ts#AgentTaskSnapshot`
+### `packages/interaction/personal-agent/src/types.ts#AgentTaskSnapshot`
 
 SHA-256: `ccc91b63c4b325e08b1a0bafb77de298588a66b24926f47c247ac28cbe124fe1`
 
-Sources: [`packages/interaction/personal-agent/src/index.ts:74`](../packages/interaction/personal-agent/src/index.ts)
+Sources: [`packages/interaction/personal-agent/src/types.ts:50`](../packages/interaction/personal-agent/src/types.ts)
 
 | Property | Presence | Type |
 |---|---|---|
 | `acceptance` | optional | [`event:agent/git-checkpoint.data.commits[0].files`](#persistence-type-eventagentgit-checkpointdatacommits0files) |
 | `artifacts` | optional | [`event:agent/git-checkpoint.data.commits[0].files`](#persistence-type-eventagentgit-checkpointdatacommits0files) |
-| `budget` | required | [`packages/interaction/personal-agent/src/index.ts#AgentTaskBudget`](#persistence-type-packagesinteractionpersonal-agentsrcindextsagenttaskbudget) |
+| `budget` | required | [`packages/interaction/personal-agent/src/types.ts#AgentTaskBudget`](#persistence-type-packagesinteractionpersonal-agentsrctypestsagenttaskbudget) |
 | `createdAt` | required | `number` |
 | `error` | optional | `string` |
 | `goal` | required | `string` |
 | `id` | required | `string` |
 | `owner` | required | `string` |
 | `parentTask` | optional | `string` |
-| `status` | required | [`packages/interaction/personal-agent/src/index.ts#AgentTaskStatus`](#persistence-type-packagesinteractionpersonal-agentsrcindextsagenttaskstatus) |
+| `status` | required | [`packages/interaction/personal-agent/src/types.ts#AgentTaskStatus`](#persistence-type-packagesinteractionpersonal-agentsrctypestsagenttaskstatus) |
 | `turn` | required | `number` |
 | `updatedAt` | required | `number` |
 
-<a id="persistence-type-packagesinteractionpersonal-agentsrcindextsagenttaskstatus"></a>
+<a id="persistence-type-packagesinteractionpersonal-agentsrctypestsagenttaskstatus"></a>
 
-### `packages/interaction/personal-agent/src/index.ts#AgentTaskStatus`
+### `packages/interaction/personal-agent/src/types.ts#AgentTaskStatus`
 
 SHA-256: `690f44230b4884bef2209e4840e462fb7c2e1ec257fbbce63ff4266c7ec12aa8`
 
-Sources: [`packages/interaction/personal-agent/src/index.ts:64`](../packages/interaction/personal-agent/src/index.ts)
+Sources: [`packages/interaction/personal-agent/src/types.ts:40`](../packages/interaction/personal-agent/src/types.ts)
 
 One of:
 
@@ -6286,13 +6607,13 @@ One of:
 - `"succeeded"`
 - `"waiting-human"`
 
-<a id="persistence-type-packagesinteractionpersonal-agentsrcindextstoolpolicyaudit"></a>
+<a id="persistence-type-packagesinteractionpersonal-agentsrctypeststoolpolicyaudit"></a>
 
-### `packages/interaction/personal-agent/src/index.ts#ToolPolicyAudit`
+### `packages/interaction/personal-agent/src/types.ts#ToolPolicyAudit`
 
 SHA-256: `f99f464ac10ae9c1bead880f8656a0140ca6707dad32b8c7fa7db50ac17e495e`
 
-Sources: [`packages/interaction/personal-agent/src/index.ts:89`](../packages/interaction/personal-agent/src/index.ts)
+Sources: [`packages/interaction/personal-agent/src/types.ts:65`](../packages/interaction/personal-agent/src/types.ts)
 
 | Property | Presence | Type |
 |---|---|---|
@@ -6765,9 +7086,9 @@ One of:
 
 ### `packages/schedule/schedule/src/types.ts#AfterScheduleRecord`
 
-SHA-256: `27e337d3d6b402b221e50c247a3f518a70d0c474cc60beee15fac3e9c5cbfcbe`
+SHA-256: `0ee8170f781f9d5dddc6189c8f8904baaeedbbe13f5df41052f3a1ad4f4cc672`
 
-Sources: [`packages/schedule/schedule/src/types.ts:13`](../packages/schedule/schedule/src/types.ts)
+Sources: [`packages/schedule/schedule/src/types.ts:38`](../packages/schedule/schedule/src/types.ts)
 
 | Property | Presence | Type |
 |---|---|---|
@@ -6776,14 +7097,15 @@ Sources: [`packages/schedule/schedule/src/types.ts:13`](../packages/schedule/sch
 | `kind` | required | `"after"` |
 | `prompt` | required | `string` |
 | `scheduledAt` | required | `string` |
+| `target` | optional | [`packages/schedule/schedule/src/types.ts#WorkflowScheduleTarget`](#persistence-type-packagesscheduleschedulesrctypestsworkflowscheduletarget) |
 
 <a id="persistence-type-packagesscheduleschedulesrctypestsatschedulerecord"></a>
 
 ### `packages/schedule/schedule/src/types.ts#AtScheduleRecord`
 
-SHA-256: `658d895d187b26d83f3b53109a3bf77bbfba9f6f9a6d4bc4ee4315b4eb36239e`
+SHA-256: `aac81db1d777dca0fd4977c2182377824994d9d95fddf3f8202eb46414a305de`
 
-Sources: [`packages/schedule/schedule/src/types.ts:27`](../packages/schedule/schedule/src/types.ts)
+Sources: [`packages/schedule/schedule/src/types.ts:46`](../packages/schedule/schedule/src/types.ts)
 
 | Property | Presence | Type |
 |---|---|---|
@@ -6791,29 +7113,30 @@ Sources: [`packages/schedule/schedule/src/types.ts:27`](../packages/schedule/sch
 | `kind` | required | `"at"` |
 | `prompt` | required | `string` |
 | `scheduledAt` | required | `string` |
+| `target` | optional | [`packages/schedule/schedule/src/types.ts#WorkflowScheduleTarget`](#persistence-type-packagesscheduleschedulesrctypestsworkflowscheduletarget) |
 
 <a id="persistence-type-packagesscheduleschedulesrctypestseveryscheduledispatchchange"></a>
 
 ### `packages/schedule/schedule/src/types.ts#EveryScheduleDispatchChange`
 
-SHA-256: `e6063d0451dc02026fd9b54ad3f77c7b1b6392ad3e872a7737ac84e13ca72344`
+SHA-256: `2e765f1b3449bcd15b9b07bfcb8bbbb5261d76d4fda5aa5d8b2a6d0790acc07b`
 
-Sources: [`packages/schedule/schedule/src/types.ts:93`](../packages/schedule/schedule/src/types.ts)
+Sources: [`packages/schedule/schedule/src/types.ts:126`](../packages/schedule/schedule/src/types.ts)
 
 | Property | Presence | Type |
 |---|---|---|
 | `acceptedAt` | required | `string` |
 | `id` | required | `string` |
 | `operation` | required | `"dispatch"` |
-| `version` | required | `1` |
+| `version` | required | [`event:schedule/change.data[2].version`](#persistence-type-eventschedulechangedata2version) |
 
 <a id="persistence-type-packagesscheduleschedulesrctypestseveryschedulerecord"></a>
 
 ### `packages/schedule/schedule/src/types.ts#EveryScheduleRecord`
 
-SHA-256: `66ece68282d8c06330fb83329a24ae54c386d5ccfab296bbf18369da8beb7d14`
+SHA-256: `657166e67ef96e3bab3b8237a5e51b2df5dae85b7774c8cfdc3c906775123756`
 
-Sources: [`packages/schedule/schedule/src/types.ts:39`](../packages/schedule/schedule/src/types.ts)
+Sources: [`packages/schedule/schedule/src/types.ts:52`](../packages/schedule/schedule/src/types.ts)
 
 | Property | Presence | Type |
 |---|---|---|
@@ -6822,43 +7145,45 @@ Sources: [`packages/schedule/schedule/src/types.ts:39`](../packages/schedule/sch
 | `kind` | required | `"every"` |
 | `prompt` | required | `string` |
 | `scheduledAt` | required | `string` |
+| `target` | optional | [`packages/schedule/schedule/src/types.ts#WorkflowScheduleTarget`](#persistence-type-packagesscheduleschedulesrctypestsworkflowscheduletarget) |
 
 <a id="persistence-type-packagesscheduleschedulesrctypestsoneshotscheduledispatchchange"></a>
 
 ### `packages/schedule/schedule/src/types.ts#OneShotScheduleDispatchChange`
 
-SHA-256: `8e8e91646a5cae3fc78f7532a0013ff2088ae47077642c2edd507a508209b8af`
+SHA-256: `f31f55349c103411de409c912b32f49b26a6f4236b8f2862fae46bddb2096a47`
 
-Sources: [`packages/schedule/schedule/src/types.ts:86`](../packages/schedule/schedule/src/types.ts)
+Sources: [`packages/schedule/schedule/src/types.ts:119`](../packages/schedule/schedule/src/types.ts)
 
 | Property | Presence | Type |
 |---|---|---|
 | `id` | required | `string` |
 | `operation` | required | `"dispatch"` |
-| `version` | required | `1` |
+| `version` | required | [`event:schedule/change.data[2].version`](#persistence-type-eventschedulechangedata2version) |
 
 <a id="persistence-type-packagesscheduleschedulesrctypestsschedulechange"></a>
 
 ### `packages/schedule/schedule/src/types.ts#ScheduleChange`
 
-SHA-256: `e1d0e52dcd1855ffb803efc18f8f7b776c48d1c25757e8a75c0281fa298c02e1`
+SHA-256: `0d19eb2370c13d7b5f7a5f21b8dd3e6feb2f8feba821c9ce951b6693c8cd3f75`
 
-Sources: [`packages/schedule/schedule/src/types.ts:105`](../packages/schedule/schedule/src/types.ts)
+Sources: [`packages/schedule/schedule/src/types.ts:138`](../packages/schedule/schedule/src/types.ts)
 
 One of:
 
-- [`packages/schedule/schedule/src/types.ts#EveryScheduleDispatchChange`](#persistence-type-packagesscheduleschedulesrctypestseveryscheduledispatchchange)
 - [`packages/schedule/schedule/src/types.ts#ScheduleDeleteChange`](#persistence-type-packagesscheduleschedulesrctypestsscheduledeletechange)
 - [`packages/schedule/schedule/src/types.ts#OneShotScheduleDispatchChange`](#persistence-type-packagesscheduleschedulesrctypestsoneshotscheduledispatchchange)
 - [`packages/schedule/schedule/src/types.ts#ScheduleCreateChange`](#persistence-type-packagesscheduleschedulesrctypestsschedulecreatechange)
+- [`packages/schedule/schedule/src/types.ts#WorkflowScheduleCreateChange`](#persistence-type-packagesscheduleschedulesrctypestsworkflowschedulecreatechange)
+- [`packages/schedule/schedule/src/types.ts#EveryScheduleDispatchChange`](#persistence-type-packagesscheduleschedulesrctypestseveryscheduledispatchchange)
 
 <a id="persistence-type-packagesscheduleschedulesrctypestsschedulecreatechange"></a>
 
 ### `packages/schedule/schedule/src/types.ts#ScheduleCreateChange`
 
-SHA-256: `ca6425edd20afe34d0cedc6ad1abad1ad7b32e2fbc4c1d24db53939e80bf887f`
+SHA-256: `3309438eedd051faead3ec09c16e67fd1e3077c6ff8571f40d57bc165a500c2a`
 
-Sources: [`packages/schedule/schedule/src/types.ts:72`](../packages/schedule/schedule/src/types.ts)
+Sources: [`packages/schedule/schedule/src/types.ts:98`](../packages/schedule/schedule/src/types.ts)
 
 | Property | Presence | Type |
 |---|---|---|
@@ -6870,29 +7195,76 @@ Sources: [`packages/schedule/schedule/src/types.ts:72`](../packages/schedule/sch
 
 ### `packages/schedule/schedule/src/types.ts#ScheduleDeleteChange`
 
-SHA-256: `18dc21f12bbac8ade8377e6fbb54179e20c3d955d73fba3244c57fb6bf001df0`
+SHA-256: `b905e5e9f66e34df5a000a4668b2bbd0e478d7df286f917f8d5e1af6ac514a6c`
 
-Sources: [`packages/schedule/schedule/src/types.ts:79`](../packages/schedule/schedule/src/types.ts)
+Sources: [`packages/schedule/schedule/src/types.ts:112`](../packages/schedule/schedule/src/types.ts)
 
 | Property | Presence | Type |
 |---|---|---|
 | `id` | required | `string` |
 | `operation` | required | `"delete"` |
-| `version` | required | `1` |
+| `version` | required | [`event:schedule/change.data[2].version`](#persistence-type-eventschedulechangedata2version) |
 
 <a id="persistence-type-packagesscheduleschedulesrctypestsschedulerecord"></a>
 
 ### `packages/schedule/schedule/src/types.ts#ScheduleRecord`
 
-SHA-256: `d8f868c6b3e7189de6c1ffe2ea04794ea2aa31315b6347d12536e46020afac87`
+SHA-256: `c58d495115a8d8bd25c04aec2048ecef2c4cba7897ceaa937fe8e8cf72615f14`
 
-Sources: [`packages/schedule/schedule/src/types.ts:69`](../packages/schedule/schedule/src/types.ts)
+Sources: [`packages/schedule/schedule/src/types.ts:76`](../packages/schedule/schedule/src/types.ts)
 
 One of:
 
 - [`packages/schedule/schedule/src/types.ts#AfterScheduleRecord`](#persistence-type-packagesscheduleschedulesrctypestsafterschedulerecord)
 - [`packages/schedule/schedule/src/types.ts#EveryScheduleRecord`](#persistence-type-packagesscheduleschedulesrctypestseveryschedulerecord)
 - [`packages/schedule/schedule/src/types.ts#AtScheduleRecord`](#persistence-type-packagesscheduleschedulesrctypestsatschedulerecord)
+
+<a id="persistence-type-packagesscheduleschedulesrctypestsworkflowschedulecreatechange"></a>
+
+### `packages/schedule/schedule/src/types.ts#WorkflowScheduleCreateChange`
+
+SHA-256: `124736dbe4f19c021e3eae2fde33c53ade301fc0f62b5d804608ecef5dc3ffbc`
+
+Sources: [`packages/schedule/schedule/src/types.ts:105`](../packages/schedule/schedule/src/types.ts)
+
+| Property | Presence | Type |
+|---|---|---|
+| `operation` | required | `"create"` |
+| `schedule` | required | [`packages/schedule/schedule/src/types.ts#WorkflowScheduleRecord`](#persistence-type-packagesscheduleschedulesrctypestsworkflowschedulerecord) |
+| `version` | required | `2` |
+
+<a id="persistence-type-packagesscheduleschedulesrctypestsworkflowschedulerecord"></a>
+
+### `packages/schedule/schedule/src/types.ts#WorkflowScheduleRecord`
+
+SHA-256: `586310d8992d2b7263e4b170d279c0f8cb5e3ad7c8813669fd280641592eed34`
+
+Sources: [`packages/schedule/schedule/src/types.ts:79`](../packages/schedule/schedule/src/types.ts)
+
+One of:
+
+- [`event:schedule/change.data[1].schedule[0]`](#persistence-type-eventschedulechangedata1schedule0)
+- [`event:schedule/change.data[1].schedule[2]`](#persistence-type-eventschedulechangedata1schedule2)
+- [`event:schedule/change.data[1].schedule[1]`](#persistence-type-eventschedulechangedata1schedule1)
+
+<a id="persistence-type-packagesscheduleschedulesrctypestsworkflowscheduletarget"></a>
+
+### `packages/schedule/schedule/src/types.ts#WorkflowScheduleTarget`
+
+SHA-256: `6b288a52f236fbf6b803d1939ea0b84b97b44ea8a0428c23d0b2f4d290240157`
+
+Sources: [`packages/schedule/schedule/src/types.ts:11`](../packages/schedule/schedule/src/types.ts)
+
+| Property | Presence | Type |
+|---|---|---|
+| `args` | optional | [`event:schedule/change.data[0].schedule[0].target.args`](#persistence-type-eventschedulechangedata0schedule0targetargs) |
+| `kind` | required | `"workflow"` |
+| `nodeIds` | required | [`event:agent/git-checkpoint.data.commits[0].files`](#persistence-type-eventagentgit-checkpointdatacommits0files) |
+| `script` | required | `string` |
+| `timeoutMs` | optional | `number` |
+| `workflowId` | required | `string` |
+| `workflowName` | required | `string` |
+| `workflowVersion` | required | `number` |
 
 <a id="persistence-type-packagessessionsession-persistence-jsonlsrcformattsheaderline"></a>
 
@@ -6926,7 +7298,7 @@ Sources: [`packages/session/session-title-llm/src/index.ts:27`](../packages/sess
 | Property | Presence | Type |
 |---|---|---|
 | `maxTokens` | required | `number` |
-| `messageSeqs` | required | [`SessionEventEnvelope[47].sourceEventSeqs`](#persistence-type-sessioneventenvelope47sourceeventseqs) |
+| `messageSeqs` | required | [`SessionEventEnvelope[49].sourceEventSeqs`](#persistence-type-sessioneventenvelope49sourceeventseqs) |
 | `messages` | required | [`event:session/title-llm-request.data.messages`](#persistence-type-eventsessiontitle-llm-requestdatamessages) |
 | `route` | required | [`packages/session/session-title/src/types.ts#SessionTitleModelIdentity`](#persistence-type-packagessessionsession-titlesrctypestssessiontitlemodelidentity) |
 | `system` | required | `string` |
@@ -6942,7 +7314,7 @@ Sources: [`packages/session/session-title/src/types.ts:41`](../packages/session/
 
 | Property | Presence | Type |
 |---|---|---|
-| `messageSeqs` | required | [`SessionEventEnvelope[47].sourceEventSeqs`](#persistence-type-sessioneventenvelope47sourceeventseqs) |
+| `messageSeqs` | required | [`SessionEventEnvelope[49].sourceEventSeqs`](#persistence-type-sessioneventenvelope49sourceeventseqs) |
 | `source` | required | [`packages/session/session-title/src/types.ts#SessionTitleSource`](#persistence-type-packagessessionsession-titlesrctypestssessiontitlesource) |
 | `title` | required | `string` |
 
@@ -7092,6 +7464,101 @@ One of:
 - [`packages/subagent/subagent/src/descriptor.ts#ContinuableSubagentDescriptorData`](#persistence-type-packagessubagentsubagentsrcdescriptortscontinuablesubagentdescriptordata)
 - [`packages/subagent/subagent/src/descriptor.ts#OneShotSubagentDescriptorData`](#persistence-type-packagessubagentsubagentsrcdescriptortsoneshotsubagentdescriptordata)
 
+<a id="persistence-type-packagestodotask-statesrctypeststaskdecision"></a>
+
+### `packages/todo/task-state/src/types.ts#TaskDecision`
+
+SHA-256: `3bc38597f9488ee69433b0d83d2f86a9c6e9ef737c52bed0d589d926d5474545`
+
+Sources: [`packages/todo/task-state/src/types.ts:34`](../packages/todo/task-state/src/types.ts)
+
+| Property | Presence | Type |
+|---|---|---|
+| `at` | required | `number` |
+| `text` | required | `string` |
+
+<a id="persistence-type-packagestodotask-statesrctypeststaskevidence"></a>
+
+### `packages/todo/task-state/src/types.ts#TaskEvidence`
+
+SHA-256: `e0d4eb53ddf292b3b22b5a3c5e3e465e82a032b863d533f44eec1a3e8805d6d1`
+
+Sources: [`packages/todo/task-state/src/types.ts:15`](../packages/todo/task-state/src/types.ts)
+
+| Property | Presence | Type |
+|---|---|---|
+| `acceptance` | required | [`SessionEventEnvelope[49].sourceEventSeqs`](#persistence-type-sessioneventenvelope49sourceeventseqs) |
+| `at` | required | `number` |
+| `auto` | optional | `true` |
+| `id` | required | `string` |
+| `kind` | required | [`packages/todo/task-state/src/types.ts#TaskEvidenceKind`](#persistence-type-packagestodotask-statesrctypeststaskevidencekind) |
+| `ref` | required | `string` |
+| `status` | required | [`packages/todo/task-state/src/types.ts#TaskEvidenceStatus`](#persistence-type-packagestodotask-statesrctypeststaskevidencestatus) |
+
+<a id="persistence-type-packagestodotask-statesrctypeststaskevidencekind"></a>
+
+### `packages/todo/task-state/src/types.ts#TaskEvidenceKind`
+
+SHA-256: `30930b71572f3026fd4526b53ab65fd2dcd4d9050ff3edf2c80cf3a133290617`
+
+Sources: [`packages/todo/task-state/src/types.ts:9`](../packages/todo/task-state/src/types.ts)
+
+One of:
+
+- `"command"`
+- `"file"`
+- `"manual"`
+- `"test"`
+
+<a id="persistence-type-packagestodotask-statesrctypeststaskevidencestatus"></a>
+
+### `packages/todo/task-state/src/types.ts#TaskEvidenceStatus`
+
+SHA-256: `3ac02f70e2c5108925c7982dc545ce927808abf348067f4034ce900873f2a23f`
+
+Sources: [`packages/todo/task-state/src/types.ts:12`](../packages/todo/task-state/src/types.ts)
+
+One of:
+
+- `"fail"`
+- `"pass"`
+- `"unknown"`
+
+<a id="persistence-type-packagestodotask-statesrctypeststaskstate"></a>
+
+### `packages/todo/task-state/src/types.ts#TaskState`
+
+SHA-256: `3ce1bf05f399e52a3340c1a0ec68e13498bb87ef9445c7a77e7125d9be858337`
+
+Sources: [`packages/todo/task-state/src/types.ts:47`](../packages/todo/task-state/src/types.ts)
+
+| Property | Presence | Type |
+|---|---|---|
+| `acceptance` | required | [`event:agent/git-checkpoint.data.commits[0].files`](#persistence-type-eventagentgit-checkpointdatacommits0files) |
+| `createdAt` | required | `number` |
+| `decisions` | required | [`event:task/state.data.task[1].decisions`](#persistence-type-eventtaskstatedatatask1decisions) |
+| `evidence` | required | [`event:task/state.data.task[1].evidence`](#persistence-type-eventtaskstatedatatask1evidence) |
+| `handoff` | optional | `string` |
+| `objective` | required | `string` |
+| `revision` | required | `number` |
+| `status` | required | [`packages/todo/task-state/src/types.ts#TaskStatus`](#persistence-type-packagestodotask-statesrctypeststaskstatus) |
+| `updatedAt` | required | `number` |
+
+<a id="persistence-type-packagestodotask-statesrctypeststaskstatus"></a>
+
+### `packages/todo/task-state/src/types.ts#TaskStatus`
+
+SHA-256: `f0a1c1ea6e71f6579d53b5631ec7fa07c823bf2f1b76a67bf8b1c8b5688ef52a`
+
+Sources: [`packages/todo/task-state/src/types.ts:40`](../packages/todo/task-state/src/types.ts)
+
+One of:
+
+- `"active"`
+- `"blocked"`
+- `"cancelled"`
+- `"succeeded"`
+
 <a id="persistence-type-packagestodotool-todosrctypeststodoitem"></a>
 
 ### `packages/todo/tool-todo/src/types.ts#TodoItem`
@@ -7227,6 +7694,14 @@ One of:
 SHA-256: `e6411b09c1d982f789bf741ca74e2bea69df56029847f86a6148e722039ee732`
 
 `"parent"`
+
+<a id="persistence-type-pass"></a>
+
+### `"pass"`
+
+SHA-256: `be978f62acdb3889331a00fa9c37bdca25edf0647afc504778918b0ed3be501c`
+
+`"pass"`
 
 <a id="persistence-type-pause"></a>
 
@@ -7468,6 +7943,14 @@ SHA-256: `ca085dba2c877feceebf3c62f9d39c6c2a4d2314d97b94b3927a780fe8fe2bb2`
 
 `"sandbox/mode"`
 
+<a id="persistence-type-schedule"></a>
+
+### `"schedule"`
+
+SHA-256: `d9edf1862e4471d6ad8a106a3f4160e0643874368707d50ecd8e27e5ee7a2567`
+
+`"schedule"`
+
 <a id="persistence-type-schedulechange"></a>
 
 ### `"schedule/change"`
@@ -7540,7 +8023,7 @@ SHA-256: `5776e5553ff2dfe3f5bc202dbb1e7c9f93e35a531aebb7764c23b2b6153b2ccc`
 
 One of:
 
-- [`SessionEventEnvelope[47]`](#persistence-type-sessioneventenvelope47)
+- [`SessionEventEnvelope[49]`](#persistence-type-sessioneventenvelope49)
 - [`SessionEventEnvelope[10]`](#persistence-type-sessioneventenvelope10)
 - [`SessionEventEnvelope[0]`](#persistence-type-sessioneventenvelope0)
 
@@ -7577,7 +8060,7 @@ SHA-256: `7af85bf70d4eafce63e739adae38ea85501e68df3a0e22f97f3a0be90fd9e4cb`
 
 SHA-256: `bcf0caf62d964b2fcf5404bd5c909cfa9a21c3f3c96e6b7e36d9e33565223825`
 
-Sources: [`packages/core/session/src/types.ts:441`](../packages/core/session/src/types.ts)
+Sources: [`packages/core/session/src/types.ts:456`](../packages/core/session/src/types.ts)
 
 | Property | Presence | Type |
 |---|---|---|
@@ -7585,9 +8068,9 @@ Sources: [`packages/core/session/src/types.ts:441`](../packages/core/session/src
 | `op` | required | `"replace"` |
 | `startSeq` | required | `number` |
 
-<a id="persistence-type-sessioneventenvelope47"></a>
+<a id="persistence-type-sessioneventenvelope49"></a>
 
-### `SessionEventEnvelope[47]`
+### `SessionEventEnvelope[49]`
 
 SHA-256: `998f22585a5d73ec005365e203f07fc3b3a029e82323fdda3fd7f13b0a9639d0`
 
@@ -7595,14 +8078,14 @@ SHA-256: `998f22585a5d73ec005365e203f07fc3b3a029e82323fdda3fd7f13b0a9639d0`
 |---|---|---|
 | `ignorable` | optional | `true` |
 | `seq` | required | `number` |
-| `sourceEventSeqs` | optional | [`SessionEventEnvelope[47].sourceEventSeqs`](#persistence-type-sessioneventenvelope47sourceeventseqs) |
+| `sourceEventSeqs` | optional | [`SessionEventEnvelope[49].sourceEventSeqs`](#persistence-type-sessioneventenvelope49sourceeventseqs) |
 | `surfaceOp` | required | [`packages/core/session/src/types.ts#SurfaceOp`](#persistence-type-packagescoresessionsrctypestssurfaceop) |
 | `time` | required | `number` |
 | `type` | required | `string` |
 
-<a id="persistence-type-sessioneventenvelope47sourceeventseqs"></a>
+<a id="persistence-type-sessioneventenvelope49sourceeventseqs"></a>
 
-### `SessionEventEnvelope[47].sourceEventSeqs`
+### `SessionEventEnvelope[49].sourceEventSeqs`
 
 SHA-256: `5d03ba38734809bcbd2a55221bd938b3b3fc34b49bb686c6113e9e4931e3aa78`
 
@@ -7672,6 +8155,14 @@ SHA-256: `c219efbdfd53b836786202ab4532913d555798f0a8615a4e9629736e3799fb70`
 
 `"step/end"`
 
+<a id="persistence-type-steps"></a>
+
+### `"steps"`
+
+SHA-256: `3c1e9caa90c39d9ce98e43f459c2d12f5c21c92a064c0f603b2e4a37adace137`
+
+`"steps"`
+
 <a id="persistence-type-stepstart"></a>
 
 ### `"step/start"`
@@ -7694,7 +8185,7 @@ SHA-256: `57f3f606ff8b6c84d9c443faace9d1dd10cca0354f37a4f515ef075f7c351b90`
 
 SHA-256: `4cd48f3e5108bd6ebedf7301c3638839b8b2b9db8dbd493974177fbdeb91a01b`
 
-Sources: [`packages/api/session-controller/src/types.ts:460`](../packages/api/session-controller/src/types.ts) · [`packages/attachment/attachment/src/brand.ts:6`](../packages/attachment/attachment/src/brand.ts) · [`packages/compaction/compaction/src/brand.ts:4`](../packages/compaction/compaction/src/brand.ts) · [`packages/core/session/src/types.ts:19`](../packages/core/session/src/types.ts) · [`packages/experimental/agent-team/src/types.ts:20`](../packages/experimental/agent-team/src/types.ts) · [`packages/experimental/agent-team/src/types.ts:32`](../packages/experimental/agent-team/src/types.ts) · [`packages/experimental/agent-team/src/types.ts:8`](../packages/experimental/agent-team/src/types.ts) · [`packages/feedback/message-feedback/src/types.ts:14`](../packages/feedback/message-feedback/src/types.ts) · [`packages/goal/goal/src/types.ts:17`](../packages/goal/goal/src/types.ts) · [`packages/host/knowledge/src/types.ts:4`](../packages/host/knowledge/src/types.ts) · [`packages/host/knowledge/src/types.ts:5`](../packages/host/knowledge/src/types.ts) · [`packages/interaction/commands/src/brand.ts:31`](../packages/interaction/commands/src/brand.ts) · [`packages/interaction/user-approval/src/types.ts:17`](../packages/interaction/user-approval/src/types.ts) · [`packages/llm/llm-retry/src/brand.ts:4`](../packages/llm/llm-retry/src/brand.ts) · [`packages/llm/llm/src/brand.ts:16`](../packages/llm/llm/src/brand.ts) · [`packages/llm/llm/src/brand.ts:31`](../packages/llm/llm/src/brand.ts) · [`packages/llm/llm/src/brand.ts:43`](../packages/llm/llm/src/brand.ts) · [`packages/llm/llm/src/brand.ts:67`](../packages/llm/llm/src/brand.ts) · [`packages/schedule/schedule/src/types.ts:10`](../packages/schedule/schedule/src/types.ts) · [`packages/session/session-title/src/index.ts:42`](../packages/session/session-title/src/index.ts) · [`packages/session/session-title/src/types.ts:17`](../packages/session/session-title/src/types.ts) · [`packages/webhook/webhook/src/brand.ts:12`](../packages/webhook/webhook/src/brand.ts) · [`packages/webhook/webhook/src/brand.ts:6`](../packages/webhook/webhook/src/brand.ts) · [`packages/webhook/webhook/src/brand.ts:9`](../packages/webhook/webhook/src/brand.ts) · [`packages/workflow/workflow/src/types.ts:13`](../packages/workflow/workflow/src/types.ts)
+Sources: [`packages/api/session-controller/src/types.ts:478`](../packages/api/session-controller/src/types.ts) · [`packages/attachment/attachment/src/brand.ts:6`](../packages/attachment/attachment/src/brand.ts) · [`packages/compaction/compaction/src/brand.ts:4`](../packages/compaction/compaction/src/brand.ts) · [`packages/core/session/src/types.ts:19`](../packages/core/session/src/types.ts) · [`packages/experimental/agent-team/src/types.ts:20`](../packages/experimental/agent-team/src/types.ts) · [`packages/experimental/agent-team/src/types.ts:32`](../packages/experimental/agent-team/src/types.ts) · [`packages/experimental/agent-team/src/types.ts:8`](../packages/experimental/agent-team/src/types.ts) · [`packages/feedback/message-feedback/src/types.ts:14`](../packages/feedback/message-feedback/src/types.ts) · [`packages/goal/goal/src/types.ts:17`](../packages/goal/goal/src/types.ts) · [`packages/host/knowledge/src/types.ts:4`](../packages/host/knowledge/src/types.ts) · [`packages/host/knowledge/src/types.ts:5`](../packages/host/knowledge/src/types.ts) · [`packages/interaction/commands/src/brand.ts:31`](../packages/interaction/commands/src/brand.ts) · [`packages/interaction/user-approval/src/types.ts:17`](../packages/interaction/user-approval/src/types.ts) · [`packages/llm/llm-retry/src/brand.ts:4`](../packages/llm/llm-retry/src/brand.ts) · [`packages/llm/llm/src/brand.ts:16`](../packages/llm/llm/src/brand.ts) · [`packages/llm/llm/src/brand.ts:31`](../packages/llm/llm/src/brand.ts) · [`packages/llm/llm/src/brand.ts:43`](../packages/llm/llm/src/brand.ts) · [`packages/llm/llm/src/brand.ts:67`](../packages/llm/llm/src/brand.ts) · [`packages/schedule/schedule/src/types.ts:35`](../packages/schedule/schedule/src/types.ts) · [`packages/session/session-title/src/index.ts:42`](../packages/session/session-title/src/index.ts) · [`packages/session/session-title/src/types.ts:17`](../packages/session/session-title/src/types.ts) · [`packages/webhook/webhook/src/brand.ts:12`](../packages/webhook/webhook/src/brand.ts) · [`packages/webhook/webhook/src/brand.ts:6`](../packages/webhook/webhook/src/brand.ts) · [`packages/webhook/webhook/src/brand.ts:9`](../packages/webhook/webhook/src/brand.ts) · [`packages/workflow/workflow/src/types.ts:13`](../packages/workflow/workflow/src/types.ts)
 
 `string`
 
@@ -7842,6 +8333,14 @@ SHA-256: `c14f0df2137034ab07ffb40c64d0c693519d2b848a08cc678c024e330a5f4ef8`
 
 `"task/running"`
 
+<a id="persistence-type-taskstate"></a>
+
+### `"task/state"`
+
+SHA-256: `31dbe959a09955914fc7d4ba61beb33cc1c618049d5514c4cb69130eb4bdc1ab`
+
+`"task/state"`
+
 <a id="persistence-type-tasksucceeded"></a>
 
 ### `"task/succeeded"`
@@ -7898,6 +8397,14 @@ SHA-256: `b57ae1b37e52bee0a21cbdace168dc6a15582bcda8c306dad962c5dcc8a8e28b`
 
 `"team/task"`
 
+<a id="persistence-type-test"></a>
+
+### `"test"`
+
+SHA-256: `c749620e285f66255d8e9f107adc84549894d3b6f08bae5f4e6eb6f5ed8fc68e`
+
+`"test"`
+
 <a id="persistence-type-text"></a>
 
 ### `"text"`
@@ -7929,6 +8436,14 @@ SHA-256: `5abab3a27fd2736660ecddd94b28d6bbf114986dd894880153bd1be3ccacb563`
 SHA-256: `af0750d32d97d47b12b7361a587db41894b17e04c9a805fe212f0114aa2248c7`
 
 `"todo/write"`
+
+<a id="persistence-type-tokens"></a>
+
+### `"tokens"`
+
+SHA-256: `0269ac0bc1088df4e0abd2bf78133bd4951fbf6e8ec73d70f9d26e3575eabedc`
+
+`"tokens"`
 
 <a id="persistence-type-tool"></a>
 
@@ -8154,6 +8669,14 @@ SHA-256: `986817b630f2891a797dbc2295028a6606e99fcb9509eda5830ec2e6cf57a33a`
 
 `"waiting-human"`
 
+<a id="persistence-type-wall-clock"></a>
+
+### `"wall-clock"`
+
+SHA-256: `808a3d5ac2424c555f934ea7f9d0e8e3aac5bce55b223e569a44e465996aa6ba`
+
+`"wall-clock"`
+
 <a id="persistence-type-web_search"></a>
 
 ### `"web_search"`
@@ -8185,6 +8708,14 @@ SHA-256: `6f611bed14b2106542480c4a230b4a83baf76dc0d8ac0cd13319a7cb8dae7675`
 SHA-256: `db6c5246911d47a7969f6b4cb47c7d0dbbde75c402710b22ace3672fa97bebe0`
 
 `"webhook"`
+
+<a id="persistence-type-workflow"></a>
+
+### `"workflow"`
+
+SHA-256: `e77a7579323975163ce68f40d55f54f03df8ebad5704db62c0c7c937e6c4d173`
+
+`"workflow"`
 
 <a id="persistence-type-workspace-write"></a>
 

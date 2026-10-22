@@ -120,6 +120,7 @@
     "tests/bash-abort-row.e2e.ts",
     "tests/skill-tool-row.e2e.ts",
     "tests/turn-tail-actions.e2e.ts",
+    "tests/reasoning-transcript.e2e.ts",
     "tests/goal-multi-turn-actions.e2e.ts",
     "tests/chat-scroll-fixture.ts",
     "tests/chat-scroll-contract.e2e.ts",

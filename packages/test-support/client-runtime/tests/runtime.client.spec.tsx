@@ -410,13 +410,17 @@ describe('single-slot mounting (declare + renderSlot)', () => {
         <svg viewBox="0 0 16 16" aria-hidden="true">
           <path d="M0 0L16 16" fill="currentColor" />
         </svg>
+        <img src="data:image/webp;base64,AAAA" alt="" />
+        <img src="/api/file?path=chart.png" alt="chart" />
       </div>
     ))
     const slot = runtime.renderSlot('trt.panel', {})
     expect(slot.container).toMatchSnapshot()
-    // The serializer works on a clone: the live DOM keeps hashes and paths.
+    // The serializer works on a clone: the live DOM keeps hashes and paths, and
+    // an inline image keeps its complete payload.
     expect(slot.container.querySelector('div')!.className).toBe('_frame_a1b2c3 plain')
     expect(slot.container.querySelector('svg path')).not.toBeNull()
+    expect(slot.container.querySelector('img')!.getAttribute('src')).toBe('data:image/webp;base64,AAAA')
     await runtime.dispose()
   })
 })

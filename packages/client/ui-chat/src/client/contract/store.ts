@@ -3,10 +3,11 @@
 /** Tool call identity as carried by Chat nodes. */
 export type ToolCallId = string
 
-/** One manually expanded Turn answer generation. */
+/** One explicitly opened or closed Turn process generation. */
 export interface TurnProcessViewEntry {
   readonly turn: number
-  readonly answerStep: number
+  readonly answerStep: number | null
+  readonly open: boolean
 }
 
 /** Per-Session state shared only by the Chat view and details surface. */

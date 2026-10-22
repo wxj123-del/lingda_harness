@@ -1,3 +1,18 @@
+/**
+ * Retired suite: the multi-preset matrix.
+ *
+ * Every case here was written against the five shipped presets (`standard`,
+ * `diaosi`, `ptc`, `cordis`, `minimal`) and uses one of them as the control
+ * group for another. Only `diaosi` ships now (see the
+ * `2026-10-21-single-shipped-preset` Agent Note), so the comparisons these
+ * cases assert no longer have two sides. The preset mechanism they also
+ * exercised — the roster, user roots, copy, delete, remount, and the switch
+ * record — stays covered by `packages/preset/agent-presets/tests/`.
+ *
+ * Restoring this file means restoring presets to compare; do not rewrite the
+ * cases to mount the same preset twice, which would assert nothing.
+ */
+
 import { randomUUID } from 'node:crypto'
 import { mkdir, mkdtemp, readFile, rm, stat, symlink, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
@@ -204,7 +219,7 @@ beforeAll(async () => {
   ctx = await bootWeb(settingsFile)
 }, 120_000)
 
-describe('the shipped Web composition', () => {
+describe.skip('the shipped Web composition', () => {
   it('retrieves knowledge through the preset tool catalog and persists source excerpts in the session', async () => {
     const root = await mkdtemp(join(tmpdir(), 'dsh-knowledge-composition-'))
     const knowledgeCtx = await bootWeb(join(root, 'settings.yaml'), [{ id: 'session-title-llm', disabled: true }])
@@ -921,7 +936,7 @@ describe('the shipped Web composition', () => {
   })
 })
 
-describe('product Bundle and user-preset intersection', () => {
+describe.skip('product Bundle and user-preset intersection', () => {
   const presetIds = ['products-none', 'products-codex', 'products-claude', 'products-both'] as const
   type Product = 'codex' | 'claude-code'
   type PresetId = typeof presetIds[number]
@@ -1052,7 +1067,7 @@ describe('product Bundle and user-preset intersection', () => {
   }, 120_000)
 })
 
-describe('a switch survives the session', () => {
+describe.skip('a switch survives the session', () => {
   it('records the choice so the log states what the agent runs', async () => {
     const handle = await ctx.agents.create({
       sessionId: SessionId('preset-switch-logged'),
@@ -1076,7 +1091,7 @@ describe('a switch survives the session', () => {
 
 })
 
-describe('a forked session', () => {
+describe.skip('a forked session', () => {
   it('inherits the composition its seeded history was produced under', async () => {
     const parent = await ctx.agents.create({
       sessionId: SessionId('preset-fork-parent'),
@@ -1108,7 +1123,7 @@ describe('a forked session', () => {
   })
 })
 
-describe('a delegated child', () => {
+describe.skip('a delegated child', () => {
   it('runs on the composition its parent runs on', async () => {
     const parent = await ctx.agents.create({
       sessionId: SessionId('preset-child-parent'),
@@ -1161,7 +1176,7 @@ describe('a delegated child', () => {
   })
 })
 
-describe('a launcher that configures no writable root', () => {
+describe.skip('a launcher that configures no writable root', () => {
   // The claim this default exists for, asserted through the real shipped
   // bundles rather than a hand-built context: `apps/cli` patches in only the
   // system root, and a person's own presets are found anyway because the
@@ -1217,7 +1232,7 @@ describe('a launcher that configures no writable root', () => {
   })
 })
 
-describe('authoring a preset on the shipped composition', () => {
+describe.skip('authoring a preset on the shipped composition', () => {
   let authorCtx: Context
   let userRoot: string
 
@@ -1292,7 +1307,7 @@ describe('authoring a preset on the shipped composition', () => {
  * the roster and the settings provider are actually wired to each other, and
  * that the id the setting names is the one a session composes from.
  */
-describe('the default preset as a user setting', () => {
+describe.skip('the default preset as a user setting', () => {
   it('composes an unnamed session from the stored default, not the composed one', async () => {
     expect((await ctx.agentPresets.remoteExportList()).modeSelectionEnabled).toBe(true)
     expect(ctx.agentPresets.defaultId).toBe('standard')
@@ -1323,7 +1338,7 @@ describe('the default preset as a user setting', () => {
   })
 })
 
-describe('a session keeps the preset it was created with', () => {
+describe.skip('a session keeps the preset it was created with', () => {
   it('refuses to adopt a live session under a different preset', async () => {
     const handle = await ctx.agents.create({
       sessionId: SessionId('preset-locked'),
@@ -1341,7 +1356,7 @@ describe('a session keeps the preset it was created with', () => {
   })
 })
 
-describe('a composition that configures its own preset roots', () => {
+describe.skip('a composition that configures its own preset roots', () => {
   let rootsCtx: Context
   let teamRoot: string
 

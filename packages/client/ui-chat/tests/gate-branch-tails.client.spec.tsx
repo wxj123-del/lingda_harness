@@ -19,19 +19,34 @@ afterEach(() => {
 
 
 describe('render branch tails', () => {
-  it('AssistantMarkdown paints no Think row once a later block owns the tail', () => {
+  it('AssistantMarkdown keeps a settled reasoning block behind a disclosure', () => {
     const view = render(
       <AssistantMarkdown
         t={t}
         blocks={[{ kind: 'reasoning', text: 'done thinking' }, { kind: 'text', text: 'answer' }]}
+        streaming={false}
+        renderMessageImages={renderMessageImages}
+      />,
+    )
+    // A settled turn still offers its reasoning, but collapsed: the row is a
+    // disclosure, and the prose stays out of the answer's reading flow until
+    // the reader opens it.
+    expect(view.container.querySelector('[data-variant="think"]')).not.toBeNull()
+    expect(view.queryByText(/done thinking/)).toBeNull()
+    expect(view.getByText('answer')).toBeTruthy()
+  })
+
+  it('AssistantMarkdown paints a live Think row, with no prose, while streaming', () => {
+    const view = render(
+      <AssistantMarkdown
+        t={t}
+        blocks={[{ kind: 'reasoning', text: 'still thinking' }]}
         streaming
         renderMessageImages={renderMessageImages}
       />,
     )
-    // reasoning at index 0 with a later block: not the live tail → no row at all.
-    expect(view.container.querySelector('[data-variant="think"]')).toBeNull()
-    expect(view.queryByText(/done thinking/)).toBeNull()
-    expect(view.getByText('answer')).toBeTruthy()
+    expect(view.container.querySelector('[data-state="running"]')).not.toBeNull()
+    expect(view.queryByText(/still thinking/)).toBeNull()
   })
 
   it('StatsPills falls back to window-node counts and drops the usage pill without projections', () => {

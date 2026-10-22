@@ -14,6 +14,8 @@ import type {
   SessionAddress,
   SessionAssistantStreamBaseline,
   SessionControlFrame,
+  PromptOptimizationMode,
+  SessionOptimizePromptValue,
   SessionProjectionBaseline,
   SessionQueuedItem,
   SessionRequestId,
@@ -346,6 +348,25 @@ export class Session implements SessionFace {
   /** List recent visual workflow runs owned by this Session. */
   workflowList(request: WorkflowRemoteRunsRequest = {}): Promise<RemoteResult<WorkflowRemoteRunListValue>> {
     return this.remote.session.workflowList(this.sessionId, request)
+  }
+
+  /** Ask the selected model to rewrite a draft without changing Session history. */
+  optimizePrompt(
+    draft: string,
+    mode: PromptOptimizationMode,
+    signal?: AbortSignal,
+  ): Promise<RemoteResult<SessionOptimizePromptValue>> {
+    if (this.address !== undefined) {
+      return Promise.resolve({
+        ok: false,
+        error: new RemoteError(
+          'gateway/bad-request',
+          'prompt optimization is unavailable for subagent sessions',
+          {},
+        ),
+      })
+    }
+    return this.remote.session.optimizePrompt({ sessionId: this.sessionId, draft, mode }, signal)
   }
 
   /**

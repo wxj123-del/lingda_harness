@@ -12,6 +12,10 @@ The visual workflow editor could start a Host-owned run, but it did not retain t
 
 The editor now stores text or JSON test input, passes it to the direct Session workflow start call, tracks the returned run id, polls Host status, supports cancellation and retry, and renders status, duration, Agent count, errors, JSON-safe results, and recent run history. The Host adds bounded input validation and concurrent-run limits per Session and globally.
 
+## Alternatives considered
+
+Leaving runs fire-and-forget was rejected because operators could not inspect or cancel them. Sending raw run state from the browser was rejected because run ownership, redaction, and concurrency limits belong to the Host.
+
 ## Consequences
 
 Direct runs are now inspectable and controllable without leaving the workflow console. Run history remains Host-owned and bounded; the browser only receives the redacted run view. Empty default input remains backward-compatible with the existing runner callback contract.

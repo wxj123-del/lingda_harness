@@ -466,33 +466,3 @@
 .deleteConfirm:hover:not(:disabled) {
   background: var(--dsw-alias-interactive-bg-hover-danger);
 }
-
-/* The conversational authoring entry, after the card grid in the spot the
-   create button vacated. Dashed like the Models page's add affordances: it
-   reads as a place a preset will appear, not a command. */
-.creatorButton {
-  box-sizing: border-box;
-  align-self: stretch;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  height: 44px;
-  border: 1px dashed var(--dsw-alias-border-l3);
-  border-radius: 20px;
-  font: inherit;
-  font-size: 14px;
-  line-height: 22px;
-  background: transparent;
-  color: var(--dsw-alias-label-primary);
-  cursor: pointer;
-}
-
-.creatorButton:hover:not(:disabled) {
-  background: var(--dsw-alias-interactive-bg-hover);
-}
-
-.creatorButton:disabled {
-  opacity: 0.4;
-  cursor: default;
-}

@@ -1,6 +1,6 @@
 /** VitePress configuration for the locally projected documentation site. */
 
-import { readFileSync, writeFileSync } from 'node:fs'
+import { writeFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import type { DefaultTheme, PageData, SiteConfig } from 'vitepress'
 import type { ViteDevServer } from 'vite'
@@ -205,17 +205,16 @@ const base = process.env.DOCS_BASE ?? '/'
 
 /** Site identity shared by the VitePress configuration and the llms.txt index. */
 const siteIdentity = {
-  title: 'DeepSeek Harness',
+  title: 'Lingda Harness',
   description: '用于构建 Agent Harness 的插件化 SDK',
 }
 
 /**
- * The DeepSeek wordmark, inlined so its `currentColor` fills follow the active
- * theme. An `<img>` would freeze the mark at the colors the file declares.
+ * Navigation-bar brand mark, served from the site's public directory beside the
+ * favicon. The artwork is full-color and carries its own palette, so it stays a
+ * file reference rather than inline markup that a theme could recolor.
  */
-const wordmark = readFileSync(resolve(import.meta.dirname, '../public/wordmark.svg'), 'utf8')
-  .trim()
-  .replace('<svg ', '<svg class="dsh-wordmark" ')
+const brandMark = `${base}mascot.webp`
 
 /**
  * Head-injected styles for the site identity and sidebar scrollbar.
@@ -229,7 +228,8 @@ const wordmark = readFileSync(resolve(import.meta.dirname, '../public/wordmark.s
  */
 const siteStyle = `
 .dsh-lockup { display: inline-flex; align-items: center; gap: 8px; min-width: 0; }
-.dsh-wordmark { display: block; height: 22px; width: auto; color: var(--vp-c-text-1); }
+.dsh-mark { display: block; width: 22px; height: 22px; }
+.dsh-brand { font-size: 17px; font-weight: 600; line-height: 22px; letter-spacing: 0.02em; color: var(--vp-c-text-1); }
 .dsh-tag {
   display: inline-flex;
   align-items: center;
@@ -281,14 +281,15 @@ const scrollbarScript = `
 `
 
 /**
- * Navigation-bar title: the DeepSeek wordmark and the release-stage tag.
- * VitePress renders `siteTitle` as HTML.
+ * Navigation-bar title: the mascot mark, the product name, and the
+ * release-stage tag. VitePress renders `siteTitle` as HTML.
  *
  * @param previewTag - Localized release-stage label.
+ * @param brand - Localized product name beside the mark.
  * @returns Markup placed beside the navigation-bar home link.
  */
-function siteTitle(previewTag: string): string {
-  return `<span class="dsh-lockup">${wordmark}<span class="dsh-tag">${previewTag}</span></span>`
+function siteTitle(previewTag: string, brand: string): string {
+  return `<span class="dsh-lockup"><img class="dsh-mark" src="${brandMark}" alt=""><span class="dsh-brand">${brand}</span><span class="dsh-tag">${previewTag}</span></span>`
 }
 
 export default withMermaid({
@@ -315,7 +316,7 @@ export default withMermaid({
       label: '简体中文',
       lang: 'zh-CN',
       themeConfig: {
-        siteTitle: siteTitle('技术预览'),
+        siteTitle: siteTitle('技术预览', '灵搭'),
         nav: [
           { text: '入门', link: landingLink('root', guideModules.root.guide), activeMatch: '^/guide/' },
           ...moduleNav('root'),
@@ -341,7 +342,7 @@ export default withMermaid({
       lang: 'en-US',
       link: '/en/',
       themeConfig: {
-        siteTitle: siteTitle('Preview'),
+        siteTitle: siteTitle('Preview', 'Lingda Harness'),
         nav: [
           { text: 'Guide', link: landingLink('en', guideModules.en.guide), activeMatch: '^/en/guide/' },
           ...moduleNav('en'),

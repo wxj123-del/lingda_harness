@@ -1,48 +1,50 @@
-# 手机扫码访问 DSH
+# Phone QR access for DSH
 
-## 目的
+English | [中文](2026-09-23-phone-qr-access-design.zh.md)
 
-在设置的「连接服务」页，飞书机器人那一行正下方，加一张「手机访问」卡片。用户在另一张网络上的手机扫卡片里的二维码，打开正在这台电脑上运行的 DSH Web 界面。
+## Purpose
 
-公网入口用 ngrok 免费档。免费域名每次启动才确定，而 DSH 的浏览器信任名单在进程启动时定死，所以卡片生成二维码之后，用户必须按卡片给出的命令重启一次 DSH，重启之后再扫。
+On the Settings "Connection services" page, add a "Phone access" card immediately below the Feishu bot row. A phone on another network scans the QR code and opens the DSH Web interface running on this computer.
 
-## 卡片
+The public entry point uses the free ngrok tier. The free hostname is chosen at each start, while DSH's browser trust list is fixed at process startup, so the user must restart DSH with the command shown by the card before scanning the generated QR code.
 
-卡片复用现有 `PluginCard`：收起是一行标题加一行说明加箭头，点一下展开。它注册在 `settings.integration.item`，排在飞书卡片之后。
+## Card
 
-收起时：
+The card reuses the existing `PluginCard`: collapsed, it shows one title row, one description row, and an arrow; clicking expands it. It registers at `settings.integration.item`, immediately after the Feishu card.
 
-- 标题：手机访问
-- 说明：在另一台网络的手机上扫码打开这个 DSH。
+When collapsed:
 
-展开后，从上到下：
+- Title: Phone access
+- Description: Scan on a phone on another network to open this DSH.
 
-1. ngrok authtoken 输入框。写入 DSH 凭据库，引用名 `DSH_NGROK_AUTHTOKEN`，不写入 settings 文档。
-2. 「生成二维码」按钮。没有 token 时不可点。
-3. 生成中的状态，失败时一行原因。
-4. 成功后显示二维码。内容是 `https://<ngrok 域名>/?token=<本次进程的登录 token>`。旁边写明：这个码等同于登录钥匙，不要发给别人。
-5. 一行可复制的重启命令：`dsh web --trusted-host <ngrok 域名>`。说明写明：先退出当前 DSH，运行这行，等它起来后再扫。
+When expanded, from top to bottom:
 
-## 行为
+1. An ngrok authtoken input. It is written to the DSH credential store under the reference name `DSH_NGROK_AUTHTOKEN`, not to the settings document.
+2. A "Generate QR code" button. It is disabled without a token.
+3. A generating status, with one reason line on failure.
+4. After success, a QR code whose content is `https://<ngrok hostname>/?token=<login token for this process>`. Beside it, state that this code is equivalent to a login key and must not be shared.
+5. A copyable restart command: `dsh web --trusted-host <ngrok hostname>`. Explain that the user must quit DSH, run this command, wait for it to start, and then scan.
 
-Host 侧一个插件拥有这条隧道，一个进程只开一条。
+## Behavior
 
-- 点「生成二维码」时，如果已有隧道，先停掉它。
-- 插件用本进程 Web 端口拉起 `ngrok http <port>`，authtoken 只通过 ngrok 自己的环境或配置传入，不出现在二维码和日志里。
-- 公网地址从 ngrok 的本地接口 `http://127.0.0.1:4040/api/tunnels` 读取，只接受 `https://` 的那条。超时或没有地址就是失败，卡片显示原因。
-- 登录 token 用本进程已有的启动 token，不新发一套认证。
-- 关闭卡片、离开页面、DSH 退出，隧道进程跟着停，二维码失效。
-- DSH 不自己重启。重启会杀掉 ngrok，免费域名就会变。
+One Host plugin owns the tunnel, and one process opens at most one tunnel.
 
-## 不做
+- When "Generate QR code" is clicked and a tunnel already exists, stop the existing tunnel first.
+- The plugin starts `ngrok http <port>` for the process's Web port. The authtoken reaches ngrok only through its environment or configuration; it never appears in the QR code or logs.
+- Read the public address from ngrok's local `http://127.0.0.1:4040/api/tunnels` endpoint and accept only its `https://` tunnel. A timeout or missing address is a failure whose reason is shown in the card.
+- Reuse the process's existing startup login token; do not issue a second credential.
+- Closing the card, leaving the page, or exiting DSH stops the tunnel, and invalidates the QR code.
+- DSH does not restart itself. Restarting kills ngrok, so the free hostname changes.
 
-- 不支持 ngrok 付费固定域名。
-- 不把 DSH 绑到 `0.0.0.0`，也不改现有 cookie 认证。
-- 不在终端里印二维码。`scripts/dsh-phone.sh` 删除。
-- 不操作手机，也不做 ZCode 那种中继。
+## Out of scope
 
-## 失败
+- Paid ngrok fixed hostnames.
+- Binding DSH to `0.0.0.0` or changing the existing cookie authentication.
+- Printing the QR code in a terminal. `scripts/dsh-phone.sh` is removed.
+- Operating the phone or adding a ZCode-style relay.
 
-- 本机没有 `ngrok`：卡片说明需要先安装并登录。
-- authtoken 无效、隧道超时、本地接口没有 https 地址：卡片显示一行原因，不显示二维码。
-- 重启前就扫：手机打开的域名还不在信任名单里，DSH 会拒绝。卡片文案把「先重启再扫」写成步骤，不另做探测。
+## Failure
+
+- If `ngrok` is absent, the card tells the user to install it and log in first.
+- If the authtoken is invalid, the tunnel times out, or the local endpoint has no HTTPS address, the card shows one reason and no QR code.
+- If the user scans before restarting, the hostname is not in the trust list and DSH rejects the request. The card explains "restart before scanning" as a required step instead of adding another probe.

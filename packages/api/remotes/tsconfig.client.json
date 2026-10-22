@@ -39,6 +39,9 @@
       "path": "../../goal/goal"
     },
     {
+      "path": "../../schedule/schedule"
+    },
+    {
       "path": "../../feedback/message-feedback"
     },
     {
@@ -46,6 +49,9 @@
     },
     {
       "path": "../../host/knowledge"
+    },
+    {
+      "path": "../../host/authoring-assistant"
     },
     {
       "path": "../../host/local-skill-import"

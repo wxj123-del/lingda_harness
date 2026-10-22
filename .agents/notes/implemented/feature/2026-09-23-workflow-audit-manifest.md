@@ -12,6 +12,10 @@ The visual workflow Host accepted node audit events by run id only. A malformed 
 
 The visual compiler now returns the node identifier manifest alongside the generated script. `workflowStart` validates a bounded, unique manifest and stores it with the live run. Session Controller audit handlers ignore node events outside that manifest and ignore updates after the run is terminal. The manifest is scoped to the direct visual-editor API; ordinary workflow engine runs retain their existing behavior.
 
+## Alternatives considered
+
+Accepting node events by run id alone was rejected because stale or malformed scripts could contaminate history. Reusing the general workflow engine manifest was rejected because the visual editor has a narrower direct-start contract.
+
 ## Consequences
 
 Persisted visual workflow histories contain only node records declared by the graph submitted for that run. Older direct callers must provide the manifest when invoking the visual-editor start endpoint. Unknown audit events no longer pollute the in-memory view or session history.

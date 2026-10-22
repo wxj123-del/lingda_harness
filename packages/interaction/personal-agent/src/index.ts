@@ -30,74 +30,38 @@ import { setSandboxMode } from '@deepseek-ai/dsh-sandbox-policy'
 import type { SandboxMode } from '@deepseek-ai/dsh-sandbox'
 import { setApprovalPolicy } from '@deepseek-ai/dsh-user-approval'
 import type { ApprovalPolicy } from '@deepseek-ai/dsh-user-approval'
+import { AGENT_MODES } from './types.ts'
+import type {
+  AgentMode,
+  AgentModeSettings,
+  AgentTaskSnapshot,
+  AgentTaskStatus,
+  ModeOption,
+  ModePolicy,
+  ModeView,
+  ToolPolicyAudit,
+} from './types.ts'
+
+export { AGENT_MODES } from './types.ts'
+export type {
+  AgentMode,
+  AgentModeSettings,
+  AgentTaskBudget,
+  AgentTaskSnapshot,
+  AgentTaskStatus,
+  ModeOption,
+  ModePolicy,
+  ModeView,
+  ToolPolicyAudit,
+} from './types.ts'
 
 export const AGENT_MODE_SETTINGS_NAMESPACE = 'personal-agent'
 
-export const AGENT_MODES = ['qa', 'research', 'coding', 'execution'] as const
-export type AgentMode = typeof AGENT_MODES[number]
-
-export interface ModePolicy {
-  mode: AgentMode
-  visibleTools: readonly string[]
-  maxSteps: number
-  maxToolResultBytes: number
-  maxContextTokens: number
-  historyTurns: number
-  knowledgeBase: 'off' | 'explicit'
-  approval: 'ask' | 'never'
-  sandbox: 'read-only' | 'workspace-write' | 'danger-full-access'
-}
-
-export interface ModeOption {
-  value: AgentMode
-  name: string
-  description: string
-  maxSteps: number
-  maxContextTokens: number
-}
-
-export interface ModeView {
-  mode: AgentMode
-  policy: ModePolicy
-}
-
-export type AgentTaskStatus = 'created' | 'planned' | 'running' | 'waiting-human' | 'succeeded' | 'failed' | 'cancelled'
-
-export interface AgentTaskBudget {
-  maxSteps: number
-  maxTokens?: number | undefined
-  maxDepth?: number | undefined
-  maxConcurrent?: number | undefined
-  timeoutMs?: number | undefined
-}
-
-export interface AgentTaskSnapshot {
-  id: string
-  goal: string
-  status: AgentTaskStatus
-  owner: string
-  turn: number
-  parentTask?: string | undefined
-  budget: AgentTaskBudget
-  acceptance?: string[] | undefined
-  artifacts?: string[] | undefined
-  error?: string | undefined
-  createdAt: number
-  updatedAt: number
-}
-
-export interface ToolPolicyAudit {
-  name: string
-  reason: string
-}
-
 export interface Config {
+  /** Mode selected for new sessions when no session setting exists. */
   defaultMode?: AgentMode
+  /** Per-mode overrides merged with the built-in policy defaults. */
   modes?: Partial<Record<AgentMode, Partial<Omit<ModePolicy, 'mode'>>>>
-}
-
-export interface AgentModeSettings {
-  defaultMode: AgentMode
 }
 
 export const AGENT_MODE_SETTINGS_SCHEMA: schema<AgentModeSettings> = schema.object({
@@ -107,69 +71,6 @@ export const AGENT_MODE_SETTINGS_SCHEMA: schema<AgentModeSettings> = schema.obje
 declare module '@deepseek-ai/cordis' {
   interface Context {
     personalAgent: PersonalAgentService
-  }
-}
-
-declare module '@deepseek-ai/dsh-session/types' {
-  interface SessionEventMap {
-    /** Durable current personal Agent mode. The latest event wins. */
-    'agent/mode': { mode: AgentMode }
-    /** Informational audit of one bounded request snapshot. */
-    'agent/request-context': {
-      turn: number
-      step: number
-      mode: AgentMode
-      maxSteps: number
-      usedSteps: number
-      inputMessages: number
-      outputMessages: number
-      clippedToolResults: number
-      droppedMessages: number
-      /** Heuristic input composition, recorded per model request. */
-      systemPromptTokens?: number
-      toolSchemaTokens?: number
-      historyTokens?: number
-      knowledgeBaseTokens?: number
-      skillTokens?: number
-      toolResultTokens?: number
-      estimatedInputTokens?: number
-      outputBudgetTokens?: number
-      deduplicatedMessages?: number
-      hiddenTools?: ToolPolicyAudit[]
-    }
-    /** Audit of a tool call rejected by the active personal mode policy. */
-    'agent/tool-denied': {
-      turn: number
-      step: number
-      name: string
-      code: string
-      reason: string
-    }
-    /** Durable task lifecycle event emitted when a turn task is created. */
-    'task/created': AgentTaskSnapshot
-    /** Durable task lifecycle event emitted after a user goal is captured. */
-    'task/planned': AgentTaskSnapshot
-    /** Durable task lifecycle event emitted when task execution starts. */
-    'task/running': AgentTaskSnapshot
-    /** Durable task lifecycle event emitted while human approval is pending. */
-    'task/waiting-human': AgentTaskSnapshot
-    /** Durable task lifecycle event emitted after successful completion. */
-    'task/succeeded': AgentTaskSnapshot
-    /** Durable task lifecycle event emitted after a task failure. */
-    'task/failed': AgentTaskSnapshot
-    /** Durable task lifecycle event emitted after cancellation. */
-    'task/cancelled': AgentTaskSnapshot
-  }
-}
-
-declare module '@deepseek-ai/dsh-session-projection/types' {
-  interface SessionProjectionStateMap {
-    personalAgentMode: { mode: AgentMode; maxSteps: number }
-    personalAgentTask: { current: AgentTaskSnapshot | null }
-  }
-  interface SessionProjectionMap {
-    personalAgentMode: { mode: AgentMode; maxSteps: number }
-    personalAgentTask: AgentTaskSnapshot | null
   }
 }
 
@@ -567,7 +468,21 @@ export class PersonalAgentService extends TypertRemoteService {
       if (!this.isManaged(agent)) return next()
       const policy = this.policy(agent.session)
       // maxSteps counts tool rounds; one extra model step is allowed to summarize.
-      if (step > policy.maxSteps + 1) return Promise.resolve({ kind: 'reject' })
+      if (step > policy.maxSteps + 1) {
+        // Record the stop in the same shape a configured budget uses, so a
+        // continuation plugin (auto-resume) can distinguish "stopped by policy"
+        // from "the model finished". A stop after the work already concluded is
+        // still recorded: the turn was cut off, and a reader that only inspects
+        // the turn outcome must be able to see why.
+        const turn = this.steps.get(agent.session)?.turn ?? step
+        agent.session.append('budget/stop', {
+          turn,
+          reason: 'steps',
+          limit: policy.maxSteps,
+          observed: step,
+        }, { ignorable: true })
+        return Promise.resolve({ kind: 'reject' })
+      }
       return next()
     }, { prepend: true })
 
@@ -621,7 +536,11 @@ export class PersonalAgentService extends TypertRemoteService {
     ctx.systemPrompt.section({
       name: 'personal-agent:mode',
       order: ctx.systemPrompt.getSectionOrder('PLAN_POLICY') - 10,
-      text: context => context.agent === undefined ? '' : `当前个人 Agent 模式：${MODE_NAMES[this.current(context.agent)]}。只使用该模式允许的能力；需要其他能力时先建议用户切换模式。`,
+      // Preset sessions stay outside the personal policy until a mode is
+      // selected, so they must not be told a mode constrains their tools.
+      text: context => context.agent === undefined || !this.isManaged(context.agent)
+        ? ''
+        : `当前个人 Agent 模式：${MODE_NAMES[this.current(context.agent)]}。只使用该模式允许的能力；需要其他能力时先建议用户切换模式。`,
     })
   }
 
@@ -690,7 +609,11 @@ export class PersonalAgentService extends TypertRemoteService {
     return this.policies[this.activeModes.get(session) ?? this.currentForSession(session)]
   }
 
-  /** Return the mode context ceiling without applying it to legacy preset sessions. */
+  /**
+   * Return the mode context ceiling without applying it to legacy preset sessions.
+   * @param session - Session whose active mode supplies the ceiling.
+   * @returns The token ceiling, or undefined for unmanaged sessions.
+   */
   contextBudget(session: Session): number | undefined {
     if (this.unmanagedSessions.has(session)) return undefined
     return this.policy(session).maxContextTokens
@@ -733,8 +656,20 @@ export class PersonalAgentService extends TypertRemoteService {
   }
 
   /** Keep the mode policy and the existing permission/sandbox services aligned. */
-  private applyModePermissions(session: Session, mode: AgentMode): void {
+  private applyModePermissions(
+    session: Session,
+    mode: AgentMode,
+    preserved: { sandbox: boolean; approval: boolean } = { sandbox: false, approval: false },
+  ): void {
     const policy = this.policies[mode]
+    // A permission preset writes both knobs as one bundle. Once one knob has
+    // been explicitly persisted, use the canonical single-knob setters so a
+    // mode default cannot accidentally widen the other persisted boundary.
+    if (preserved.sandbox || preserved.approval) {
+      if (!preserved.sandbox) setSandboxMode(session, policy.sandbox)
+      if (!preserved.approval) setApprovalPolicy(session, policy.approval)
+      return
+    }
     const permissionPresets = this.ctx.get('permissionPresets') as {
       names: readonly string[]
       resolve: (name: string) => { sandbox: SandboxMode; approval: ApprovalPolicy }
@@ -809,7 +744,7 @@ export class PersonalAgentService extends TypertRemoteService {
   private deduplicateContext(messages: Message[]): { messages: Message[]; count: number } {
     const seen = new Set<string>()
     let count = 0
-    const result = messages.map((message) => {
+    const result = messages.toReversed().map((message) => {
       const key = duplicateKey(message)
       if (key === undefined || !seen.has(key)) {
         if (key !== undefined) seen.add(key)
@@ -817,7 +752,7 @@ export class PersonalAgentService extends TypertRemoteService {
       }
       count++
       return markDuplicate(message)
-    })
+    }).reverse()
     return { messages: result, count }
   }
 
@@ -1070,8 +1005,48 @@ export class PersonalAgentService extends TypertRemoteService {
     if (state?.mode === undefined || !hasModeEvent) {
       const mode = preferredMode ?? state?.mode ?? this.defaultMode
       session.append('agent/mode', { mode })
-      this.applyModePermissions(session, mode)
+      // A resumed session and an in-process child may already carry an
+      // explicit sandbox/approval decision. The personal-mode default fills
+      // an uninitialized session, but must not widen a policy that was
+      // persisted before this lifecycle (or seeded during child creation).
+      this.applyModePermissions(session, mode, this.persistedPermissionOverrides(session))
     }
+  }
+
+  /**
+   * Find the permission dimensions that were already fixed before this
+   * lifecycle initialized the session. `firstLiveSeq` separates a restored log
+   * from defaults appended by other `session/created` listeners. A child also
+   * gets delegation policy events in its unpublished live suffix, so those
+   * marked events are retained without treating unrelated live changes as
+   * restored policy.
+   */
+  private persistedPermissionOverrides(session: Session): { sandbox: boolean; approval: boolean } {
+    const result = { sandbox: false, approval: false }
+    const mark = (event: SessionEvent, live: boolean): void => {
+      // `permission/preset` is an optional declaration merge supplied by the
+      // permission-presets package, so keep this predicate package-neutral.
+      const type = event.type as string
+      const source = (event.data as { source?: unknown }).source
+      if (type === 'sandbox/mode') {
+        if (!live || source === 'delegation') result.sandbox = true
+      } else if (type === 'approval/policy') {
+        if (!live || source === 'delegation') result.approval = true
+      } else if (type === 'permission/preset') {
+        // Presets are a declaration for the complete bundle. A restored
+        // declaration, or a child declaration appended after its descriptor,
+        // protects both dimensions even when a legacy log omitted one knob.
+        if (!live || session.header.parentSession !== undefined) {
+          result.sandbox = true
+          result.approval = true
+        }
+      }
+    }
+    // oxlint-disable-next-line typescript/no-deprecated -- Existing Session history read; migration deferred.
+    const events = session.snapshotEvents()
+    const firstLiveSeq = Number(session.firstLiveSeq)
+    for (const event of events) mark(event, event.seq >= firstLiveSeq)
+    return result
   }
 
   /** Resolve a personal mode inherited by a child of a managed session. */

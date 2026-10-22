@@ -39,7 +39,7 @@ describe('repository flow', () => {
     fireEvent.change(screen.getByRole('textbox', { name: zh.gitCommitMessage }), { target: { value: 'feat: update demo' } })
     expect((publish as HTMLButtonElement).disabled).toBe(false)
     fireEvent.click(publish)
-    await waitFor(() => expect(pushRepository).toHaveBeenCalledWith({ repositoryRoot: '/tmp/demo-repo', message: 'feat: update demo', includeUntracked: true }))
+    await waitFor(() =>{  expect(pushRepository).toHaveBeenCalledWith({ repositoryRoot: '/tmp/demo-repo', message: 'feat: update demo', includeUntracked: true }) })
     expect(await screen.findByText(zh.gitPushCompleted)).toBeTruthy()
     expect(inspectRepository).toHaveBeenCalled()
   })
@@ -101,7 +101,7 @@ describe('repository flow', () => {
     expect(screen.getAllByText('/tmp/one/repo').length).toBeGreaterThan(0)
     expect(screen.queryByText('/tmp/two/repo')).toBeNull()
     view.rerender(<RepositoryFlow checkpoints={[]} t={key => zh[key]} workspacePath="/tmp/two" />)
-    await waitFor(() => expect(screen.getAllByText('/tmp/two/repo').length).toBeGreaterThan(0))
+    await waitFor(() =>{  expect(screen.getAllByText('/tmp/two/repo').length).toBeGreaterThan(0) })
     expect(screen.queryByText('/tmp/one/repo')).toBeNull()
   })
 

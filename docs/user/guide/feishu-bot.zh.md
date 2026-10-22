@@ -2,7 +2,7 @@
 
 [English](feishu-bot.md) | 中文
 
-Web 版 DSH 内置飞书机器人，可以让手机通过飞书自建应用机器人和 DeepSeek Harness Agent 聊天。默认使用飞书出站 WebSocket 长连接，因此电脑不需要公网 IP、入站端口、HTTPS 回调，也不要求手机和电脑连接同一 Wi-Fi。命令行用户仍可以使用下方的 overlay 配置。
+Web 版 DSH 内置飞书机器人，可以让手机通过飞书自建应用机器人和 Lingda Harness Agent 聊天。默认使用飞书出站 WebSocket 长连接，因此电脑不需要公网 IP、入站端口、HTTPS 回调，也不要求手机和电脑连接同一 Wi-Fi。命令行用户仍可以使用下方的 overlay 配置。
 
 需要理解消息从飞书到 Agent 再回到飞书的完整过程时，请阅读[飞书机器人全链路文章](feishu-bot-end-to-end.md)。
 

@@ -1,0 +1,255 @@
+.root {
+  position: relative;
+  display: inline-flex;
+  flex: none;
+}
+
+.trigger {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: none;
+  border-radius: 999px;
+  corner-shape: round;
+  background: transparent;
+  color: var(--dsw-alias-label-secondary);
+  cursor: pointer;
+}
+
+.trigger:hover:not(:disabled),
+.trigger[aria-expanded='true'] {
+  background: var(--dsw-alias-interactive-bg-hover);
+  color: var(--dsw-alias-label-primary);
+}
+
+.trigger:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.panel {
+  position: absolute;
+  left: 0;
+  bottom: calc(100% + 8px);
+  z-index: 200;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  box-sizing: border-box;
+  width: min(420px, calc(100vw - 32px));
+  padding: 14px;
+  border-radius: 12px;
+  background: var(--dsw-specific-menu);
+  --dsw-elevation-stroke-color: var(--dsw-alias-border-l1);
+  box-shadow: var(--dsw-elevation-prominent);
+  color: var(--dsw-alias-label-primary);
+}
+
+.header {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.title {
+  margin: 0;
+  min-width: 0;
+  flex: 1;
+  font-size: 14px;
+  line-height: 20px;
+  font-weight: 600;
+}
+
+.iconButton {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: none;
+  border-radius: 999px;
+  corner-shape: round;
+  background: transparent;
+  color: var(--dsw-alias-label-tertiary);
+  cursor: pointer;
+}
+
+.iconButton:hover {
+  background: var(--dsw-alias-interactive-bg-hover);
+  color: var(--dsw-alias-label-primary);
+}
+
+.modeRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.mode {
+  min-width: 0;
+  min-height: 28px;
+  padding: 3px 9px;
+  border: 0.5px solid var(--dsw-alias-border-l3);
+  border-radius: 8px;
+  background: transparent;
+  color: var(--dsw-alias-label-secondary);
+  font-size: 12px;
+  line-height: 20px;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.mode:hover {
+  background: var(--dsw-alias-interactive-bg-hover);
+}
+
+.mode[aria-pressed='true'] {
+  border-color: var(--dsw-alias-state-business-primary);
+  background: var(--dsw-alias-state-business-tertiary);
+  color: var(--dsw-alias-label-primary-bluish);
+}
+
+.editor {
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 190px;
+  max-height: 340px;
+  resize: vertical;
+  padding: 10px;
+  border: 0.5px solid var(--dsw-alias-border-l2);
+  border-radius: 8px;
+  outline: none;
+  background: var(--dsw-specific-input-major);
+  color: var(--dsw-alias-label-primary);
+  font-family: var(--dsw-font-family);
+  font-size: 13px;
+  line-height: 20px;
+}
+
+.editor:focus {
+  border-color: var(--dsw-alias-state-business-primary);
+}
+
+.status,
+.error {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 28px;
+  color: var(--dsw-alias-label-secondary);
+  font-size: 12px;
+  line-height: 18px;
+}
+
+.error {
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+  color: var(--dsw-alias-state-error-primary);
+}
+
+.error > span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.spinner {
+  flex: none;
+  animation: promptOptimizerSpin 1s linear infinite;
+}
+
+.retry {
+  display: inline-flex;
+  align-items: center;
+  flex: none;
+  gap: 4px;
+  min-height: 26px;
+  padding: 2px 7px;
+  border: 0.5px solid var(--dsw-alias-border-l2);
+  border-radius: 6px;
+  background: transparent;
+  color: var(--dsw-alias-label-secondary);
+  font-size: 12px;
+  line-height: 18px;
+  cursor: pointer;
+}
+
+.retry:hover {
+  background: var(--dsw-alias-interactive-bg-hover);
+  color: var(--dsw-alias-label-primary);
+}
+
+@keyframes promptOptimizerSpin {
+  to { transform: rotate(360deg); }
+}
+
+.footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  min-width: 0;
+}
+
+.copy,
+.apply {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-width: 0;
+  min-height: 30px;
+  padding: 4px 10px;
+  border: none;
+  border-radius: 8px;
+  font-size: 12px;
+  line-height: 20px;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.copy {
+  background: transparent;
+  color: var(--dsw-alias-label-secondary);
+}
+
+.copy:hover:not(:disabled) {
+  background: var(--dsw-alias-interactive-bg-hover);
+  color: var(--dsw-alias-label-primary);
+}
+
+.apply {
+  background: var(--dsw-alias-button-info-fill);
+  color: #fff;
+}
+
+.apply:hover:not(:disabled) {
+  background: var(--dsw-alias-button-info-hover);
+}
+
+.copy:disabled,
+.apply:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+@media (max-width: 480px) {
+  .panel {
+    /* The trigger lives in the left toolbar group. Keep the narrow panel
+       anchored to that group; right-aligning it against the 28px trigger
+       would place most of the panel outside the viewport. */
+    left: 0;
+    right: auto;
+  }
+
+  .footer {
+    justify-content: stretch;
+  }
+
+  .copy,
+  .apply {
+    flex: 1;
+  }
+}

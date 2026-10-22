@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { Context } from '@deepseek-ai/cordis'
-import SessionStore, { SessionId, type Session } from '@deepseek-ai/dsh-session'
+import SessionStore, { SessionId, SessionSeq, type Session, type SessionEvent } from '@deepseek-ai/dsh-session'
 import SessionProjectionRegistry from '@deepseek-ai/dsh-session-projection'
 import SystemPrompt from '@deepseek-ai/dsh-system-prompt'
 import ToolRuntime, { defineContentToolFixture } from '@deepseek-ai/dsh-tools'
@@ -10,6 +10,8 @@ import { ToolCallId, createAssistantMessage, createToolResultMessage, createUser
 import type { ToolResultMessage, UserMessage } from '@deepseek-ai/dsh-llm'
 import { SettingsProvider } from '@deepseek-ai/dsh-settings'
 import type { SettingsNamespace } from '@deepseek-ai/dsh-settings'
+import SandboxPolicyService from '@deepseek-ai/dsh-sandbox-policy'
+import ApprovalService from '@deepseek-ai/dsh-user-approval'
 import PersonalAgentService, { suggestMode, type Config as PersonalAgentConfig } from '../src/index.ts'
 
 class MemorySettings extends SettingsProvider {
@@ -38,6 +40,26 @@ async function harness(
   return { ctx, session, agent }
 }
 
+async function permissionHarness(
+  personalConfig: PersonalAgentConfig = { defaultMode: 'execution' },
+  sessionOptions?: { seed?: readonly SessionEvent[]; parentSession?: SessionId },
+): Promise<{ ctx: Context; session: Session; agent: Agent }> {
+  const ctx = new Context()
+  await ctx.plugin(SessionStore)
+  await ctx.plugin(SessionProjectionRegistry)
+  await ctx.plugin(SystemPrompt)
+  await ctx.plugin(ToolRuntime)
+  await ctx.plugin(SandboxPolicyService, { mode: 'workspace-write', workspaceRoot: process.cwd() })
+  await ctx.plugin(ApprovalService)
+  await ctx.plugin(PersonalAgentService, personalConfig)
+  const session = ctx.sessions.create(SessionId(`personal-permissions-${Math.random().toString(36).slice(2)}`), {
+    ...sessionOptions?.seed === undefined ? {} : { seed: sessionOptions.seed },
+    ...sessionOptions?.parentSession === undefined ? {} : { meta: { parentSession: sessionOptions.parentSession } },
+  })
+  const agent = { id: session.id, session, ctx } as unknown as Agent
+  return { ctx, session, agent }
+}
+
 describe('personal agent modes', () => {
   it('suggests a mode locally without an LLM call', () => {
     expect(suggestMode('修改这个 TypeScript 文件')).toBe('coding')
@@ -61,6 +83,65 @@ describe('personal agent modes', () => {
     const session = ctx.sessions.create(SessionId(`settings-${Math.random().toString(36).slice(2)}`))
     const agent = { id: session.id, session, ctx } as unknown as Agent
     expect(ctx.personalAgent.current(agent)).toBe('research')
+  })
+
+  it('preserves restored permission overrides when pinning a default mode', async () => {
+    const seed: SessionEvent[] = [
+      { type: 'sandbox/mode', seq: SessionSeq(0), time: 1, data: { mode: 'read-only' } },
+      { type: 'approval/policy', seq: SessionSeq(1), time: 2, data: { policy: 'ask' } },
+    ]
+    const { ctx, session, agent } = await permissionHarness({ defaultMode: 'execution' }, { seed })
+
+    expect(session.firstLiveSeq).toBe(2)
+    expect(ctx.personalAgent.current(agent)).toBe('execution')
+    expect(ctx.sandboxPolicy.overrideOf(session)).toBe('read-only')
+    expect(ctx.approval.overrideOf(session)).toBe('ask')
+    expect(session.snapshotEvents().filter(event => event.type === 'agent/mode')).toHaveLength(1)
+    expect(session.snapshotEvents().filter(event => event.type === 'sandbox/mode')).toHaveLength(1)
+    expect(session.snapshotEvents().filter(event => event.type === 'approval/policy')).toHaveLength(1)
+  })
+
+  it('preserves each restored permission dimension independently', async () => {
+    const sandboxOnly = await permissionHarness({ defaultMode: 'execution' }, {
+      seed: [{ type: 'sandbox/mode', seq: SessionSeq(0), time: 1, data: { mode: 'read-only' } }],
+    })
+    expect(sandboxOnly.ctx.sandboxPolicy.overrideOf(sandboxOnly.session)).toBe('read-only')
+    expect(sandboxOnly.ctx.approval.overrideOf(sandboxOnly.session)).toBe('ask')
+
+    const approvalOnly = await permissionHarness({ defaultMode: 'execution' }, {
+      seed: [{ type: 'approval/policy', seq: SessionSeq(0), time: 1, data: { policy: 'never' } }],
+    })
+    expect(approvalOnly.ctx.sandboxPolicy.overrideOf(approvalOnly.session)).toBe('workspace-write')
+    expect(approvalOnly.ctx.approval.overrideOf(approvalOnly.session)).toBe('never')
+  })
+
+  it('applies defaults to fresh sessions and keeps explicit mode switches authoritative', async () => {
+    const { ctx, session, agent } = await permissionHarness()
+
+    expect(ctx.sandboxPolicy.overrideOf(session)).toBe('workspace-write')
+    ctx.personalAgent.set(agent, 'qa')
+    expect(ctx.sandboxPolicy.overrideOf(session)).toBe('read-only')
+    ctx.personalAgent.set(agent, 'execution')
+    expect(ctx.sandboxPolicy.overrideOf(session)).toBe('workspace-write')
+  })
+
+  it('preserves delegation policy events appended in a fresh child window', async () => {
+    const { ctx, session, agent } = await permissionHarness()
+    const childSeed: SessionEvent[] = [
+      { type: 'sandbox/mode', seq: SessionSeq(0), time: 1, data: { mode: 'read-only', source: 'delegation' } },
+      { type: 'approval/policy', seq: SessionSeq(1), time: 2, data: { policy: 'never', source: 'delegation' } },
+    ]
+    const childSession = ctx.sessions.create(SessionId(`personal-child-${Math.random().toString(36).slice(2)}`), {
+      seed: childSeed,
+      meta: { parentSession: session.id },
+    })
+    const child = { id: childSession.id, session: childSession, ctx } as unknown as Agent
+
+    expect(ctx.personalAgent.current(child)).toBe(ctx.personalAgent.current(agent))
+    expect(ctx.sandboxPolicy.overrideOf(childSession)).toBe('read-only')
+    expect(ctx.approval.overrideOf(childSession)).toBe('never')
+    expect(childSession.snapshotEvents().filter(event => event.type === 'sandbox/mode')).toHaveLength(1)
+    expect(childSession.snapshotEvents().filter(event => event.type === 'approval/policy')).toHaveLength(1)
   })
 
   it('filters model-visible tools and rejects hidden calls at execution time', async () => {
@@ -121,6 +202,19 @@ describe('personal agent modes', () => {
     }, () => Promise.resolve([message]))
     expect(result).toEqual([message])
     expect(sessionEvents(session)).toHaveLength(0)
+  })
+
+  it('announces the active mode only to sessions the personal policy manages', async () => {
+    const managed = await harness()
+    const managedPrompt = await managed.ctx.systemPrompt.assemble(assembleContextFor(managed.agent))
+    const managedSection = managedPrompt.sections.find(section => section.name === 'personal-agent:mode')
+    expect(managedSection?.text).toContain('当前个人 Agent 模式：问答')
+
+    const preset = await harness()
+    preset.ctx.provide('agentPresets', { composedPreset: () => 'legacy' } as never)
+    const presetPrompt = await preset.ctx.systemPrompt.assemble(assembleContextFor(preset.agent))
+    const presetSection = presetPrompt.sections.find(section => section.name === 'personal-agent:mode')
+    expect(presetSection?.text ?? '').toBe('')
   })
 
   it('inherits a selected personal mode into a child session', async () => {
@@ -241,6 +335,42 @@ describe('personal agent modes', () => {
       && block.content[0]?.type === 'text' && block.content[0].text.includes('工具结果已裁剪'))).toBe(true)
   })
 
+  it('deduplicates an older tool result while preserving the newest copy', async () => {
+    const { ctx, session, agent } = await harness()
+    ctx.provide('contextRouter', { active: true })
+    const firstCallId = ToolCallId('duplicate-first')
+    const secondCallId = ToolCallId('duplicate-second')
+    const firstCall = createAssistantMessage({
+      source: { provider: 'test', model: 'test' },
+      content: [{ type: 'tool-call', id: firstCallId, name: 'lookup', arguments: '{}' }],
+    })
+    const secondCall = createAssistantMessage({
+      source: { provider: 'test', model: 'test' },
+      content: [{ type: 'tool-call', id: secondCallId, name: 'lookup', arguments: '{}' }],
+    })
+    const firstResult = createToolResultMessage({
+      callId: firstCallId, isError: false, content: [{ type: 'text', text: 'LATEST_RESULT' }],
+    })
+    const secondResult = createToolResultMessage({
+      callId: secondCallId, isError: false, content: [{ type: 'text', text: 'LATEST_RESULT' }],
+    })
+    const current = createUserMessage({ source: { kind: 'user' }, content: [{ type: 'text', text: '继续' }] })
+    session.append('turn/start', { turn: 1 })
+
+    const retained = await agentEvents(ctx, agent).waterfall('agent/request-context', {
+      turn: 1,
+      step: 2,
+      messages: [firstCall, firstResult, secondCall, secondResult, current],
+      signal: new AbortController().signal,
+    }, () => Promise.resolve([firstCall, firstResult, secondCall, secondResult, current]))
+
+    const toolResultTexts = retained.flatMap(message => message.content.flatMap(block =>
+      block.type === 'tool-result'
+        ? block.content.flatMap(content => content.type === 'text' ? [content.text] : [])
+        : []))
+    expect(toolResultTexts).toEqual(['[重复工具结果已省略]', 'LATEST_RESULT'])
+  })
+
   it('projects a durable task lifecycle on top of turn events', async () => {
     const { ctx, session } = await harness()
     session.append('turn/start', { turn: 1 })
@@ -263,6 +393,24 @@ describe('personal agent modes', () => {
     })
   })
 
+  it('records a durable budget stop when the mode step cap rejects a step', async () => {
+    const { ctx, session, agent } = await harness(false, { modes: { coding: { maxSteps: 2 } } })
+    ctx.personalAgent.set(agent, 'coding')
+    session.append('turn/start', { turn: 1 })
+    // Drive the pre-step waterfall past the cap; personal-agent rejects it.
+    const decision = await ctx.waterfall('agent/pre-step', {
+      agent,
+      messages: [],
+      turn: 1,
+      step: 4,
+      signal: new AbortController().signal,
+    }, async () => ({ kind: 'enter' as const, messages: [] }))
+    expect(decision.kind).toBe('reject')
+    const stops = session.snapshotEvents().filter(event => event.type === 'budget/stop')
+    expect(stops).toHaveLength(1)
+    expect(stops[0]?.data).toMatchObject({ turn: 1, reason: 'steps', limit: 2, observed: 4 })
+  })
+
   it('charges one tool round per model step instead of one per parallel call', async () => {
     const { ctx, session, agent } = await harness(false, { modes: { coding: { maxSteps: 2 } } })
     ctx.tools.register(defineContentToolFixture({ name: 'read', description: 'read', parameters: {}, execute: async () => [] }))
@@ -275,7 +423,7 @@ describe('personal agent modes', () => {
       const result = await ctx.tools.execute({
         name: 'read', callId: callId as never, arguments: {}, agent, signal: new AbortController().signal,
       })
-      return result.isError === true
+      return  result.isError
     }
     session.append('step/start', { turn: 1, step: 1 })
     // A batched step is one round, so four parallel calls stay inside the cap.

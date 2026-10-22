@@ -12,6 +12,10 @@ The direct workflow console had run controls, but graph execution still lacked n
 
 Workflow nodes can retain a bounded retry count. The compiler emits retry loops for model and condition nodes, reports retry progress, and emits node start/completion and condition branch logs through the existing `log()` hook. Editor validation mirrors the compiler's reachability, terminal-path, identifier, and branch-handle checks. Built-in templates now import with valid graphs, including a two-way review branch, and retain their first published snapshot. Output nodes support template substitution and JSON parsing. Direct test runs retain text or JSON input plus an optional 1-second to 24-hour timeout. Host-side controls continue to enforce input, result, error, metadata, audit, and concurrency bounds.
 
+## Alternatives considered
+
+Leaving retries and graph checks to individual nodes was rejected because editor and compiler behavior could diverge. A global retry policy was rejected because authors need explicit, bounded recovery at the node that owns the transient operation.
+
 ## Consequences
 
 Workflow authors can make transient model or condition failures recoverable without changing the Host engine. Output nodes can normalize the final value for downstream consumers. Retry remains explicit per node and does not hide infrastructure exceptions. Timeout remains Host-owned and cancellation-safe.

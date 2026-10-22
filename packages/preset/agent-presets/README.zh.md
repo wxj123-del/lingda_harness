@@ -27,11 +27,9 @@ kind: "package-reference"
 
 在需要让每个 agent 会话从 preset 文件获得自己的工具、提示词段落与 skill 的组装中挂载本包。每个会话都会命名一个 preset——显式指定或通过配置的默认值——并据此组装；没有本包时，会话只能回退到宿主组装挂载的内容。
 
-随附 Web 的 `standard`、`diaosi`、`ptc` 与 `cordis` preset 包含[显式文件交付](../../client/ui-deliverables/README.zh.md#explicit-deliveries)。`minimal` preset 仅提供持久 shell，并以包含会话所配置模型和提供方的完整人设作为系统提示词。它会抑制其他提示词段落和运行时上下文。
+随附仅有一个 preset：`diaosi`（Budget mode，屌丝模式），它是每个会话默认采用的组合。
 
-`diaosi` 使用[按需工具发现](../tool-discovery/README.zh.md)：初始提供四个工具，其中固定保留 `read`、`skill` 和 `present`，另加 `tool_search`；剩余的一个初始名额优先分配给历史实际调用较多的工具。每次搜索最多加载两个相关工具，后续请求最多保留八个工具和搜索入口。继承的媒体与 MCP schema 也参与同一筛选，不再无条件出现。更新后的预设适用于新建对话，已加载的代次保留原配置。
-
-需要精简日常工具集时，可选择 `diaosi`（屌丝模式，Budget mode），使用文件编辑、Shell、搜索、Skills、任务跟踪和提问。它保留所选模型与项目指令，不加载委派、工作流、目标和计划模式工具，并要求定向搜索、分段读取和简洁回复。每次读取最多返回 120 行、8,000 字节的所选文本；搜索内联保留 40 个路径或匹配。作用域 spill 策略将过大的 Shell、搜索、网页及任务输出文本变为 8,000 字节以内的预览并附全文位置；其他工具沿用既有策略。精简 Skill 目录保留名称、描述和完整指令加载。其私有压缩器在达到所选模型上下文窗口的 65% 时触发。这些是输出与压力限制，并非总 Token 预算或经过测量的节省保证。[组装文件](presets/diaosi/agent.cordis.yml)定义会话专属配置；[决策记录](../../../.agents/notes/implemented/feature/2026-09-16-diaosi-agent-preset.zh.md)说明取舍。
+需要精简日常工具集时，可选择 `diaosi`（屌丝模式，Budget mode），使用文件编辑、Shell、搜索、Skills、任务跟踪和提问。它保留所选模型与项目指令，不加载委派、工作流、目标和计划模式工具，并要求定向搜索、分段读取和简洁回复。每次读取最多返回 120 行、8,000 字节的所选文本；搜索内联保留 40 个路径或匹配。作用域 spill 策略将过大的 Shell、搜索、网页及任务输出文本变为 8,000 字节以内的预览并附全文位置；其他工具沿用既有策略。精简 Skill 目录保留名称、描述和完整指令加载。其私有压缩器在达到所选模型上下文窗口的 65% 时触发。这些是输出与压力限制，并非总 Token 预算或经过测量的节省保证。[组装文件](presets/diaosi/agent.cordis.yml)定义会话专属配置；[决策记录](../../../.agents/notes/implemented/feature/2026-09-16-diaosi-agent-preset.md)说明取舍。
 
 ### preset 给会话带来什么
 
@@ -46,7 +44,7 @@ kind: "package-reference"
 ```yaml
 - name: '@deepseek-ai/dsh-agent-presets'
   config:
-    default: standard
+    default: diaosi
     modeSelectionEnabled: true
     roots:
       - path: ~/company-presets
@@ -72,7 +70,7 @@ kind: "package-reference"
 ```yaml
 agent-presets:
   modeSelectionEnabled: true
-  default: minimal
+  default: diaosi
 ```
 
 客户端只需写入 `modeSelectionEnabled` 即可显示或隐藏选择，[Web GUI 设置开关](../../client/ui-agent-preset/README.zh.md)正是这样做的。选择器隐藏期间由部署默认值生效；再次开启时恢复已保存的用户 `default`，尚未保存时则继续使用部署默认值。模式选择保持开启时，选择默认模式会写入用户覆盖值，仅供此后创建的会话使用。由于该策略归 Host 所有，它适用于 Web、CLI、SDK 与 headless 调用方此后创建的全部未显式指定 preset 的会话；显式指定的 preset 与任何既有会话均不受影响。
@@ -183,7 +181,7 @@ agent-presets:
 - **被替代的代际永不回收**——已加入的会话保持其运行所在的代际，而名单没有加入计数可以判断最后一个何时离开，因此整棵子树一直挂到进程结束。代价按代际计而非按会话计，但并非为零：`dsh-skill-filesystem` 默认监听自己的根目录，因此每一轮「编辑后建会话」都会新增一套活的 watcher。
 - **副本从不被实际挂载以校验**——它与来源逐字节相同，因此磁盘上已坏的来源会产出与来源同样损坏的副本；发现过程的健康检查会在下一次读取名单时把两行都标出来，而不是把失败推迟到会话启动。
 - **健康问的是「装没装」，不是「能不能 import」**——发现过程证明组装能以加载器方言解析、由具名行组成，且对于每个能证明会启动的行，其引用的包存在于 harness 基址以上，或引用的文件确实存在；它从不 import 任何一个，因此入口文件缺失的包、在 apply 时抛错的插件、以及永远等待某个服务的插件，都仍在第一个会话处失败。`disabled` 是加载器唯一会插值的条目字段，因此该字段带表达式的行不予检查，而不是仅凭文件作出判断。
-- **副本是会漂移的快照**——升级部署不会更新随附 preset 的副本，本层也没有表达「standard 加一处改动」的 patch 语义；随附集合自己也接受同样的代价——`cordis` 与 `code` 都复制了 `standard` 的完整组装并在此基础上编辑——换来整份组装在一个文件里可读。
+- **副本是会漂移的快照**——升级部署不会更新随附 preset 的副本，本层也没有表达「standard 加一处改动」的 patch 语义；随附 preset 则承受相反方向的同样代价——它无法被 patch，只能被整体替换。
 - **根目录扫描不做监听**——每次读取都实际访问文件系统，这让名单保持新鲜，但每次 `list()` 会对每个根目录产生一次 `readdir`。
 
 <a id="dev-note"></a>

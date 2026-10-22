@@ -2,5 +2,5 @@
 # side as of the last confirmed-consistent state. Both languages carry equal authority;
 # after editing either side, bring the other along and re-record with:
 #   pnpm run verify-translation-pairing --write .agents/notes/implemented/feature/2026-09-23-workflow-tool-isolation.md
-2026-09-23-workflow-tool-isolation.md: dccc99af287d9c638f12e16442c9caa3bd850eb3
-2026-09-23-workflow-tool-isolation.zh.md: 0416371de8c9b703fccd23de402012f91bedae92
+2026-09-23-workflow-tool-isolation.md: 47fcfb1bdc7097ca2cb5c12131782640b387a079
+2026-09-23-workflow-tool-isolation.zh.md: 85d4c6ddc770b663b08d2f43a853eeda6d273ff9

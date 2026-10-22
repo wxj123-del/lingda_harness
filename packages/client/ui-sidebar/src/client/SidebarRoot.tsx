@@ -19,7 +19,7 @@
 import { useEffect, useRef, useState } from 'react'
 import clsx from 'clsx'
 import {
-  FishLogo, IconNewChatOutline16, IconPanelLeftOutline16, Tooltip,
+  IconNewChatOutline16, IconPanelLeftOutline16, LingdaMascot, Tooltip,
 } from '@deepseek-ai/dsh-client-ui-primitives'
 import type { InjectFace, PropsRenderSlots, PropsRuntime } from '@deepseek-ai/dsh-client-ui-slots'
 import type {
@@ -97,7 +97,6 @@ export function SidebarRoot({
   renderSlot,
 }: SidebarRootComponentProps) {
   const panels = usePanels(snapshot => snapshot)
-  const conversation = usePanelInfo(info => info.activePanelId === null)
   // Wide content stays mounted while the collapse animates (fading via
   // .collapsed .wide), unmounts at settle, and remounts right away on expand.
   const [settled, setSettled] = useState(collapsed)
@@ -164,6 +163,24 @@ export function SidebarRoot({
 
   const buildVersion = localBuildVersion()
 
+  // One seat, rendered either in the content column (expanded) or in the rail
+  // (settled collapse). Without an occupant the shell falls back to the panel
+  // list it owns; an empty list renders nothing at all.
+  const navigationSeat = (
+    <div className={css.navigationArea}>
+      {renderSlot('sidebar.navigation', { compact: !wide }, {
+        fallback: panels.length === 0 ? null : (
+          <nav className={css.panelList} aria-label={t('panels.label')}>
+            {panels.map(({ id, label }) => (
+              <PanelRow key={id} id={id} label={label} wide={wide}
+                usePanelInfo={usePanelInfo} selectPanel={selectPanel} renderSlot={renderSlot} />
+            ))}
+          </nav>
+        ),
+      })}
+    </div>
+  )
+
   return (
     <div
       ref={column}
@@ -179,23 +196,18 @@ export function SidebarRoot({
       onPointerLeave={() => { armLinger() }}
     >
       <div className={css.layout}>
+        {/* The collapsed rail holds the expand toggle and the navigation's icon
+        column. While the collapse animates, `wide` keeps the row in the frozen
+        content column instead, so the entries never straddle two layouts. */}
         <aside className={css.navigationRail}>
-          {collapsed && conversation && (
+          {collapsed && (
             <Tooltip label={t('toggle.open')} delayMs={500}>
               <button type="button" className={css.iconButton} aria-label={t('toggle.open')} onClick={toggleSidebar}>
                 <IconPanelLeftOutline16 size={18} />
               </button>
             </Tooltip>
           )}
-          {renderSlot('sidebar.navigation', {})}
-          {collapsed && panels.length > 0 && (
-            <nav className={css.panelList} aria-label={t('panels.label')}>
-              {panels.map(({ id, label }) => (
-                <PanelRow key={id} id={id} label={label} wide={false}
-                  usePanelInfo={usePanelInfo} selectPanel={selectPanel} renderSlot={renderSlot} />
-              ))}
-            </nav>
-          )}
+          {!wide && navigationSeat}
         </aside>
         <div className={css.content}>
           <div className={css.logoRow}>
@@ -210,7 +222,7 @@ export function SidebarRoot({
               >
                 <span className={css.brandIdentity} aria-hidden="true">
                   <span className={css.brandMark}>
-                    {renderSlot('sidebar.brand.mark', { size: 24 }, { fallback: <FishLogo size={24} /> })}
+                    {renderSlot('sidebar.brand.mark', { size: 24 }, { fallback: <LingdaMascot size={24} /> })}
                   </span>
                   <span className={css.brandName}>
                     {renderSlot('sidebar.brand.name', {}, {
@@ -227,7 +239,7 @@ export function SidebarRoot({
                 </span>
               </button>
             )}
-            {/* Rail resting state is the whale mark; hovering swaps in the panel
+            {/* Rail resting state is the mascot mark; hovering swaps in the panel
             icon (the expand affordance, figma sidebar-hover flow). */}
             {!collapsed && <Tooltip label={t('toggle.collapse')} delayMs={500}>
               <button
@@ -238,7 +250,7 @@ export function SidebarRoot({
               >
                 {!wide && (
                   <span className={css.railMark} aria-hidden="true">
-                    {renderSlot('sidebar.brand.mark', { size: 24 }, { fallback: <FishLogo size={24} /> })}
+                    {renderSlot('sidebar.brand.mark', { size: 24 }, { fallback: <LingdaMascot size={24} /> })}
                   </span>
                 )}
                 {/* Rail icons render at 18 (figma rail spec); expanded keeps the glyph-native sizes. */}
@@ -260,17 +272,8 @@ export function SidebarRoot({
             </button>
           </Tooltip>
 
-          {/* The browsing region fills the column between the controls and the
-          foot in both states; its rail icon column rides the same slot. */}
-          {!collapsed && panels.length > 0 && (
-            <nav className={css.panelList} aria-label={t('panels.label')}>
-              {panels.map(({ id, label }) => (
-                <PanelRow key={id} id={id} label={label} wide={wide}
-                  usePanelInfo={usePanelInfo} selectPanel={selectPanel} renderSlot={renderSlot} />
-              ))}
-            </nav>
-          )}
-          <div className={css.regionArea} hidden={!conversation}>
+          {wide && navigationSeat}
+          <div className={css.regionArea}>
             {renderSlot('sidebar.workspaces', {
               wide,
               expandSidebar: () => { if (collapsed) toggleSidebar() },

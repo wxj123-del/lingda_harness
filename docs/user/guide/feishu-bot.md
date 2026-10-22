@@ -2,7 +2,7 @@
 
 English | [中文](feishu-bot.zh.md)
 
-The Web app includes a Feishu bot so a phone can chat with a DeepSeek Harness Agent through a Feishu custom-app bot. It uses Feishu's outbound WebSocket long connection by default, so the computer does not need a public IP, inbound port, HTTPS callback, or the same Wi-Fi as the phone. Command-line users can still use the overlay shown below.
+The Web app includes a Feishu bot so a phone can chat with a Lingda Harness Agent through a Feishu custom-app bot. It uses Feishu's outbound WebSocket long connection by default, so the computer does not need a public IP, inbound port, HTTPS callback, or the same Wi-Fi as the phone. Command-line users can still use the overlay shown below.
 
 For the complete message path from Feishu to the Agent and back, see the [end-to-end Feishu bot article](feishu-bot-end-to-end.md).
 

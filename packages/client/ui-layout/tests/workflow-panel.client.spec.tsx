@@ -3,8 +3,8 @@ import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-li
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { WorkflowPanel } from '../src/client/authoring/WorkflowPanel.tsx'
 import { zh } from '../src/client/locales.ts'
-import type { AuthoringItem } from '../src/authoring-settings.ts'
-import type { WorkflowDebugEvent, WorkflowRunView } from '../src/client/authoring/workflow-debug.ts'
+import { releasedWorkflow, type AuthoringItem } from '../src/authoring-settings.ts'
+import type { WorkflowCredentialControls, WorkflowDebugEvent, WorkflowRunView } from '../src/client/authoring/workflow-debug.ts'
 import { workflowRuntimeName } from '../src/client/authoring/workflow-debug.ts'
 import { compileWorkflow } from '../src/workflow-compile.ts'
 import { serializeWorkflow } from '../src/workflow-io.ts'
@@ -21,11 +21,25 @@ const setup = (
   return { save, invoke, remove }
 }
 
+const publishedWorkflow = (overrides: Partial<AuthoringItem> = {}): AuthoringItem => {
+  const nodes: NonNullable<AuthoringItem['nodes']> = [
+    { id: 'start', kind: 'start', title: '开始', instructions: '', x: 0, y: 0 },
+    { id: 'end', kind: 'end', title: '结束', instructions: '', x: 220, y: 0 },
+  ]
+  const edges: NonNullable<AuthoringItem['edges']> = [{ id: 'edge', source: 'start', target: 'end' }]
+  return {
+    id: 'workflow-release', title: '线上流程', description: '线上描述', enabled: true, body: '线上说明', steps: [],
+    nodes, edges, workflowStatus: 'published', version: 1, updatedAt: 1,
+    versions: [{ version: 1, publishedAt: 1, title: '线上流程', description: '线上描述', body: '线上说明', steps: [], nodes, edges }],
+    ...overrides,
+  }
+}
+
 describe('Workflow workspace', () => {
   it('shows ready-made templates and imports one into my workflows', async () => {
     const { save } = setup()
     expect(screen.getAllByRole('article')).toHaveLength(3)
-    fireEvent.click(within(screen.getAllByRole('article')[0]).getByRole('button', { name: '一键导入' }))
+    fireEvent.click(within(screen.getAllByRole('article')[0]!).getByRole('button', { name: '一键导入' }))
     await waitFor(() => {
       const imported = save.mock.calls[0]?.[0]
       expect(imported).toEqual(expect.objectContaining({ id: 'builtin-workflow-meeting-summary', title: '会议纪要整理', nodes: expect.arrayContaining([expect.objectContaining({ kind: 'input' }), expect.objectContaining({ kind: 'output' })]), versions: [expect.objectContaining({ version: 1 })] }))
@@ -142,10 +156,15 @@ describe('Workflow workspace', () => {
   })
 
   it('duplicates and deletes a saved workflow', async () => {
-    const item: AuthoringItem = { id: 'workflow-one', title: '我的流程', description: '描述', enabled: true, body: '执行', steps: ['一步'], updatedAt: 1 }
+    const item = publishedWorkflow({ id: 'workflow-one', title: '我的流程', testInput: 'secret test', testInputMode: 'json', testTimeoutMs: 5000 })
     const { save, remove } = setup([item])
     fireEvent.click(screen.getByRole('button', { name: '复制' }))
-    await waitFor(() => { expect(save).toHaveBeenCalledWith(expect.objectContaining({ title: '我的流程 副本', id: expect.stringMatching(/^workflow-/) })) })
+    await waitFor(() => { expect(save).toHaveBeenCalledWith(expect.objectContaining({ title: '我的流程 副本', id: expect.stringMatching(/^workflow-/), workflowStatus: 'draft', version: 0, versions: [] })) })
+    const copy = save.mock.calls[0]?.[0]
+    expect(copy).not.toHaveProperty('testInput')
+    expect(copy).not.toHaveProperty('testInputMode')
+    expect(copy).not.toHaveProperty('testTimeoutMs')
+    expect(copy === undefined ? undefined : releasedWorkflow(copy)).toBeUndefined()
     vi.spyOn(window, 'confirm').mockReturnValue(true)
     fireEvent.click(screen.getByRole('button', { name: '删除' }))
     await waitFor(() => { expect(remove).toHaveBeenCalledWith(item.id) })
@@ -191,6 +210,30 @@ describe('Workflow workspace', () => {
     await waitFor(() => { expect(cancel).toHaveBeenCalledWith('run-input') })
   })
 
+  it('keeps a published workflow published when only direct-test settings change', async () => {
+    const item = publishedWorkflow()
+    const save = vi.fn<(_item: AuthoringItem) => Promise<void>>(async () => {})
+    render(<WorkflowPanel items={[item]} writable save={save} invoke={vi.fn(async () => {})} run={vi.fn(async () => undefined)} t={key => zh[key]} />)
+    fireEvent.click(screen.getByRole('button', { name: '编辑工作流' }))
+    fireEvent.change(screen.getByLabelText('测试输入'), { target: { value: 'new test input' } })
+    fireEvent.click(screen.getByRole('button', { name: '保存测试输入' }))
+    await waitFor(() => { expect(save).toHaveBeenCalledWith(expect.objectContaining({ testInput: 'new test input', workflowStatus: 'published', version: 1 })) })
+  })
+
+  it('tests changed release content as a draft while retaining the prior live snapshot', async () => {
+    const item = publishedWorkflow()
+    const save = vi.fn<(_item: AuthoringItem) => Promise<void>>(async () => {})
+    const run = vi.fn(async () => undefined)
+    render(<WorkflowPanel items={[item]} writable save={save} invoke={vi.fn(async () => {})} run={run} t={key => zh[key]} />)
+    fireEvent.click(screen.getByRole('button', { name: '编辑工作流' }))
+    fireEvent.change(screen.getByLabelText('执行说明'), { target: { value: '未发布的新说明' } })
+    fireEvent.click(screen.getByRole('button', { name: '保存并测试' }))
+    await waitFor(() => { expect(save).toHaveBeenCalledWith(expect.objectContaining({ body: '未发布的新说明', workflowStatus: 'draft', version: 1 })) })
+    await waitFor(() => { expect(run).toHaveBeenCalledWith(expect.objectContaining({ body: '未发布的新说明', workflowStatus: 'draft', version: 1 })) })
+    const savedDraft = save.mock.calls[0]?.[0]
+    expect(savedDraft === undefined ? undefined : releasedWorkflow(savedDraft)).toMatchObject({ body: '线上说明', workflowStatus: 'published', version: 1 })
+  })
+
   it('renders a completed result, loads history, and retries the last run', async () => {
     const item: AuthoringItem = { id: 'workflow-result', title: '结果流程', description: '结果', enabled: true, body: '执行', steps: ['执行'], workflowStatus: 'published', updatedAt: 1 }
     const completed: WorkflowRunView = { runId: 'run-complete', workflowId: item.id, workflowVersion: 3, name: 'ui-workflow-result', status: 'completed', startedAt: 100, endedAt: 250, agentsStarted: 2, value: { answer: 'ok' } }
@@ -201,11 +244,66 @@ describe('Workflow workspace', () => {
     fireEvent.click(screen.getByRole('button', { name: '编辑工作流' }))
     await waitFor(() => { expect(screen.getAllByText('已完成').length).toBeGreaterThan(0) })
     expect(screen.getByText('版本 v3')).toBeTruthy()
-    expect(screen.getByText((_content, element) => element?.tagName === 'PRE' && element.textContent?.includes('"answer"') === true)).toBeTruthy()
+    expect(screen.getByText((_content, element) => element?.tagName === 'PRE' &&  element.textContent?.includes('"answer"'))).toBeTruthy()
     expect(screen.getByRole('button', { name: '重试上次运行' })).toBeTruthy()
     fireEvent.click(screen.getByRole('button', { name: '重试上次运行' }))
     await waitFor(() => { expect(run).toHaveBeenCalledTimes(1) })
     expect(list).toHaveBeenCalledWith(item.id)
+  })
+
+  it('summarizes recent workflow reliability and latency metrics', async () => {
+    const item = publishedWorkflow({ id: 'workflow-metrics', title: '指标流程' })
+    const runs: WorkflowRunView[] = [
+      { runId: 'run-error', workflowId: item.id, name: 'ui-workflow-metrics', status: 'error', startedAt: 100, endedAt: 500, agentsStarted: 1, error: 'failed' },
+      { runId: 'run-ok', workflowId: item.id, name: 'ui-workflow-metrics', status: 'completed', startedAt: 100, endedAt: 200, agentsStarted: 1 },
+    ]
+    render(<WorkflowPanel items={[item]} writable save={vi.fn(async () => {})} invoke={vi.fn(async () => {})} runControls={{ list: vi.fn(async () => runs) }} t={key => zh[key]} />)
+    fireEvent.click(screen.getByRole('button', { name: '编辑工作流' }))
+    const metrics = await screen.findByRole('region', { name: '运行指标' })
+    expect(within(metrics).getByText('最近 2 次')).toBeTruthy()
+    expect(within(metrics).getByText('50%')).toBeTruthy()
+    expect(within(metrics).getByText('400 ms')).toBeTruthy()
+    expect(within(metrics).getByText('失败运行').nextElementSibling?.textContent).toBe('1')
+  })
+
+  it('manages referenced credentials without persisting secret values in the workflow', async () => {
+    const item = publishedWorkflow({
+      id: 'workflow-credential',
+      title: '凭据流程',
+      nodes: [
+        { id: 'start', kind: 'start', title: '开始', instructions: '', x: 0, y: 0 },
+        { id: 'http', kind: 'http', title: '接口请求', instructions: '调用接口', config: { url: 'https://example.com', method: 'GET', credential: 'SERVICE_KEY' }, x: 220, y: 0 },
+        { id: 'end', kind: 'end', title: '结束', instructions: '', x: 440, y: 0 },
+      ],
+      edges: [{ id: 'e1', source: 'start', target: 'http' }, { id: 'e2', source: 'http', target: 'end' }],
+    })
+    const describe = vi.fn<WorkflowCredentialControls['describe']>()
+      .mockResolvedValueOnce({ configured: false, writable: true })
+      .mockResolvedValueOnce({ configured: true, writable: true, source: 'local' })
+      .mockResolvedValue({ configured: false, writable: true })
+    const set = vi.fn<WorkflowCredentialControls['set']>(async () => {})
+    const unset = vi.fn<WorkflowCredentialControls['unset']>(async () => {})
+    const save = vi.fn<(_item: AuthoringItem) => Promise<void>>(async () => {})
+    render(<WorkflowPanel items={[item]} writable save={save} invoke={vi.fn(async () => {})} credentials={{ describe, set, unset }} t={key => zh[key]} />)
+    fireEvent.click(screen.getByRole('button', { name: '编辑工作流' }))
+    const httpNode = screen.getByRole('region', { name: '工作流画布' }).querySelector('[data-node-id="http"]')
+    const nodeButtons = httpNode?.querySelectorAll('button')
+    if (nodeButtons === undefined || nodeButtons.length < 2) throw new Error('HTTP node body was not rendered')
+    fireEvent.click(nodeButtons[1]!)
+    await waitFor(() => { expect(describe).toHaveBeenCalledWith('SERVICE_KEY') })
+    expect(await screen.findByText('凭据未配置')).toBeTruthy()
+    const secret = screen.getByLabelText<HTMLInputElement>('凭据值')
+    expect(secret.type).toBe('password')
+    fireEvent.change(secret, { target: { value: 'workflow-secret' } })
+    fireEvent.click(screen.getByRole('button', { name: '保存凭据' }))
+    await waitFor(() => { expect(set).toHaveBeenCalledWith('SERVICE_KEY', 'workflow-secret') })
+    await waitFor(() => { expect(screen.getByText('凭据已配置')).toBeTruthy() })
+    expect(screen.queryByDisplayValue('workflow-secret')).toBeNull()
+    expect(save).not.toHaveBeenCalled()
+    vi.spyOn(window, 'confirm').mockReturnValue(true)
+    fireEvent.click(screen.getByRole('button', { name: '删除凭据' }))
+    await waitFor(() => { expect(unset).toHaveBeenCalledWith('SERVICE_KEY') })
+    await waitFor(() => { expect(screen.getByText('凭据未配置')).toBeTruthy() })
   })
 
   it('renders persisted node statuses and audit details for a historical run', async () => {

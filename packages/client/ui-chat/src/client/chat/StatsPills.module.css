@@ -63,6 +63,6 @@ button.pill[aria-expanded='true'] {
 }
 
 .sep {
-  color: var(--dsw-alias-separator-primary);
+  color: var(--dsw-alias-border-l2);
   margin: 0 6px;
 }

@@ -65,28 +65,21 @@ describe('ic_ds_ icon set', () => {
   })
 })
 
-describe('FishLogo', () => {
-  it('renders the fish path in currentColor at the native ratio', () => {
-    const { container } = render(<primitives.FishLogo />)
-    const svg = container.querySelector('svg')!
-    expect(svg.getAttribute('width')).toBe('24')
-    expect(Number(svg.getAttribute('height'))).toBeCloseTo(17.66, 1)
-    expect(svg.getAttribute('viewBox')).toBe('0 0 23.16 17.04')
-    expect(container.querySelectorAll('path')).toHaveLength(1)
-    expect(container.innerHTML).toContain('currentColor')
-    expect(container.innerHTML).not.toContain('M0 0L23.16')
+describe('LingdaMascot', () => {
+  it('renders the embedded artwork at the requested square size, decorative', () => {
+    const { container } = render(<primitives.LingdaMascot size={34} className="mark" />)
+    const image = container.querySelector('img')!
+    expect(image.getAttribute('width')).toBe('34')
+    expect(image.getAttribute('height')).toBe('34')
+    expect(image.getAttribute('src')).toBe(primitives.LINGDA_MASCOT_DATA_URL)
+    expect(image.getAttribute('src')).toMatch(/^data:image\/webp;base64,/)
+    expect(image.getAttribute('alt')).toBe('')
+    expect(image.getAttribute('aria-hidden')).toBe('true')
+    expect(image.classList.contains('mark')).toBe(true)
   })
-})
 
-describe('BrandWordmark', () => {
-  it('can render the name artwork with or without its leading mark', () => {
-    const view = render(<primitives.BrandWordmark />)
-    const svg = view.container.querySelector('svg')!
-    expect(svg.getAttribute('width')).toBe('182')
-    expect(svg.getAttribute('viewBox')).toBe('0 0 182 24')
-
-    view.rerender(<primitives.BrandWordmark includeMark={false} />)
-    expect(svg.getAttribute('width')).toBe('156')
-    expect(svg.getAttribute('viewBox')).toBe('26 0 156 24')
+  it('defaults to the 24px rail size', () => {
+    const { container } = render(<primitives.LingdaMascot />)
+    expect(container.querySelector('img')!.getAttribute('width')).toBe('24')
   })
 })

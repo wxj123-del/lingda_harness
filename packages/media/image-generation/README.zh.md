@@ -63,6 +63,8 @@ kind: "package-bundle"
 
 - 参考输入暂不接受已有附件 ID；每次调用只输出一张位图，暂不提供遮罩、流式预览和多图生成。
 
+不会发布 runtime invariant companion，因为图片生成拥有提供方请求和附件持久化，而不是独立的回放不变量。
+
 <a id="dev-note"></a>
 ### 开发备注
 

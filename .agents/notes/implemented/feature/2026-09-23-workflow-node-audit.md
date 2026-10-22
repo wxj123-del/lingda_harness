@@ -12,6 +12,10 @@ Workflow runs exposed child-agent lifecycle events but could not explain which v
 
 Add validated `workflow/node-start` and `workflow/node-end` lifecycle events. The compiler emits them around every visual node, including explicit `skipped` states for inactive branches and `blocked` states for nodes downstream of a failed dependency wave. These bindings are enabled only for trusted compiler-generated visual runs, so ordinary model-authored workflow scripts cannot forge node audit records. The PTC guest bounds summaries and the Host validates and closes active nodes on cancellation. Session Controller persists a redacted, capped audit trail with the run correlation id and exposes it through `WorkflowRemoteRunView`; the editor debug feed displays node lifecycle updates.
 
+## Alternatives considered
+
+Inferring node state from child-agent events was rejected because it cannot distinguish graph nodes or blocked waves. Persisting unrestricted inputs and outputs was rejected because audit data must remain bounded and redacted.
+
 ## Consequences
 
 Operators can correlate a run, wave, node, retry budget, duration, outcome, and bounded summaries without retaining secrets or unbounded payloads. Invariants reject duplicate, unpaired, malformed, and unterminated node lifecycles. Existing agent lifecycle and run history remain compatible.

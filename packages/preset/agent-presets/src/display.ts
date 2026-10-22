@@ -9,11 +9,7 @@
 
 /** Dictionary keys carrying one shipped preset's display copy. */
 export type BuiltInPresetCopyKey =
-  | 'presetStandardName' | 'presetStandardDescription'
   | 'presetDiaosiName' | 'presetDiaosiDescription'
-  | 'presetPtcName' | 'presetPtcDescription'
-  | 'presetMinimalName' | 'presetMinimalDescription'
-  | 'presetCordisName' | 'presetCordisDescription'
 
 /** Preset roster fields needed to resolve display copy. */
 export interface PresetDisplaySource {
@@ -41,11 +37,7 @@ interface PresetLocaleKeys {
 }
 
 const BUILT_IN_PRESET_KEYS: Readonly<Partial<Record<string, PresetLocaleKeys>>> = {
-  standard: { name: 'presetStandardName', description: 'presetStandardDescription' },
   diaosi: { name: 'presetDiaosiName', description: 'presetDiaosiDescription' },
-  ptc: { name: 'presetPtcName', description: 'presetPtcDescription' },
-  minimal: { name: 'presetMinimalName', description: 'presetMinimalDescription' },
-  cordis: { name: 'presetCordisName', description: 'presetCordisDescription' },
 }
 
 /**

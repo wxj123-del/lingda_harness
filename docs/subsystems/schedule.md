@@ -10,47 +10,29 @@ Schedule owns durable reminders that return to the original live Session as ordi
 
 ```ts type-equiv
 /** Durable one-shot reminder created from a positive delay. */
-interface AfterScheduleRecord {
-  /** Session-local stable identity. */
-  readonly id: ScheduleId
+interface AfterScheduleRecord extends ScheduleRecordFields {
   /** Rule discriminator for a delayed one-shot reminder. */
   readonly kind: 'after'
-  /** Trimmed reminder content supplied at creation. */
-  readonly prompt: string
   /** Positive safe-integer delay accepted at creation. */
   readonly afterSeconds: number
-  /** Four-digit-year RFC 3339 UTC target. */
-  readonly scheduledAt: string
 }
 ```
 
 ```ts type-equiv
 /** Durable one-shot reminder created from an absolute instant. */
-interface AtScheduleRecord {
-  /** Session-local stable identity. */
-  readonly id: ScheduleId
+interface AtScheduleRecord extends ScheduleRecordFields {
   /** Rule discriminator for an absolute one-shot reminder. */
   readonly kind: 'at'
-  /** Trimmed reminder content supplied at creation. */
-  readonly prompt: string
-  /** Four-digit-year RFC 3339 UTC target. */
-  readonly scheduledAt: string
 }
 ```
 
 ```ts type-equiv
 /** Durable fixed-rate reminder whose next target remains creation-anchor-aligned. */
-interface EveryScheduleRecord {
-  /** Session-local stable identity. */
-  readonly id: ScheduleId
+interface EveryScheduleRecord extends ScheduleRecordFields {
   /** Rule discriminator for a fixed-rate recurring reminder. */
   readonly kind: 'every'
-  /** Trimmed reminder content supplied at creation. */
-  readonly prompt: string
   /** Fixed safe-integer interval, never below five minutes. */
   readonly everySeconds: number
-  /** Earliest anchor-aligned occurrence not yet dispatched. */
-  readonly scheduledAt: string
 }
 ```
 
@@ -113,7 +95,7 @@ interface ScheduleCreateChange {
 ```ts type-equiv
 /** Deletes one currently active reminder. */
 interface ScheduleDeleteChange {
-  readonly version: 1
+  readonly version: 1 | 2
   readonly operation: 'delete'
   readonly id: ScheduleId
 }
@@ -122,7 +104,7 @@ interface ScheduleDeleteChange {
 ```ts type-equiv
 /** Records that one active one-shot reminder entered the durable dispatch history. */
 interface OneShotScheduleDispatchChange {
-  readonly version: 1
+  readonly version: 1 | 2
   readonly operation: 'dispatch'
   readonly id: ScheduleId
 }
@@ -131,7 +113,7 @@ interface OneShotScheduleDispatchChange {
 ```ts type-equiv
 /** Records one fixed-rate decision and advances directly past missed occurrences. */
 interface EveryScheduleDispatchChange {
-  readonly version: 1
+  readonly version: 1 | 2
   readonly operation: 'dispatch'
   readonly id: ScheduleId
   /** Wall-clock decision time used to select the latest due occurrence. */
@@ -146,7 +128,7 @@ type ScheduleDispatchChange = OneShotScheduleDispatchChange | EveryScheduleDispa
 
 ```ts type-equiv
 /** Strict version-1 durable Schedule mutation union. */
-type ScheduleChange = ScheduleCreateChange | ScheduleDeleteChange | ScheduleDispatchChange
+type ScheduleChange = ScheduleCreateChange | WorkflowScheduleCreateChange | ScheduleDeleteChange | ScheduleDispatchChange
 ```
 
 The strict decoder and fold reject unknown versions, extra fields, reused ids, mismatched one-shot or Every dispatch shapes, and delete or dispatch transitions against inactive records. A normal Session folds its complete event stream. A fork folds only events at or after its exact `inheritedEventCount`, so it retains history without adopting the parent Session's active reminders. Projection initialization receives that cut beside the immutable header, uses the shared transition, and persists both the cut, active records, and used-id history so cached restore preserves strict replay. The `schedule/change` declaration and source location are also indexed in the [persistence catalog](../persistence-catalog.md#schedulechange--log-only).
@@ -190,3 +172,103 @@ The process-local owner derives its earliest timer from the durable fold and rer
 Due work waits for the Agent to become fully idle and claims the maintenance phase before it refolds state, samples the decision, queues one `followup()`, and appends the corresponding dispatch changes. It never calls `steer()` and never interrupts a current turn.
 
 The admitted one-shot or fixed-rate batch starts one normal later turn and appears only through the ordinary conversation transcript; Schedule has no independent durable Web receipt. The read-only active catalog above never represents delivery success. If framing or synchronous queue admission fails, no dispatch is recorded and the reminder stays active. The narrow crash interval after admission but before durable dispatch can repeat reminder content after recovery, so the boundary is best-effort at-least-once rather than exactly-once delivery.
+
+<!-- BEGIN GENERATED cordis-surface (gen-cordis-catalog.ts) — do not edit between markers -->
+
+<a id="cordis-surface"></a>
+
+## Cordis API
+
+Generated from source by `scripts/gen-cordis-catalog.ts` (verified fresh by `pnpm run verify-cordis-catalog` in doc-sync; regenerate with `pnpm run gen-cordis-catalog`) — the language sides differ only in locale-specific paired document paths. Signature blocks use a `ts cordis-catalog` fence and keep the original source JSDoc; dispatch modes are defined in the [primer](../cordis-primer.md#dispatch-modes), and the framework-inherited `ctx` API lives in [cordis-api/inherited.md](../cordis-api/inherited.md).
+
+<a id="ctxworkflowschedules--workflowscheduleservice"></a>
+
+### `ctx.workflowSchedules` — `WorkflowScheduleService`
+
+Workflow Schedule Remote and Host dispatcher registry.
+
+```ts cordis-catalog
+/**
+ * Register the sole workflow starter used by due Schedule records.
+ * @param dispatcher - Callback that starts one due workflow.
+ * @returns A disposer that releases the registration.
+ */
+registerDispatcher(dispatcher: WorkflowScheduleDispatcher): () => void
+
+/**
+ * Start one due immutable workflow program through the registered execution owner.
+ * @param agent - Live root Agent that owns the schedule.
+ * @param target - Published workflow target to execute.
+ * @param occurrenceAt - ISO timestamp assigned to this occurrence.
+ * @returns The dispatch promise.
+ */
+dispatch(agent: Agent, target: WorkflowScheduleTarget, occurrenceAt: string): Promise<void>
+
+/**
+ * Create one one-shot or fixed-rate trigger for an immutable published workflow.
+ * @param agent - Live root Agent that owns the schedule.
+ * @param request - Schedule timing and published workflow details.
+ * @returns The durable schedule record.
+ */
+@Remote('create') async create(agent: Agent, request: WorkflowScheduleCreateRequest): Promise<WorkflowScheduleRecord>
+
+/**
+ * List active workflow triggers for the exact Session, optionally filtered by workflow id.
+ * @param agent - Live root Agent whose Session is queried.
+ * @param workflowId - Optional published workflow identifier filter.
+ * @returns Active workflow schedule records.
+ */
+@Remote('list') async list(agent: Agent, workflowId?: string): Promise<WorkflowScheduleRecord[]>
+
+/**
+ * Delete one active workflow trigger by its exact Session-local id.
+ * @param agent - Live root Agent whose Session is changed.
+ * @param id - Session-local schedule identifier.
+ * @returns The identifier and whether a record was deleted.
+ */
+@Remote('delete') async delete(agent: Agent, id: string): Promise<{ readonly id: string; readonly deleted: boolean }>
+```
+
+Types: [Agent](core.md)
+
+Source: [`packages/schedule/schedule/src/service.ts`](../../packages/schedule/schedule/src/service.ts)
+
+<a id="schedule-events"></a>
+
+### `schedule/*` events
+
+<a id="scheduleworkflow-dispatcher-ready--emit"></a>
+
+#### `schedule/workflow-dispatcher-ready` — emit
+
+Requests recomputation after the workflow dispatcher becomes available.
+
+```ts cordis-catalog
+/**
+ * Requests recomputation after the workflow dispatcher becomes available.
+ * @mode emit
+ */
+'schedule/workflow-dispatcher-ready': () => void
+```
+
+Source: [`packages/schedule/schedule/src/service.ts`](../../packages/schedule/schedule/src/service.ts)
+
+<a id="scheduleworkflow-refresh--emit"></a>
+
+#### `schedule/workflow-refresh` — emit
+
+Requests recomputation after a workflow Schedule mutation.
+
+```ts cordis-catalog
+/**
+ * Requests recomputation after a workflow Schedule mutation.
+ * @mode emit
+ * @param agent Exact live owner whose runtime must refold.
+ */
+'schedule/workflow-refresh': (agent: Agent) => void
+```
+
+Types: [Agent](core.md)
+
+Source: [`packages/schedule/schedule/src/service.ts`](../../packages/schedule/schedule/src/service.ts)
+<!-- END GENERATED cordis-surface -->

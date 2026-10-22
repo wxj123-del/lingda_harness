@@ -1,12 +1,15 @@
 /**
- * ui-workspace contracts. Two registrations share this package:
+ * ui-workspace contracts. Three registrations share this package:
  *
  * - WorkspaceBrowser fills the sidebar shell's `sidebar.workspaces` hole —
  *   the whole browsing region (section header, search, grouped/flat session
- *   list, workspace dialogs). It registers this package's viewing store and
+ *   list, workspace dialogs). It shares this package's viewing store and
  *   consumes the shell's two-fact owner share (wide / expandSidebar).
  * - WorkspacePicker fills the conversation empty-state hole (menu + error
  *   dialog shared with the browser).
+ * - WorkspaceFlowPage fills the layout's keyed `main` slot as the flow page —
+ *   the full-width stage board the folder menu opens. It shares the browser's
+ *   viewing store instance: the menu writes `flowTarget`, the page reads it.
  *
  * Each registration also declares one **directory-flow hole** (`single`
  * kind): the slot a composed picker package's client half fills with its
@@ -106,6 +109,11 @@ export type WorkspaceBrowserInjected = {
   /** Open a real Session. */
   open: (sessionId: SessionId) => void
   /**
+   * Select the flow page in the main column. The caller has already written
+   * the page's Workspace target into the shared viewing store (`actions`).
+   */
+  openFlow: () => void
+  /**
    * Search current visible conversation messages. The Host fixes the result
    * bound; `hasMore` means the query needs narrowing.
    */
@@ -145,6 +153,28 @@ export type WorkspaceBrowserProps =
   & PropsStore<ReturnType<typeof createWorkspaceViewStore>>
   & Omit<WorkspaceBrowserInjected, 'hooks'>
   & PropsHooks<WorkspaceBrowserInjected['hooks']>
+  & PropsLocale<'workspace'>
+
+/**
+ * Flow-page injected share: the navigation the page drives. Stage data arrives
+ * through the global hooks and the shared viewing store, never through inject.
+ */
+export type WorkspaceFlowPageInjected = {
+  /** Open one Session from a stage card; the Session's own navigation leaves the page. */
+  open: (sessionId: SessionId) => void
+  /** Return the main column to the Conversation. */
+  close: () => void
+}
+
+/**
+ * Full flow-page props: the keyed main-slot runtime seat, the shared browsing
+ * store (its `flowTarget` names the Workspace to show), inject callbacks, and
+ * the workspace locale seat.
+ */
+export type WorkspaceFlowPageProps =
+  PropsRuntime<'main'>
+  & PropsStore<ReturnType<typeof createWorkspaceViewStore>>
+  & WorkspaceFlowPageInjected
   & PropsLocale<'workspace'>
 
 /**

@@ -14,7 +14,7 @@ import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
 import {
   Button, IconBrowseOutline16, IconCopyOutline16, IconFolderOpenOutline16,
-  IconPlusOutline16, IconTrashOutline16, Modal, Switch, Tag, Tooltip,
+  IconTrashOutline16, Modal, Switch, Tag, Tooltip,
 } from '@deepseek-ai/dsh-client-ui-primitives'
 import type { SnapshotStore } from '@deepseek-ai/dsh-client-store'
 import type { InjectFace, PropsLocale, PropsRuntime } from '@deepseek-ai/dsh-client-ui-slots'
@@ -46,12 +46,6 @@ export interface AgentPresetSectionInjected {
   confirmCopy: () => Promise<void>
   /** Open one preset's directory, or reveal its path where there is no desktop. */
   openLocation: (id: string) => Promise<void>
-  /**
-   * Stage the self-referential preset and start a new session on it — the
-   * guided way to author a preset, beside copying. Absent when the surface
-   * is composed without the conversation flow to land the session in.
-   */
-  startCreatorDraft?: () => void
   /** Ask for delete confirmation, or dismiss it with null. */
   confirmDelete: (id: string | null) => void
   /** Delete the preset awaiting confirmation. */
@@ -89,7 +83,7 @@ function CopyDialog({ state, t, actions }: CopyDialogProps): ReactNode {
       title={draft === null ? t('copyTitle') : `${t('copyTitle')} · ${t('copyOf')} ${sourceTitle}`}
       closeLabel={t('close')}
       description={t('copyIntro')}
-      className={css.dialog as string}
+      className={css.dialog}
       footer={(
         <>
           <Button
@@ -207,31 +201,6 @@ export function AgentPresetSection(props: AgentPresetSectionProps): ReactNode {
     )
   }
 
-  /* The guided alternative to copying: the self-referential preset can
-     read this very composition and author a new one in conversation.
-     Offered only where that preset is actually on the roster and a
-     session can be landed; without a writable root the draft could
-     never be discovered, so the reason rides the disabled button. */
-  const creatorButton = props.startCreatorDraft !== undefined && state.rows.some(row => row.id === 'cordis')
-    ? (
-      <button
-        type="button"
-        className={css.creatorButton}
-        disabled={!state.authorable || !state.showPicker || state.policySaving}
-        title={!state.showPicker
-          ? t('enablePickerToCreate')
-          : state.authorable ? undefined : t('duplicateUnavailable')}
-        onClick={() => {
-          props.startCreatorDraft?.()
-          props.close()
-        }}
-      >
-        <IconPlusOutline16 size={14} />
-        {t('creatorDraft')}
-      </button>
-    )
-    : null
-
   return (
     <div className={css.section}>
       <h2 className={css.title}>{t('nav')}</h2>
@@ -265,9 +234,8 @@ export function AgentPresetSection(props: AgentPresetSectionProps): ReactNode {
                 : t(state.showPicker ? 'setDefault' : 'enablePickerToSetDefault'),
           }))
         // The custom group is where a preset of one's own will appear, so it
-        // stays on screen even while empty: heading plus the creator entry.
-        const tail = trust === 'user' ? creatorButton : null
-        if (group.length === 0 && tail === null) return null
+        // stays on screen even while empty: heading only.
+        if (group.length === 0) return null
         return (
           <section key={trust} className={css.group}>
             <h3 className={css.groupHead}>{heading}</h3>
@@ -422,7 +390,6 @@ export function AgentPresetSection(props: AgentPresetSectionProps): ReactNode {
                 ))}
               </ul>
             )}
-            {tail}
           </section>
         )
       })}
@@ -442,7 +409,7 @@ export function AgentPresetSection(props: AgentPresetSectionProps): ReactNode {
         title={state.view === null ? '' : `${t('view')} · ${viewedTitle}`}
         closeLabel={t('close')}
         description={t('composition')}
-        className={css.dialog as string}
+        className={css.dialog}
         footer={(
           <Button variant="outline" autoFocus onClick={() => { props.closeView() }}>
             {t('close')}
@@ -459,7 +426,7 @@ export function AgentPresetSection(props: AgentPresetSectionProps): ReactNode {
         title={t('deleteTitle')}
         closeLabel={t('close')}
         description={t('deleteDescription')}
-        className={css.deleteDialog as string}
+        className={css.deleteDialog}
         footer={(
           <>
             <Button

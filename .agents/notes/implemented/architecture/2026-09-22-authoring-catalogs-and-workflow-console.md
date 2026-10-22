@@ -2,7 +2,7 @@
 
 Status: implemented
 
-[中文](2026-09-22-authoring-catalogs-and-workflow-console.zh.md)
+English | [中文](2026-09-22-authoring-catalogs-and-workflow-console.zh.md)
 
 ## Problem
 

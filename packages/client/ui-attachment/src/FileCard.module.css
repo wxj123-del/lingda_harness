@@ -137,7 +137,7 @@
   overflow: hidden;
   height: 2px;
   border-radius: 1px;
-  background: var(--dsw-alias-fill-tertiary, rgba(0, 0, 0, 0.08));
+  background: var(--dsw-alias-interactive-bg-hover-solid, rgba(0, 0, 0, 0.08));
 }
 
 .progressBar {

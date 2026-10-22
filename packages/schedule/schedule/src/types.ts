@@ -5,48 +5,55 @@
 
 import type { Branded } from '@deepseek-ai/dsh-brand'
 import type {} from '@deepseek-ai/dsh-session/types'
+import type { JsonValue } from '@deepseek-ai/dsh-util-values'
+
+/** Immutable visual-workflow program retained by a scheduled trigger. */
+export interface WorkflowScheduleTarget {
+  readonly kind: 'workflow'
+  readonly workflowId: string
+  readonly workflowVersion: number
+  readonly workflowName: string
+  readonly script: string
+  readonly nodeIds: readonly string[]
+  readonly args?: JsonValue
+  readonly timeoutMs?: number
+}
+
+/** Shared durable fields for every Schedule rule. */
+interface ScheduleRecordFields {
+  /** Session-local stable identity. */
+  readonly id: ScheduleId
+  /** Trimmed presentation label supplied at creation. */
+  readonly prompt: string
+  /** Optional deterministic workflow execution retained with the trigger. */
+  readonly target?: WorkflowScheduleTarget
+  /** Four-digit-year RFC 3339 UTC target. */
+  readonly scheduledAt: string
+}
 
 /** Stable reminder identity that is unique and never reused within one session. */
 export type ScheduleId = Branded<'ScheduleId'>
 
 /** Durable one-shot reminder created from a positive delay. */
-export interface AfterScheduleRecord {
-  /** Session-local stable identity. */
-  readonly id: ScheduleId
+export interface AfterScheduleRecord extends ScheduleRecordFields {
   /** Rule discriminator for a delayed one-shot reminder. */
   readonly kind: 'after'
-  /** Trimmed reminder content supplied at creation. */
-  readonly prompt: string
   /** Positive safe-integer delay accepted at creation. */
   readonly afterSeconds: number
-  /** Four-digit-year RFC 3339 UTC target. */
-  readonly scheduledAt: string
 }
 
 /** Durable one-shot reminder created from an absolute instant. */
-export interface AtScheduleRecord {
-  /** Session-local stable identity. */
-  readonly id: ScheduleId
+export interface AtScheduleRecord extends ScheduleRecordFields {
   /** Rule discriminator for an absolute one-shot reminder. */
   readonly kind: 'at'
-  /** Trimmed reminder content supplied at creation. */
-  readonly prompt: string
-  /** Four-digit-year RFC 3339 UTC target. */
-  readonly scheduledAt: string
 }
 
 /** Durable fixed-rate reminder whose next target remains creation-anchor-aligned. */
-export interface EveryScheduleRecord {
-  /** Session-local stable identity. */
-  readonly id: ScheduleId
+export interface EveryScheduleRecord extends ScheduleRecordFields {
   /** Rule discriminator for a fixed-rate recurring reminder. */
   readonly kind: 'every'
-  /** Trimmed reminder content supplied at creation. */
-  readonly prompt: string
   /** Fixed safe-integer interval, never below five minutes. */
   readonly everySeconds: number
-  /** Earliest anchor-aligned occurrence not yet dispatched. */
-  readonly scheduledAt: string
 }
 
 /** Structured local-calendar input accepted by `schedule_create`. */
@@ -68,6 +75,25 @@ export type OneShotScheduleRecord = AfterScheduleRecord | AtScheduleRecord
 /** The v1 durable reminder record union. */
 export type ScheduleRecord = OneShotScheduleRecord | EveryScheduleRecord
 
+/** Active Schedule rule whose due action starts one immutable workflow release. */
+export type WorkflowScheduleRecord = ScheduleRecord & { readonly target: WorkflowScheduleTarget }
+
+/** Browser request for one pinned visual-workflow trigger. */
+export interface WorkflowScheduleCreateRequest {
+  readonly label: string
+  readonly workflowId: string
+  readonly workflowVersion: number
+  readonly workflowName: string
+  readonly script: string
+  readonly nodeIds: readonly string[]
+  readonly args?: JsonValue
+  readonly timeoutMs?: number
+  /** One-shot UTC target. Exactly one timing selector is required. */
+  readonly at?: string
+  /** Fixed-rate interval in seconds. Exactly one timing selector is required. */
+  readonly everySeconds?: number
+}
+
 /** Creates one durable reminder record. */
 export interface ScheduleCreateChange {
   readonly version: 1
@@ -75,23 +101,30 @@ export interface ScheduleCreateChange {
   readonly schedule: ScheduleRecord
 }
 
+/** Creates one deterministic workflow trigger using the version-2 payload. */
+export interface WorkflowScheduleCreateChange {
+  readonly version: 2
+  readonly operation: 'create'
+  readonly schedule: WorkflowScheduleRecord
+}
+
 /** Deletes one currently active reminder. */
 export interface ScheduleDeleteChange {
-  readonly version: 1
+  readonly version: 1 | 2
   readonly operation: 'delete'
   readonly id: ScheduleId
 }
 
 /** Records that one active one-shot reminder entered the durable dispatch history. */
 export interface OneShotScheduleDispatchChange {
-  readonly version: 1
+  readonly version: 1 | 2
   readonly operation: 'dispatch'
   readonly id: ScheduleId
 }
 
 /** Records one fixed-rate decision and advances directly past missed occurrences. */
 export interface EveryScheduleDispatchChange {
-  readonly version: 1
+  readonly version: 1 | 2
   readonly operation: 'dispatch'
   readonly id: ScheduleId
   /** Wall-clock decision time used to select the latest due occurrence. */
@@ -102,7 +135,7 @@ export interface EveryScheduleDispatchChange {
 export type ScheduleDispatchChange = OneShotScheduleDispatchChange | EveryScheduleDispatchChange
 
 /** Strict version-1 durable Schedule mutation union. */
-export type ScheduleChange = ScheduleCreateChange | ScheduleDeleteChange | ScheduleDispatchChange
+export type ScheduleChange = ScheduleCreateChange | WorkflowScheduleCreateChange | ScheduleDeleteChange | ScheduleDispatchChange
 
 /** Current delivery timing derived from the durable record and wall clock. */
 export type ScheduleState = 'scheduled' | 'overdue'

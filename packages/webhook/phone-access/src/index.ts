@@ -39,6 +39,32 @@ interface TunnelJson {
   readonly tunnels?: readonly { readonly public_url?: unknown; readonly proto?: unknown }[]
 }
 
+const NGROK_SUFFIXES = ['.ngrok-free.app', '.ngrok.io'] as const
+const NGROK_LABEL = /^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/u
+
+/**
+ * Normalize one inspector URL only when it is a bare HTTPS ngrok authority.
+ * The launch token is appended later, so paths, credentials, and query strings
+ * must never be allowed to come from the local inspector response.
+ */
+function normalizeNgrokUrl(value: string): string | undefined {
+  let url: URL
+  try {
+    url = new URL(value)
+  } catch {
+    return undefined
+  }
+  const hostname = url.hostname.toLowerCase()
+  const suffix = NGROK_SUFFIXES.find(candidate => hostname.endsWith(candidate))
+  if (url.protocol !== 'https:' || url.username !== '' || url.password !== '' || url.port !== ''
+    || url.pathname !== '/' || url.search !== '' || url.hash !== '' || suffix === undefined) {
+    return undefined
+  }
+  const label = hostname.slice(0, -suffix.length)
+  if (!NGROK_LABEL.test(label)) return undefined
+  return `https://${hostname}/`
+}
+
 /** Injectable process and clock operations, so tests drive the tunnel without ngrok. */
 export interface PhoneAccessInternals {
   /** Launch `ngrok`. Defaults to `node:child_process` `spawn`. */
@@ -62,9 +88,9 @@ export function httpsTunnel(body: unknown): string | undefined {
   const tunnels = (body as TunnelJson).tunnels
   if (!Array.isArray(tunnels)) return undefined
   for (const tunnel of tunnels) {
-    if (tunnel?.proto === 'https' && typeof tunnel.public_url === 'string'
-      && tunnel.public_url.startsWith('https://')) {
-      return tunnel.public_url
+    if (tunnel?.proto === 'https' && typeof tunnel.public_url === 'string') {
+      const normalized = normalizeNgrokUrl(tunnel.public_url)
+      if (normalized !== undefined) return normalized
     }
   }
   return undefined

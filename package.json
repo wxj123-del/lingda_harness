@@ -92,6 +92,7 @@
     "check:ci:windows-complete": "tsx scripts/run-gates.ts ci-windows-complete",
     "check:ci:windows-observational": "tsx scripts/run-gates.ts ci-windows-observational",
     "check:node-compat": "tsx scripts/run-gates.ts node-compat",
+    "audit:prod": "pnpm audit --prod --audit-level=low --registry=https://registry.npmjs.org",
     "publint": "tsx scripts/publint-all.ts",
     "doc-typecheck": "npm run build:lib:host && npm run doc-typecheck:contracts-ready",
     "doc-typecheck:contracts-ready": "tsx scripts/doc-typecheck.ts",
@@ -106,6 +107,7 @@
     "verify-package-paths": "tsx scripts/verify-package-paths.ts",
     "verify-dsh-package-licenses": "tsx scripts/verify-dsh-package-licenses.ts",
     "verify-config-source-ownership": "tsx scripts/verify-config-source-ownership.ts",
+    "verify-source-artifacts": "tsx scripts/verify-source-artifacts.ts",
     "verify-package-invariants": "tsx scripts/verify-package-invariants.ts",
     "verify-built-package-invariants": "node scripts/verify-built-package-invariants.mjs",
     "verify-package-readme-model-experience": "tsx scripts/verify-package-readme-model-experience.ts",
@@ -190,6 +192,7 @@
     "release:verify-packed-install": "tsx scripts/release/verify-packed-install.ts",
     "release:publish": "tsx scripts/release/publish.ts",
     "dsh": "node --import tsx/esm apps/cli/src/bin.ts",
+    "lingda": "node --import tsx/esm apps/cli/src/bin.ts",
     "demo:ptc": "node scripts/demo-ptc.mjs",
     "demo:inspector": "node --import tsx/esm apps/cli/src/bin.ts web --patch ./packages/experimental/inspector/cordis.source.patch.yml",
     "mock:llm": "node --import tsx packages/test-support/llm-mock-server/src/bin.ts",
@@ -217,14 +220,14 @@
     "@types/mdast": "^4.0.4",
     "@types/node": "^22.20.0",
     "@types/spdx-expression-parse": "^4.0.0",
-    "@vitest/coverage-v8": "^4.1.8",
+    "@vitest/coverage-v8": "^4.1.11",
     "@yao-pkg/pkg": "6.21.0",
     "@yarnpkg/cli-dist": "4.17.1",
     "eslint-plugin-sonarjs": "^4.1.0",
     "execa": "^10.0.0",
     "fast-check": "^4.8.0",
     "istanbul-lib-report": "^3.0.1",
-    "js-yaml": "^4.2.0",
+    "js-yaml": "^4.3.2",
     "jscpd": "^5.0.12",
     "jsdom": "29.1.1",
     "lefthook": "^2.1.9",
@@ -242,6 +245,6 @@
     "tsx": "^4.22.4",
     "typescript": "^6.0.3",
     "vite-tsconfig-paths": "^6.1.1",
-    "vitest": "^4.1.8"
+    "vitest": "^4.1.11"
   }
 }

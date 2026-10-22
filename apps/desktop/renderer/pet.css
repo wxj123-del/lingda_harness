@@ -1,0 +1,205 @@
+/* Desktop pet surface: a frameless transparent window painting one mascot and,
+   while a task runs, a compact progress bubble beside it. */
+
+:root {
+  --pet-bubble-bg: rgb(255 255 255 / 92%);
+  --pet-bubble-border: rgb(0 0 0 / 8%);
+  --pet-ink: #14161a;
+  --pet-ink-soft: #5b6169;
+  --pet-meter: #49bf98;
+  --pet-meter-track: rgb(0 0 0 / 8%);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --pet-bubble-bg: rgb(30 32 36 / 92%);
+    --pet-bubble-border: rgb(255 255 255 / 10%);
+    --pet-ink: #f4f5f7;
+    --pet-ink-soft: #a9aeb6;
+    --pet-meter-track: rgb(255 255 255 / 14%);
+  }
+}
+
+html,
+body {
+  margin: 0;
+  height: 100%;
+  background: transparent;
+  overflow: hidden;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB", sans-serif;
+  /* The whole window is a drag handle; text selection would break the gesture. */
+  user-select: none;
+  -webkit-user-drag: none;
+}
+
+#pet {
+  position: relative;
+  display: flex;
+  /* The mascot sits at the window's right edge and the bubble grows leftward,
+     so the pet stays put as its copy changes length. */
+  justify-content: flex-end;
+  align-items: flex-end;
+  gap: 8px;
+  height: 100%;
+  padding: 6px;
+  box-sizing: border-box;
+  cursor: grab;
+}
+
+#pet:active {
+  cursor: grabbing;
+}
+
+#sprite {
+  order: 1;
+  flex: none;
+  width: 96px;
+  height: 96px;
+  display: block;
+  pointer-events: none;
+  /* Contact shadow keeps the artwork grounded on a wallpaper of any colour. */
+  filter: drop-shadow(0 6px 10px rgb(0 0 0 / 22%));
+  transform-origin: 50% 92%;
+  animation: pet-breathe 4s ease-in-out infinite;
+}
+
+/* Working: a steady bob so a glance is enough to see the pet is busy. */
+#pet[data-phase="working"] #sprite {
+  animation: pet-work 1.15s ease-in-out infinite;
+}
+
+/* Done: one hop, then settle back to breathing. */
+#pet[data-phase="done"] #sprite {
+  animation: pet-hop 620ms cubic-bezier(0.32, 1.5, 0.5, 1) 2;
+}
+
+@keyframes pet-breathe {
+  0%,
+  100% {
+    transform: translateY(0) scale(1);
+  }
+
+  50% {
+    transform: translateY(-2px) scale(1.012);
+  }
+}
+
+@keyframes pet-work {
+  0%,
+  100% {
+    transform: translateY(0) rotate(-2deg);
+  }
+
+  50% {
+    transform: translateY(-4px) rotate(2deg);
+  }
+}
+
+@keyframes pet-hop {
+  0%,
+  100% {
+    transform: translateY(0) scale(1);
+  }
+
+  35% {
+    transform: translateY(-12px) scale(1.04);
+  }
+
+  60% {
+    transform: translateY(0) scaleY(0.95);
+  }
+}
+
+#bubble {
+  order: 0;
+  flex: none;
+  align-self: center;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  max-width: 208px;
+  padding: 7px 10px;
+  border: 0.5px solid var(--pet-bubble-border);
+  border-radius: 12px;
+  background: var(--pet-bubble-bg);
+  box-shadow: 0 4px 14px rgb(0 0 0 / 14%);
+  backdrop-filter: blur(8px);
+  pointer-events: none;
+}
+
+#bubble[hidden] {
+  display: none;
+}
+
+/* Tail pointing at the mascot, so the pill reads as the pet speaking. */
+#bubble::after {
+  content: "";
+  position: absolute;
+  right: -5px;
+  top: 50%;
+  width: 9px;
+  height: 9px;
+  margin-top: -4.5px;
+  border-top: 0.5px solid var(--pet-bubble-border);
+  border-right: 0.5px solid var(--pet-bubble-border);
+  border-radius: 2px;
+  background: var(--pet-bubble-bg);
+  transform: rotate(45deg);
+}
+
+#headline {
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 16px;
+  color: var(--pet-ink);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+#detail {
+  font-size: 11px;
+  line-height: 15px;
+  color: var(--pet-ink-soft);
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
+#detail:empty {
+  display: none;
+}
+
+#meter {
+  height: 3px;
+  margin-top: 3px;
+  border-radius: 2px;
+  background: var(--pet-meter-track);
+  overflow: hidden;
+}
+
+#meter[hidden] {
+  display: none;
+}
+
+#meter-fill {
+  height: 100%;
+  width: 0;
+  border-radius: 2px;
+  background: var(--pet-meter);
+  transition: width 240ms ease;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #sprite,
+  #pet[data-phase="working"] #sprite,
+  #pet[data-phase="done"] #sprite {
+    animation: none;
+  }
+
+  #meter-fill {
+    transition: none;
+  }
+}

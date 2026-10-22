@@ -85,7 +85,7 @@ export type OptionalSessionSeq = SessionSeq | null
  * immutable prior-generation, and current fast-path rules are recorded in
  * `.agents/notes/implemented/architecture/2026-08-31-released-session-format-migrations.md`.
  */
-export const SESSION_FORMAT_VERSION = 3
+export const SESSION_FORMAT_VERSION = 4
 
 /**
  * Immutable validated storage metadata, kept outside the conversation event log.
@@ -339,6 +339,21 @@ export interface SessionEventMap {
    * call with its `tool/result`.
    */
   'tool/call': { turn: number; step: number; callId: ToolCallId; name: string; arguments: string }
+  /**
+   * One turn stopped at a step boundary because a runtime or mode budget was
+   * exhausted: the configured guards and the personal-agent mode caps both
+   * write this shape, so a continuation policy has one signal to read.
+   */
+  'budget/stop': {
+    /** Turn that stopped. */
+    turn: number
+    /** Which ceiling was hit. */
+    reason: 'steps' | 'tokens' | 'wall-clock'
+    /** The configured ceiling. */
+    limit: number
+    /** The observed value at the stop. */
+    observed: number
+  }
   /**
    * A completed tool call's model-facing result, optional internal failure
    * identity and user-facing reason, and optional tool-private `meta`

@@ -66,7 +66,7 @@ export class ClientTerminals extends Service {
    * @param createWhenMissing - allocate the supplied identity when Host has no retained terminal for it.
    * @returns its observable state and terminal commands.
    */
-  view(sessionId: SessionId, key: string, terminalId?: WebTerminalId, shellPath?: string, createWhenMissing = terminalId === undefined): TerminalView {
+  view(sessionId: SessionId, key: string, terminalId?: WebTerminalId, shellPath?: string, createWhenMissing: boolean = terminalId === undefined): TerminalView {
     let views = this.views.get(sessionId)
     if (views === undefined) { views = new Map(); this.views.set(sessionId, views) }
     let view = views.get(key)

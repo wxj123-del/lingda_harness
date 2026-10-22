@@ -37,7 +37,7 @@ Local relative imports/exports in vendored TypeScript source use explicit `.ts` 
 
 | File | Change |
 |---|---|
-| `tsconfig.base.json` | add `"<npm-name>": ["./vendor/<dir>/src"]` to `paths` |
+| `tsconfig.base.json` | add `"<npm-name>": ["./vendor/<dir>/src/index.ts"]` to `paths` |
 | `tsconfig.host.json` | add `{ "path": "./vendor/<dir>" }` to `references` (before the `packages/*` entries; vendored code enters the graph through the host aggregate only) |
 | `vendor/README.md` | add a manifest table row (dir, npm name, version, upstream repo, commit SHA) and log any local modifications |
 | `scripts/publint-all.ts` | only if the vendored package is itself published from here (vendored deps normally are not — skip) |

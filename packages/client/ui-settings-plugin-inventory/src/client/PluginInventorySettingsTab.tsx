@@ -1,8 +1,16 @@
 import { useEffect, useId, useMemo, useState, type ReactNode } from 'react'
 import type { PluginInventorySnapshot } from '@deepseek-ai/dsh-api-remotes/client'
 import {
+  IconBranchOutline16,
   IconChevronDownOutline14,
+  IconCodeOutline16,
+  IconDatabaseOutline16,
+  IconNewChatOutline16,
+  IconPanelLeftOutline16,
   IconSearchOutline16,
+  IconShieldOutline16,
+  IconSkillOutline16,
+  IconSparkle16,
   Menu,
   StateDot,
   Tag,
@@ -266,6 +274,111 @@ const TAG_TONES = {
   failed: 'danger',
 } as const satisfies Record<EnablementKind, TagTone>
 
+type VisualNodeId = 'model' | 'skill' | 'tools' | 'session' | 'sandbox' | 'agentLoop' | 'ui' | 'storage'
+
+interface VisualNode {
+  readonly id: VisualNodeId
+  readonly label: PluginInventoryLocaleKey
+  readonly category: Exclude<PluginCategory, 'all'>
+  readonly tone: VisualNodeId
+}
+
+const VISUAL_NODES: readonly VisualNode[] = [
+  { id: 'model', label: 'visualModel', category: 'models', tone: 'model' },
+  { id: 'skill', label: 'visualSkill', category: 'skills', tone: 'skill' },
+  { id: 'tools', label: 'visualTools', category: 'tools', tone: 'tools' },
+  { id: 'session', label: 'visualSession', category: 'system', tone: 'session' },
+  { id: 'sandbox', label: 'visualSandbox', category: 'tools', tone: 'sandbox' },
+  { id: 'agentLoop', label: 'visualAgentLoop', category: 'agents', tone: 'agentLoop' },
+  { id: 'ui', label: 'visualUi', category: 'system', tone: 'ui' },
+  { id: 'storage', label: 'visualStorage', category: 'rag', tone: 'storage' },
+]
+
+/** Match one module row to the conceptual node it contributes to. */
+function visualNodeMatches(node: VisualNodeId, moduleName: string, entryId: string | null): boolean {
+  const value = `${moduleName} ${entryId ?? ''}`.toLocaleLowerCase()
+  switch (node) {
+    case 'model': return pluginCategory(moduleName, entryId) === 'models'
+    case 'skill': return pluginCategory(moduleName, entryId) === 'skills'
+    case 'tools': return pluginCategory(moduleName, entryId) === 'tools' && !/sandbox|isolate|landlock/.test(value)
+    case 'session': return /session|conversation|history|context|checkpoint/.test(value)
+    case 'sandbox': return /sandbox|isolate|landlock|permission/.test(value)
+    case 'agentLoop': return pluginCategory(moduleName, entryId) === 'agents'
+    case 'ui': return /(^|[-:/])ui([-:/]|$)|client|renderer|theme|locale/.test(value)
+    case 'storage': return pluginCategory(moduleName, entryId) === 'rag' || /storage|persist|database|sqlite|cache|memory/.test(value)
+  }
+}
+
+/** Pick the icon used by one architecture-map node. */
+function visualNodeIcon(node: VisualNodeId): ReactNode {
+  switch (node) {
+    case 'model': return <IconSparkle16 aria-hidden="true" />
+    case 'skill': return <IconSkillOutline16 aria-hidden="true" />
+    case 'tools': return <IconCodeOutline16 aria-hidden="true" />
+    case 'session': return <IconNewChatOutline16 aria-hidden="true" />
+    case 'sandbox': return <IconShieldOutline16 aria-hidden="true" />
+    case 'agentLoop': return <IconBranchOutline16 aria-hidden="true" />
+    case 'ui': return <IconPanelLeftOutline16 aria-hidden="true" />
+    case 'storage': return <IconDatabaseOutline16 aria-hidden="true" />
+  }
+}
+
+/** Render the puzzle-like capability map above the detailed inventory. */
+function PluginArchitectureMap({
+  rows,
+  category,
+  onCategoryChange,
+  t,
+}: {
+  readonly rows: readonly { readonly moduleName: string; readonly entryId: string | null }[]
+  readonly category: PluginCategory
+  readonly onCategoryChange: (category: Exclude<PluginCategory, 'all'>) => void
+  readonly t: Translate
+}): ReactNode {
+  const uniqueRows = useMemo(() => {
+    const seen = new Set<string>()
+    return rows.filter((row) => {
+      const key = `${row.moduleName}\u0000${row.entryId ?? ''}`
+      if (seen.has(key)) return false
+      seen.add(key)
+      return true
+    })
+  }, [rows])
+
+  return (
+    <section className={css.visualMap} aria-labelledby="plugin-architecture-title">
+      <div className={css.visualHeader}>
+        <h3 id="plugin-architecture-title">{t('visualTitle')}</h3>
+      </div>
+      <div className={css.visualGrid} role="group" aria-label={t('visualTitle')}>
+        {VISUAL_NODES.map((node) => {
+          const count = uniqueRows.filter(row => visualNodeMatches(node.id, row.moduleName, row.entryId)).length
+          const label = t(node.label)
+          return (
+            <button
+              key={node.id}
+              type="button"
+              className={css.visualTile}
+              data-plugin-map-node={node.id}
+              data-tone={node.tone}
+              data-active={category === node.category ? 'true' : undefined}
+              aria-label={`${label}, ${String(count)} ${t('visualCountUnit')}`}
+              onClick={() => { onCategoryChange(node.category) }}
+            >
+              <span className={css.visualTileTop}>
+                <span className={css.visualIcon}>{visualNodeIcon(node.id)}</span>
+                <span className={css.visualVersion}>{t('visualVersionPrefix')}{node.id === 'model' || node.id === 'sandbox' || node.id === 'agentLoop' || node.id === 'ui' ? '3' : '2'}</span>
+              </span>
+              <strong>{label}</strong>
+              <span className={css.visualCount}>{String(count)} {t('visualCountUnit')}</span>
+            </button>
+          )
+        })}
+      </div>
+    </section>
+  )
+}
+
 /** Enablement tag; `kind` selects the palette. */
 function StateTag({ kind, label }: { readonly kind: EnablementKind; readonly label: string }): ReactNode {
   return <Tag tone={TAG_TONES[kind]}>{label}</Tag>
@@ -297,6 +410,12 @@ export function PluginInventorySettingsTab({ list, presetName, t }: PluginInvent
   const snapshot = state.status === 'ready' ? state.snapshot : undefined
   const presets = snapshot?.agentPresets ?? []
   const selected = presets.find(preset => preset.id === chosenPreset) ?? fallbackPreset(presets)
+  const visualRows = snapshot === undefined
+    ? []
+    : [
+      ...snapshot.entries,
+      ...(selected?.rows ?? []),
+    ]
 
   /** Presets that actually enable a module, keyed by module name. */
   const enabledIn = useMemo(() => {
@@ -477,6 +596,12 @@ export function PluginInventorySettingsTab({ list, presetName, t }: PluginInvent
       ) : null}
       {snapshot !== undefined ? (
         <div className={css.catalog}>
+          <PluginArchitectureMap
+            rows={visualRows}
+            category={category}
+            onCategoryChange={setCategory}
+            t={t}
+          />
           <label className={css.search}>
             <IconSearchOutline16 aria-hidden="true" />
             <span className={css.visuallyHidden}>{t('search')}</span>

@@ -598,7 +598,7 @@ export const TYPE_API: readonly TypeApiEntry[] = [
   },
   {
     name: 'ISession',
-    declaration: 'export interface ISession {\n    readonly sessionId: SessionId;\n    readonly projections: ProjectionsFace;\n    beginSubmission(input: BeginSubmissionInput): SubmissionHandle;\n    prompt(content: PromptContentPart[], mode: \'queue\' | \'steer\', signal?: AbortSignal, requestId?: SessionRequestId): Promise<RemoteResult<{\n        accepted: true;\n    }>>;\n    readAttachment(attachmentId: AttachmentIdType): Promise<RemoteResult<{\n        attachment: ImageAttachmentRef;\n        data: Uint8Array;\n    }>>;\n    updateQueue(itemId: MessageId, action: QueueAction): Promise<RemoteResult<{\n        accepted: true;\n    }>>;\n    cancel(): Promise<RemoteResult<{\n        accepted: true;\n    }>>;\n    rename(title: string): Promise<RemoteResult<{\n        title: string;\n        seq: SessionSeq;\n    }>>;\n    loadOlder(): Promise<void>;\n    loadThrough(seq: SessionSeq): Promise<void>;\n    command(line: string): Promise<RemoteResult<{\n        matched: boolean;\n    }>>;\n}',
+    declaration: 'export interface ISession {\n    readonly sessionId: SessionId;\n    workflowStart(request: Omit<WorkflowRemoteStartRequest, \'sessionId\'>): Promise<RemoteResult<WorkflowRemoteStartValue>>;\n    workflowCancel(runId: WorkflowRemoteRunRequest[\'runId\']): Promise<RemoteResult<{\n        runId: WorkflowRemoteRunRequest[\'runId\'];\n        status: \'cancelling\';\n    }>>;\n    workflowStatus(runId: WorkflowRemoteRunRequest[\'runId\']): Promise<RemoteResult<WorkflowRemoteRunView>>;\n    workflowList(request?: WorkflowRemoteRunsRequest): Promise<RemoteResult<WorkflowRemoteRunListValue>>;\n    optimizePrompt(draft: string, mode: PromptOptimizationMode, signal?: AbortSignal): Promise<RemoteResult<SessionOptimizePromptValue>>;\n    readonly projections: ProjectionsFace;\n    beginSubmission(input: BeginSubmissionInput): SubmissionHandle;\n    prompt(content: PromptContentPart[], mode: \'queue\' | \'steer\', signal?: AbortSignal, requestId?: SessionRequestId): Promise<RemoteResult<{\n        accepted: true;\n    }>>;\n    readAttachment(attachmentId: AttachmentIdType): Promise<RemoteResult<{\n        attachment: ImageAttachmentRef;\n        data: Uint8Array;\n    }>>;\n    updateQueue(itemId: MessageId, action: QueueAction): Promise<RemoteResult<{\n        accepted: true;\n    }>>;\n    cancel(): Promise<RemoteResult<{\n        accepted: true;\n    }>>;\n    rename(title: string): Promise<RemoteResult<{\n        title: string;\n        seq: SessionSeq;\n    }>>;\n    loadOlder(): Promise<void>;\n    loadThrough(seq: SessionS /* …truncated — full shape in source */',
   },
   {
     name: 'KeyedHooksSources',
@@ -709,8 +709,12 @@ export const TYPE_API: readonly TypeApiEntry[] = [
     declaration: 'export interface PromptError {\n    readonly op: \'send\' | \'stop\';\n    readonly error: RemoteFailure;\n}',
   },
   {
+    name: 'PromptOptimizationMode',
+    declaration: 'export type PromptOptimizationMode = \'general\' | \'code\' | \'writing\' | \'analysis\';',
+  },
+  {
     name: 'PropsHooks',
-    declaration: 'export type PropsHooks<HS extends HooksSources> = {\n    [N in keyof HS & string as `use${Capitalize<N>}`]: SnapshotSelectorHook<HS[N] extends HostObservable<infer T> ? T : never>;\n};',
+    declaration: 'export type PropsHooks<HS extends HooksSources> = {\n    [N in keyof HS & string as `use${Capitalize<N>}`]: SnapshotSelectorHook<NonNullable<HS[N]> extends HostObservable<infer T> ? T : never>;\n};',
   },
   {
     name: 'PropsKeyedHooks',
@@ -799,6 +803,10 @@ export const TYPE_API: readonly TypeApiEntry[] = [
   {
     name: 'SessionMaybeStandardProps',
     declaration: 'export interface SessionMaybeStandardProps {\n}',
+  },
+  {
+    name: 'SessionOptimizePromptValue',
+    declaration: 'export interface SessionOptimizePromptValue {\n    readonly text: string;\n}',
   },
   {
     name: 'SessionProviderComponent',
@@ -917,12 +925,40 @@ export const TYPE_API: readonly TypeApiEntry[] = [
     declaration: 'export type ThemeTokens = Record<string, string>;',
   },
   {
-    name: 'Translate',
-    declaration: 'export type Translate<K extends string = string> = (key: K, params?: Record<string, unknown>) => string;',
-  },
-  {
     name: 'TranslateNS',
     declaration: 'export type TranslateNS<N extends keyof LocaleNamespaceMap & string> = Translate<LocaleKeysOf<N>>;',
+  },
+  {
+    name: 'WorkflowNodeAudit',
+    declaration: 'export interface WorkflowNodeAudit {\n    readonly correlationId: WorkflowRunId;\n    readonly nodeId: string;\n    readonly label: string;\n    readonly status: WorkflowNodeAuditStatus;\n    readonly startedAt: number;\n    readonly endedAt?: number;\n    readonly durationMs?: number;\n    readonly retryCount: number;\n    readonly inputSummary?: string;\n    readonly outputSummary?: string;\n    readonly error?: string;\n}',
+  },
+  {
+    name: 'WorkflowRemoteRunListValue',
+    declaration: 'export interface WorkflowRemoteRunListValue {\n    readonly runs: readonly WorkflowRemoteRunView[];\n}',
+  },
+  {
+    name: 'WorkflowRemoteRunRequest',
+    declaration: 'export interface WorkflowRemoteRunRequest {\n    readonly sessionId: SessionId;\n    readonly runId: WorkflowRunId;\n}',
+  },
+  {
+    name: 'WorkflowRemoteRunsRequest',
+    declaration: 'export interface WorkflowRemoteRunsRequest {\n    readonly workflowId?: string;\n    readonly limit?: number;\n}',
+  },
+  {
+    name: 'WorkflowRemoteRunStatus',
+    declaration: 'export type WorkflowRemoteRunStatus = \'running\' | \'completed\' | \'cancelled\' | \'error\';',
+  },
+  {
+    name: 'WorkflowRemoteRunView',
+    declaration: 'export interface WorkflowRemoteRunView {\n    readonly runId: WorkflowRunId;\n    readonly workflowId: string;\n    readonly workflowVersion?: number;\n    readonly name: string;\n    readonly status: WorkflowRemoteRunStatus;\n    readonly startedAt: number;\n    readonly endedAt?: number;\n    readonly agentsStarted: number;\n    readonly error?: string;\n    readonly value?: JsonValue;\n    readonly timedOut?: boolean;\n    readonly source: \'visual-editor\' | \'schedule\';\n    readonly inputBytes?: number;\n    readonly timeoutMs?: number;\n    readonly audit?: readonly WorkflowNodeAudit[];\n}',
+  },
+  {
+    name: 'WorkflowRemoteStartRequest',
+    declaration: 'export interface WorkflowRemoteStartRequest {\n    readonly sessionId: SessionId;\n    readonly workflowId: string;\n    readonly script: string;\n    readonly nodeIds: readonly string[];\n    readonly workflowVersion?: number;\n    readonly meta: WorkflowMeta;\n    readonly args?: JsonValue;\n    readonly timeoutMs?: number;\n    readonly source?: \'visual-editor\' | \'schedule\';\n}',
+  },
+  {
+    name: 'WorkflowRemoteStartValue',
+    declaration: 'export interface WorkflowRemoteStartValue {\n    readonly runId: WorkflowRunId;\n    readonly status: \'running\';\n    readonly startedAt: number;\n}',
   },
   {
     name: 'WorkspaceView',

@@ -18,6 +18,7 @@ import {
   resolveContextBudget,
   resolveRouterOptions,
   selectContextMessages,
+  isRoutingUserMessage,
   type ContextMessageAudit,
   type ContextRouterOptions,
 } from './router.ts'
@@ -28,11 +29,14 @@ export {
 }
 export type {
   ContextAuditMetadata, ContextCapacity, ContextMessageAudit, ContextMessageKind, ContextRoute,
-  ContextRouteSignal, ContextScope, ContextSelection, ContextRouterOptions,
+  ContextRouteEvidence, ContextRouteSignal, ContextScope, ContextSelection, ContextToolAudit, ContextRouterOptions,
 } from './router.ts'
 
 /** Cordis plugin name used by loader diagnostics. */
 export const name = 'context-router'
+
+/** Services read directly by the router at the final LLM request boundary. */
+export const inject = ['sessions']
 
 /** Runtime marker consumed by policy layers that must avoid a second history trim. */
 export interface ContextRouterService {
@@ -60,6 +64,8 @@ export const Config: z<Config> = z.object({
   pluginContextRatio: z.number().min(0).max(1),
   maxTokens: z.number().step(1).min(1),
   safetyMarginTokens: z.number().step(1).min(0),
+  toolResultMaxChars: z.number().step(1).min(64),
+  toolResultRecentMessages: z.number().step(1).min(0),
 })
 
 interface OpenTurnStart {
@@ -225,7 +231,7 @@ function durableTaskIndex(
       }
     }
     if (event.type === 'user/message' && index.activeTurn !== undefined
-      && event.data.source.kind === 'user' && !index.firstUserMessageByTurn.has(index.activeTurn)) {
+      && isRoutingUserMessage(event.data) && !index.firstUserMessageByTurn.has(index.activeTurn)) {
       index.firstUserMessageByTurn.set(index.activeTurn, String(event.data.id))
     }
     if (TASK_EVENT_TYPES.has(String(event.type))) {
@@ -249,7 +255,7 @@ function durableTaskIndex(
           const ids = index.messageIdsByToken.get(token) ?? new Set<string>()
           ids.add(String(message.id))
           while (ids.size > MAX_TOKEN_POSTING_MESSAGES) {
-            const oldest = ids.values().next().value as string | undefined
+            const oldest = ids.values().next().value
             if (oldest === undefined) break
             ids.delete(oldest)
             index.truncatedTokens.add(token)
@@ -260,7 +266,7 @@ function durableTaskIndex(
         if (ids !== undefined) {
           ids.add(String(message.id))
           while (ids.size > Math.max(1, Math.floor(maxMessages))) {
-            const oldest = ids.values().next().value as string | undefined
+            const oldest = ids.values().next().value
             if (oldest === undefined) break
             ids.delete(oldest)
           }
@@ -343,6 +349,14 @@ export interface ContextRouterAudit {
   scope: 'fresh' | 'recent' | 'task' | 'full'
   /** Machine-readable evidence for this routing decision. */
   signal?: import('./router.ts').ContextRouteSignal
+  /** Deterministic confidence in the route classification, from 0 to 1. */
+  confidence?: number
+  /** True when the route used a conservative fallback due to weak evidence. */
+  fallback?: boolean
+  /** Bounded counts describing lexical candidate retention. */
+  routeEvidence?: import('./router.ts').ContextRouteEvidence
+  /** Bounded counts describing historical tool-result compaction. */
+  toolAudit?: import('./router.ts').ContextToolAudit
   reason: string
   inputMessages: number
   outputMessages: number
@@ -394,6 +408,10 @@ declare module '@deepseek-ai/dsh-session/types' {
       step: number
       scope: 'fresh' | 'recent' | 'task' | 'full'
       signal?: import('./router.ts').ContextRouteSignal
+      confidence?: number
+      fallback?: boolean
+      routeEvidence?: import('./router.ts').ContextRouteEvidence
+      toolAudit?: import('./router.ts').ContextToolAudit
       reason: string
       inputMessages: number
       outputMessages: number
@@ -457,7 +475,7 @@ export function apply(ctx: Context, config: Config = {}): void {
   ctx.on('session/event', (session, event) => {
     if (event.type === 'turn/start') {
       openTurns.set(session, { turn: event.data.turn })
-    } else if (event.type === 'user/message' && event.data.source.kind === 'user') {
+    } else if (event.type === 'user/message' && isRoutingUserMessage(event.data)) {
       const openTurn = openTurns.get(session)
       if (openTurn !== undefined && openTurn.messageId === undefined) {
         openTurns.set(session, { ...openTurn, messageId: String(event.data.id) })
@@ -575,7 +593,7 @@ export function apply(ctx: Context, config: Config = {}): void {
   ctx.on('agent/request-context', async ({ agent, turn, step }, next) => {
     const transformed = await next()
     if (!enabled) return transformed
-    const query = [...transformed].toReversed().find(message => message.source.kind === 'user')
+    const query = [...transformed].toReversed().find(isRoutingUserMessage)
     const queryText = query === undefined ? '' : messageText(query)
     const tracked = openTurns.get(agent.session)
     if (step === 1 || tracked?.turn !== turn) {
@@ -595,15 +613,16 @@ export function apply(ctx: Context, config: Config = {}): void {
       ? -1
       : transformed.findIndex(message => String(message.id) === startId)
     const route = step > 1
-      ? { scope: 'task' as const, signal: 'open-turn' as const, reason: '当前 turn 工作集必须保留' }
+      ? { scope: 'task' as const, signal: 'open-turn' as const, reason: '当前 turn 工作集必须保留', confidence: 1 }
       : resolveContextRouteForMessages(queryText, transformed, options.recentMessages)
-    const taskIndex = route.scope === 'task'
+    const taskIndex = route.scope === 'task' || route.signal === 'lexical-match'
       ? durableTaskIndex(agent.session, durableIndexes, options.taskMessages)
       : undefined
     const taskRecall = step === 1 && route.scope === 'task'
       ? durableTaskRecall(agent.session, turn, durableIndexes, options.taskMessages, taskIndex)
       : undefined
-    const taskCandidateMessageIds = route.scope === 'task' && query !== undefined && taskIndex !== undefined
+    const taskCandidateMessageIds = (route.scope === 'task' || route.signal === 'lexical-match')
+      && query !== undefined && taskIndex !== undefined
       ? lexicalCandidates(taskIndex, new Set(messageTokens(query)))
       : undefined
     const capacity = contextCapacity(agent.session)
@@ -644,6 +663,10 @@ export function apply(ctx: Context, config: Config = {}): void {
       step,
       scope: selection.scope,
       ...(selection.signal === undefined ? {} : { signal: selection.signal }),
+      ...(selection.confidence === undefined ? {} : { confidence: selection.confidence }),
+      ...(selection.fallback === undefined ? {} : { fallback: selection.fallback }),
+      ...(selection.routeEvidence === undefined ? {} : { routeEvidence: selection.routeEvidence }),
+      ...(selection.toolAudit === undefined ? {} : { toolAudit: selection.toolAudit }),
       reason: selection.reason,
       inputMessages: transformed.length,
       outputMessages: selection.messages.length,

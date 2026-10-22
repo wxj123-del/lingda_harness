@@ -1,14 +1,19 @@
-import { useEffect, useState, useSyncExternalStore, type ChangeEvent } from 'react'
+import { useEffect, useState, useSyncExternalStore, type ChangeEvent, type ReactNode } from 'react'
 import type { Context } from '@deepseek-ai/cordis'
 import type {} from '@deepseek-ai/dsh-api-remotes/client'
 import type { ISession, ISessions } from '@deepseek-ai/dsh-api-session-controller/client'
+import type { WorkflowScheduleRecord } from '@deepseek-ai/dsh-schedule/client'
 import type { SessionId } from '@deepseek-ai/dsh-session/types'
 import type { SettingsScope } from '@deepseek-ai/dsh-client-ui-settings/client'
 import type { MainPanelId } from '../service.ts'
 import type { createLayoutStore } from '../stores.ts'
 import type { AuthoringItem, AuthoringSettings, KnowledgeDocument } from '../../authoring-settings.ts'
-import { IconApiOutline14, IconCodeOutline16, IconCordisPluginOutline14, IconDatabaseOutline16, IconEditOutline16, IconNewChatOutline16, IconSkillOutline16, IconPlusOutline16, IconCloseOutline16 } from '@deepseek-ai/dsh-client-ui-primitives'
-import { Button } from '@deepseek-ai/dsh-client-ui-primitives'
+import type { NavigationPanelMetadata } from '../index.ts'
+import { createSnapshotStore } from '@deepseek-ai/dsh-client-store'
+import { resolveSlotLabel } from '@deepseek-ai/dsh-client-ui-slots'
+import type { PropsRenderSlots } from '@deepseek-ai/dsh-client-ui-slots'
+import { IconApiOutline14, IconBranchOutline16, IconCordisPluginOutline14, IconDatabaseOutline16, IconEditOutline16, IconSkillOutline16, IconPlusOutline16, IconCloseOutline16 } from '@deepseek-ai/dsh-client-ui-primitives'
+import { Button, Tooltip } from '@deepseek-ai/dsh-client-ui-primitives'
 import { en, zh } from '../locales.ts'
 import css from './AuthoringPanel.module.css'
 import { StepsEditor } from './StepsEditor.tsx'
@@ -20,19 +25,24 @@ import {
   KnowledgeConversationControl,
   type KnowledgeConversationControlInjected,
 } from './KnowledgeConversationControl.tsx'
-import {
-  PersonalModeConversationControl,
-  type PersonalModeConversationControlInjected,
-} from './PersonalModeConversationControl.tsx'
+import type {
+  KnowledgeGenerateRequest,
+  KnowledgeGenerateValue,
+  WorkflowGenerateRequest,
+  WorkflowGenerateValue,
+} from '@deepseek-ai/dsh-api-remotes/client'
+import type { RemoteResult } from '@deepseek-ai/dsh-typert-protocol'
+
+/** The authoring Remote namespace as the generated Typert contract exposes it. */
+interface AuthoringAssistantRemote {
+  generateWorkflow: (request: WorkflowGenerateRequest, signal?: AbortSignal) => Promise<RemoteResult<WorkflowGenerateValue>>
+  generateKnowledge: (request: KnowledgeGenerateRequest, signal?: AbortSignal) => Promise<RemoteResult<KnowledgeGenerateValue>>
+}
 import { runtimeToolName } from '../../runtime-tool-name.ts'
-import type { SubscribeWorkflowDebug, WorkflowRunControls, WorkflowRunInput, WorkflowRunStart, WorkflowRunStartHandler, WorkflowRunView } from './workflow-debug.ts'
+import type { SubscribeWorkflowDebug, WorkflowCredentialControls, WorkflowRunControls, WorkflowRunInput, WorkflowRunStart, WorkflowRunStartHandler, WorkflowRunView, WorkflowScheduleControls, WorkflowScheduleView } from './workflow-debug.ts'
 import { compileWorkflow } from '../../workflow-compile.ts'
 
 declare module '@deepseek-ai/dsh-client-ui-slots' {
-  interface SlotMap {
-    /** Composer tool-row seat used by the knowledge-base toggle. */
-    'conversation.input.left': { kind: 'list'; scope: 'session'; owner: { draft: string } }
-  }
   interface LocaleNamespaceMap { layout: keyof typeof zh }
 }
 
@@ -70,9 +80,30 @@ function createWorkflowDebugSubscription(ctx: Context): SubscribeWorkflowDebug {
   }
 }
 
+function createWorkflowCredentialControls(ctx: Context): WorkflowCredentialControls {
+  return {
+    describe: async (ref) => {
+      const response = await ctx.remote.credentials.describe([ref])
+      if (!response.ok) throw new Error(response.error.message)
+      const info = response.value[ref]
+      if (info === undefined) throw new Error('Credential state unavailable')
+      return info
+    },
+    set: async (ref, value) => {
+      const response = await ctx.remote.credentials.set(ref, value)
+      if (!response.ok) throw new Error(response.error.message)
+    },
+    unset: async (ref) => {
+      const response = await ctx.remote.credentials.unset(ref)
+      if (!response.ok) throw new Error(response.error.message)
+    },
+    subscribe: listener => ctx.remote.$on('credentials/reference-updated', (ref) => { listener(String(ref)) }),
+  }
+}
+
 function iconFor(kind: AuthoringKind, size = 16) {
   if (kind === 'knowledge') return <IconDatabaseOutline16 size={size} />
-  if (kind === 'workflow') return <IconCodeOutline16 size={size} />
+  if (kind === 'workflow') return <IconBranchOutline16 size={size} />
   if (kind === 'skill') return <IconSkillOutline16 size={size} />
   return <IconApiOutline14 size={size} />
 }
@@ -86,43 +117,60 @@ function useScope(scope: SettingsScope<AuthoringSettings>): AuthoringSettings {
   return snapshot.value ?? { skills: [], workflows: [], tools: [], knowledge: [] }
 }
 
-function NavigationRail({
-  active, select, t,
-}: { active: string | null; select: (id: string | null) => void; t: (key: keyof typeof zh) => string }) {
-  const items: { id: string | null; key: keyof typeof zh; kind?: AuthoringKind }[] = [
-    { id: null, key: 'nav.conversation' },
+/**
+ * Product navigation inside the sidebar, above the workspace section: one
+ * full-width row per destination, mirroring the session rows below, or a
+ * centered icon column in the collapsed rail. There is no Conversation entry —
+ * the sidebar's own New Session control and the workspace browser are the way
+ * back to the conversation. Panel entries contributed through
+ * `sidebar.navigation.panels` (the workspace Flow page) take their own row
+ * beside the built-in ones.
+ */
+function ProductNavigation({
+  active, select, panels, renderSlot, compact, t,
+}: {
+  active: string | null
+  select: (id: string | null) => void
+  panels: readonly NavigationPanelMetadata[]
+  renderSlot: PropsRenderSlots<'sidebar.navigation.panels'>['renderSlot']
+  compact: boolean
+  t: (key: keyof typeof zh) => string
+}) {
+  const items: { id: string; key: keyof typeof zh; kind: AuthoringKind }[] = [
     { id: PANEL_IDS.knowledge, key: 'nav.knowledge', kind: 'knowledge' },
     { id: PANEL_IDS.workflow, key: 'nav.workflow', kind: 'workflow' },
     { id: PANEL_IDS.skill, key: 'nav.skill', kind: 'skill' },
     { id: PANEL_IDS.tool, key: 'nav.tool', kind: 'tool' },
   ]
+  const entry = (id: string, label: string, icon: ReactNode, activeState: boolean) => (
+    <Tooltip key={id} label={label} delayMs={400} maxWidth={220} disabled={!compact}>
+      <button
+        type="button"
+        className={css.navigationButton}
+        data-active={activeState || undefined}
+        aria-current={activeState ? 'page' : undefined}
+        aria-label={label}
+        onClick={() => { select(id) }}
+      >
+        <span className={css.navigationIcon} aria-hidden="true">{icon}</span>
+        {!compact && <span className={css.navigationLabel}>{label}</span>}
+      </button>
+    </Tooltip>
+  )
   return (
-    <nav className={css.navigation} aria-label={t('nav.label')}>
-      {items.map(item => (
-        <button
-          key={item.id ?? 'conversation'}
-          type="button"
-          className={css.navigationButton}
-          data-active={active === item.id || undefined}
-          aria-current={active === item.id ? 'page' : undefined}
-          aria-label={t(item.key)}
-          onClick={() => { select(item.id) }}
-        >
-          <span className={css.navigationIcon}>{item.kind === undefined ? <IconNewChatOutline16 /> : iconFor(item.kind)}</span>
-          <span>{t(item.key)}</span>
-        </button>
+    <nav className={compact ? `${css.navigation} ${css.navigationCompact}` : css.navigation} aria-label={t('nav.label')}>
+      {items.map(item => entry(item.id, t(item.key), iconFor(item.kind), active === item.id))}
+      {panels.map(panel => entry(
+        panel.id,
+        panel.label,
+        renderSlot('sidebar.navigation.panels', { size: 16, active: active === panel.id, compact }, { only: panel.id }),
+        active === panel.id,
       ))}
       <div className={css.navigationDivider} />
-      <button type="button" className={css.navigationButton} aria-label={t('nav.plugins')}
-        aria-current={active === 'plugins' ? 'page' : undefined}
-        data-active={active === 'plugins' || undefined} onClick={() => { select('plugins') }}>
-        <span className={css.navigationIcon}><IconCordisPluginOutline14 size={16} /></span>
-        <span>{t('nav.plugins')}</span>
-      </button>
+      {entry('plugins', t('nav.plugins'), <IconCordisPluginOutline14 size={16} />, active === 'plugins')}
     </nav>
   )
 }
-
 
 function blankDocument(): KnowledgeDocument {
   return { id: `doc-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`, title: '', content: '', updatedAt: 0 }
@@ -265,6 +313,7 @@ export function registerAuthoringSurface(
   const scope = ctx.settingsScope.bind<AuthoringSettings>({ namespace: 'ui-authoring' })
   ctx.effect(() => ctx.locale.register('layout', { zh, en }), 'ui-layout: authoring dictionaries')
   const t = ctx.locale.bind('layout')
+  const workflowCredentialControls = createWorkflowCredentialControls(ctx)
   const panelInfo = {
     getSnapshot: () => instance.getSnapshot().panelInfo,
     subscribe: (listener: () => void) => instance.subscribe(listener),
@@ -283,37 +332,6 @@ export function registerAuthoringSurface(
         openManagement: () => { ctx.layout.selectPanel(PANEL_IDS.knowledge as MainPanelId) },
       }),
     }, KnowledgeConversationControl))
-  })
-  // The personal-agent service is intentionally host-only; keep the UI face
-  // local to this layout package so mode selection adds no model context.
-  // `remote.personalAgent` is a dotted Cordis service the Remote assembly
-  // publishes after this package activates, so inject it by name and read it
-  // through one lazy accessor: capturing the namespace while only `remote`
-  // exists would freeze `undefined` and stall the control on 'loading modes'.
-  ctx.inject(['remote', 'remote.personalAgent'], (modeContext: Context) => {
-    const personalAgent = (): {
-      current: (agentId: string) => Promise<unknown>
-      modes: () => Promise<unknown>
-      set: (agentId: string, mode: string) => Promise<unknown>
-      suggest: (input: string) => Promise<unknown>
-    } => (modeContext as unknown as { remote: { personalAgent: {
-      current: (agentId: string) => Promise<unknown>
-      modes: () => Promise<unknown>
-      set: (agentId: string, mode: string) => Promise<unknown>
-      suggest: (input: string) => Promise<unknown>
-    } } }).remote.personalAgent
-    modeContext.slots.inject('conversation.input.left', () => modeContext.slots.register({
-      name: 'conversation.input.left',
-      id: 'personal-agent-mode-control',
-      locale: 'layout',
-      order: -10,
-      inject: (): PersonalModeConversationControlInjected => ({
-        current: id => personalAgent().current(id) as Promise<never>,
-        modes: () => personalAgent().modes() as Promise<never>,
-        set: (id, mode) => personalAgent().set(id, mode) as Promise<never>,
-        suggest: input => personalAgent().suggest(input) as Promise<never>,
-      }),
-    }, PersonalModeConversationControl))
   })
   const saveTool = async (item: AuthoringItem): Promise<void> => {
     const snapshot = scope.getSnapshot()
@@ -361,6 +379,7 @@ export function registerAuthoringSurface(
     await openConversationDraft(`请调用工作流工具 ${runtimeToolName('workflow', item)} 执行“${title}”。\n\n`)
   }
   let workflowSession: ISession | undefined
+  let workflowSessionId: SessionId | undefined
   const resolveWorkflowSession = async (): Promise<{ session: ISession; id: SessionId; openSession: (id: string) => void }> => {
     const sessions = ctx.get('sessions') as unknown as ISessions | undefined
     const workspaces = ctx.get('workspaces') as { list: { getSnapshot(): { items: readonly { workspaceId: string }[] } } } | undefined
@@ -376,22 +395,24 @@ export function registerAuthoringSurface(
     const session = sessions.binding(id as SessionId)?.session
     if (session === undefined) throw new Error('Session unavailable')
     workflowSession = session
+    workflowSessionId = id as SessionId
     return { session, id: id as SessionId, openSession: uiWorkspace.openSession }
   }
   const workflowSessionOrResolve = async (): Promise<ISession> => workflowSession ?? (await resolveWorkflowSession()).session
+  const workflowArguments = (input: WorkflowRunInput): unknown => {
+    if (input.mode !== 'json') return { input: input.text }
+    let parsed: unknown
+    try { parsed = JSON.parse(input.text.trim() === '' ? 'null' : input.text) }
+    catch { throw new Error('Workflow input must be valid JSON') }
+    return parsed !== null && typeof parsed === 'object' && !Array.isArray(parsed) && ('input' in parsed || 'variables' in parsed)
+      ? parsed
+      : { input: parsed }
+  }
   const runWorkflow: WorkflowRunStartHandler = async (item: AuthoringItem, input: WorkflowRunInput = { text: '', mode: 'text' }): Promise<WorkflowRunStart> => {
     const resolved = await resolveWorkflowSession()
     const compiled = compileWorkflow(item)
     if (compiled === undefined) throw new Error('Workflow graph is invalid')
-    let args: unknown = { input: input.text }
-    if (input.mode === 'json') {
-      let parsed: unknown
-      try { parsed = JSON.parse(input.text.trim() === '' ? 'null' : input.text) }
-      catch { throw new Error('Test input must be valid JSON') }
-      args = parsed !== null && typeof parsed === 'object' && !Array.isArray(parsed) && ('input' in parsed || 'variables' in parsed)
-        ? parsed
-        : { input: parsed }
-    }
+    const args = workflowArguments(input)
     const result = await resolved.session.workflowStart({
       workflowId: item.id,
       script: compiled.script,
@@ -429,6 +450,56 @@ export function registerAuthoringSurface(
     return result.value.runs
   }
   const workflowRunControls: WorkflowRunControls = { cancel: cancelWorkflow, status: statusWorkflow, list: listWorkflowRuns }
+  const scheduleView = (record: WorkflowScheduleRecord): WorkflowScheduleView => ({
+    id: String(record.id),
+    kind: record.kind === 'every' ? 'every' : 'at',
+    scheduledAt: record.scheduledAt,
+    ...(record.kind === 'every' ? { everySeconds: record.everySeconds } : {}),
+    workflowVersion: record.target.workflowVersion,
+  })
+  const workflowScheduleControls: WorkflowScheduleControls = {
+    create: async (item, input) => {
+      const version = item.version
+      if (item.workflowStatus !== 'published' || version === undefined || version === null || version < 1) throw new Error('Only published workflows can be scheduled')
+      const resolved = await resolveWorkflowSession()
+      const compiled = compileWorkflow(item)
+      if (compiled === undefined) throw new Error('Workflow graph is invalid')
+      const timing = input.kind === 'at'
+        ? input.at === undefined ? (() => { throw new Error('An absolute schedule time is required') })() : { at: input.at }
+        : input.everySeconds === undefined ? (() => { throw new Error('A recurring schedule interval is required') })() : { everySeconds: input.everySeconds }
+      const response = await ctx.remote.workflowSchedules.create(resolved.id, {
+        label: item.title,
+        workflowId: item.id,
+        workflowVersion: version,
+        workflowName: compiled.meta.name,
+        script: compiled.script,
+        nodeIds: compiled.nodeIds,
+        args: workflowArguments(input.input) as never,
+        ...(input.input.timeoutMs === undefined ? {} : { timeoutMs: input.input.timeoutMs }),
+        ...timing,
+      })
+      if (!response.ok) throw new Error(response.error.message)
+      resolved.openSession(resolved.id)
+      return scheduleView(response.value)
+    },
+    list: async (workflowId) => {
+      if (workflowSessionId === undefined) {
+        const sessions = ctx.get('sessions') as unknown as ISessions | undefined
+        const current = sessions?.list.getSnapshot().current
+        if (current === null || current === undefined) return []
+        workflowSessionId = current
+      }
+      const response = await ctx.remote.workflowSchedules.list(workflowSessionId, workflowId)
+      if (!response.ok) throw new Error(response.error.message)
+      return response.value.map(scheduleView)
+    },
+    delete: async (id) => {
+      if (workflowSessionId === undefined) await resolveWorkflowSession()
+      const response = await ctx.remote.workflowSchedules.delete(workflowSessionId as SessionId, id)
+      if (!response.ok) throw new Error(response.error.message)
+      if (!response.value.deleted) throw new Error('Workflow schedule was not found')
+    },
+  }
   const saveWorkflow = async (item: AuthoringItem): Promise<void> => {
     const snapshot = scope.getSnapshot()
     if (!snapshot.writable || snapshot.value === undefined) throw new Error('Workflow storage unavailable')
@@ -442,13 +513,49 @@ export function registerAuthoringSurface(
     if (!snapshot.writable || snapshot.value === undefined) throw new Error('Workflow storage unavailable')
     await scope.set('workflows', snapshot.value.workflows.filter(item => item.id !== id))
   }
-  ctx.slots.inject('sidebar.navigation', () => ctx.slots.register({ name: 'sidebar.navigation', locale: 'layout' }, () => {
+  // The navigation row's panel entries are metadata from
+  // `sidebar.navigation.panels`; ui-workspace registers the Flow page there, so
+  // it appears beside the built-in entries.
+  const navigationPanels = createSnapshotStore<readonly NavigationPanelMetadata[]>([])
+  const syncNavigationPanels = (): void => {
+    const next = ctx.slots.entriesOfSlot('sidebar.navigation.panels').map(({ options }) => {
+      const id = options.id as MainPanelId
+      return { id, order: options.order ?? 0, label: resolveSlotLabel(options.label) ?? id }
+    }).sort((a, b) => a.order - b.order)
+    const previous = navigationPanels.getSnapshot()
+    if (previous.length === next.length && previous.every((panel, index) => {
+      const candidate = next[index] as NavigationPanelMetadata
+      return panel.id === candidate.id && panel.order === candidate.order && panel.label === candidate.label
+    })) return
+    navigationPanels.set(next)
+  }
+  ctx.effect(() => ctx.slots.subscribe('sidebar.navigation.panels', syncNavigationPanels), 'ui-layout: navigation panel entries')
+  ctx.effect(() => ctx.locale.subscribe(syncNavigationPanels), 'ui-layout: navigation panel labels')
+  syncNavigationPanels()
+  // The sidebar declares the seat; this occupant declares the panel list nested
+  // inside it, which keeps `sidebar.navigation.panels` a child of the row that
+  // renders it rather than a second seat on the sidebar entry.
+  ctx.slots.inject('sidebar.navigation', () => ctx.slots.register({
+    name: 'sidebar.navigation',
+    locale: 'layout',
+    children: { 'sidebar.navigation.panels': { kind: 'list', scope: 'root' } },
+    inject: () => ({ hooks: { navigationPanels } }),
+  }, (props) => {
     const active = useSyncExternalStore(
       listener => panelInfo.subscribe(listener),
       () => panelInfo.getSnapshot(),
       () => panelInfo.getSnapshot(),
     ).activePanelId
-    return <NavigationRail active={active} select={select} t={t} />
+    return (
+      <ProductNavigation
+        active={active}
+        select={select}
+        panels={props.useNavigationPanels(value => value)}
+        renderSlot={props.renderSlot}
+        compact={props.compact}
+        t={t}
+      />
+    )
   }))
   for (const kind of ['knowledge', 'workflow', 'skill', 'tool'] as const) {
     const key = PANEL_IDS[kind] as MainPanelId
@@ -462,9 +569,23 @@ export function registerAuthoringSurface(
           search: (query, id, signal) => remote.search(query, id, signal),
           importLegacy: items => remote.importLegacy(items),
         }
+        // Drafting is optional: a deployment without the authoring assistant
+        // renders the panel without its chat entry. Cordis refuses an
+        // undeclared `remote.<ns>` read, so the namespace is captured by an
+        // explicit injection instead of being reached through the root proxy.
+        let assistant: AuthoringAssistantRemote | undefined
+        knowledgeContext.inject(['remote', 'remote.authoringAssistant'], (assistantContext: Context) => {
+          assistant = (assistantContext.remote as unknown as { authoringAssistant: AuthoringAssistantRemote }).authoringAssistant
+        })
+        const generate: NonNullable<KnowledgePanelProps['generate']> = async (request) => {
+          if (assistant === undefined) throw new Error('Authoring assistant is unavailable')
+          const result = await assistant.generateKnowledge(request, new AbortController().signal)
+          if (!result.ok) throw new Error(result.error.message ?? 'Drafting failed')
+          return result.value
+        }
         knowledgeContext.slots.inject('main', () => knowledgeContext.slots.register({
           name: 'main', key, locale: 'layout',
-          inject: () => ({ ...callbacks, hooks: { authoring: scope } }),
+          inject: () => ({ ...callbacks, generate, hooks: { authoring: scope } }),
         }, (props) => {
           const snapshot = props.useAuthoring(value => value)
           return <KnowledgePanel {...props} legacy={snapshot.value?.knowledge} writable={snapshot.writable} t={t} />
@@ -491,15 +612,29 @@ export function registerAuthoringSurface(
       continue
     }
     if (kind === 'workflow') {
+      // Same optional drafting path as the knowledge panel: an unmounted
+      // assistant Remote leaves the panel without a chat entry rather than
+      // rendering a button that always fails.
+      let assistant: AuthoringAssistantRemote | undefined
+      ctx.inject(['remote', 'remote.authoringAssistant'], (assistantContext: Context) => {
+        assistant = (assistantContext.remote as unknown as { authoringAssistant: AuthoringAssistantRemote }).authoringAssistant
+      })
+      const generateWorkflow = async (request: WorkflowGenerateRequest): Promise<WorkflowGenerateValue> => {
+        if (assistant === undefined) throw new Error('Authoring assistant is unavailable')
+        const result = await assistant.generateWorkflow(request, new AbortController().signal)
+        if (!result.ok) throw new Error(result.error.message ?? 'Drafting failed')
+        return result.value
+      }
       ctx.slots.inject('main', () => ctx.slots.register({
         name: 'main', key, locale: 'layout',
-        inject: () => ({ hooks: { authoring: scope }, saveWorkflow, removeWorkflow, invokeWorkflow, runWorkflow, workflowRunControls,
-          subscribeWorkflowDebug: createWorkflowDebugSubscription(ctx) }),
+        inject: () => ({ hooks: { authoring: scope }, saveWorkflow, removeWorkflow, invokeWorkflow, runWorkflow, workflowRunControls, workflowScheduleControls, workflowCredentialControls,
+          subscribeWorkflowDebug: createWorkflowDebugSubscription(ctx), generate: generateWorkflow }),
       }, (props) => {
         const snapshot = props.useAuthoring(value => value)
         return <WorkflowPanel items={snapshot.value?.workflows ?? []} writable={snapshot.writable}
           save={props.saveWorkflow} remove={props.removeWorkflow} invoke={props.invokeWorkflow}
-          {...props.subscribeWorkflowDebug === undefined ? {} : { subscribeDebug: props.subscribeWorkflowDebug }} run={props.runWorkflow} runControls={props.workflowRunControls} t={t} />
+          {...props.subscribeWorkflowDebug === undefined ? {} : { subscribeDebug: props.subscribeWorkflowDebug }} run={props.runWorkflow} runControls={props.workflowRunControls} schedules={props.workflowScheduleControls} credentials={props.workflowCredentialControls}
+          {...props.generate === undefined ? {} : { generate: props.generate }} t={t} />
       }))
       continue
     }

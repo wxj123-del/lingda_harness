@@ -8,6 +8,39 @@ import { dirname, isAbsolute, join, resolve } from 'node:path'
 import { promisify } from 'node:util'
 import schema from '@deepseek-ai/schemastery'
 import { Remote, TypertRemoteService } from '@deepseek-ai/dsh-typert-protocol'
+import type {
+  GitCommitAudit,
+  GitSyncState,
+  RepositoryBranchesResult,
+  RepositoryChangeSnapshot,
+  RepositoryCloneRequest,
+  RepositoryCloneResult,
+  RepositoryCommitRequest,
+  RepositoryCommitResult,
+  RepositoryLocation,
+  RepositoryPathsRequest,
+  RepositoryPushRequest,
+  RepositoryPushResult,
+  RepositoryUpdateResult,
+  RepositoryUpdateStatus,
+} from './types.ts'
+
+export type {
+  GitCommitAudit,
+  GitSyncState,
+  RepositoryBranchesResult,
+  RepositoryChangeSnapshot,
+  RepositoryCloneRequest,
+  RepositoryCloneResult,
+  RepositoryCommitRequest,
+  RepositoryCommitResult,
+  RepositoryLocation,
+  RepositoryPathsRequest,
+  RepositoryPushRequest,
+  RepositoryPushResult,
+  RepositoryUpdateResult,
+  RepositoryUpdateStatus,
+} from './types.ts'
 
 const execFileAsync = promisify(execFile)
 
@@ -26,94 +59,10 @@ export interface Config {
   maxCommitFiles?: number
 }
 
-export interface GitCommitAudit {
-  sha: string
-  message: string
-  author: string
-  date: string | null
-  files: string[]
-}
-
-export type GitSyncState = 'synced' | 'remote-ahead' | 'local-ahead' | 'diverged' | 'different' | 'unknown'
-
 /** Canonical GitCode source used by the in-app source checkout updater. */
 export const UPDATE_REPOSITORY_URL = 'https://gitcode.com/XJ-Cyber/lingda-harness.git'
 const UPDATE_DEFAULT_BRANCH = 'main'
 const UPDATE_REMOTE_NAME = 'gitcode'
-
-/** Repository state exposed to the Settings update row. */
-export interface RepositoryUpdateStatus {
-  repositoryRoot: string
-  remote: string
-  branch: string
-  remoteBranch: string
-  localHead: string
-  remoteHead: string
-  ahead: number
-  behind: number
-  state: 'current' | 'available' | 'local-ahead' | 'diverged' | 'blocked'
-  reason?: string
-}
-
-/** Result returned after a successful source update. */
-export interface RepositoryUpdateResult extends RepositoryUpdateStatus {
-  updated: boolean
-  restartScheduled: boolean
-}
-
-/** A user-requested remote checkout target. Paths are interpreted by the Host. */
-export interface RepositoryCloneRequest {
-  url: string
-  targetDirectory: string
-  branch?: string
-}
-
-/** Result of cloning a new checkout or fast-forwarding an existing checkout. */
-export interface RepositoryCloneResult {
-  repositoryRoot: string
-  remote: string
-  branch: string
-  localHead: string
-  remoteHead?: string
-  action: 'cloned' | 'synced' | 'current'
-  changed: boolean
-}
-
-/** Branch names advertised by a remote repository. */
-export interface RepositoryBranchesResult {
-  url: string
-  branches: string[]
-}
-
-/** A bounded live view of one local checkout. */
-export interface RepositoryChangeSnapshot {
-  repositoryRoot: string
-  remote?: string
-  branch: string
-  localHead: string
-  upstreamBranch?: string
-  upstreamHead?: string
-  ahead: number
-  behind: number
-  syncState: GitSyncState
-  status: string
-  diffStat: string
-  diff: string
-}
-
-/** Explicit publish request from the repository surface. */
-export interface RepositoryPushRequest {
-  repositoryRoot: string
-  message?: string
-  includeUntracked?: boolean
-}
-
-/** Result after committing local changes and pushing the selected branch. */
-export interface RepositoryPushResult extends RepositoryChangeSnapshot {
-  committed: boolean
-  pushed: boolean
-  commitSha?: string
-}
 
 export interface GitCheckpoint {
   turn: number
@@ -242,7 +191,14 @@ async function untrackedDiff(root: string): Promise<string> {
   return chunks.join('\n')
 }
 
-async function repositorySnapshot(root: string): Promise<RepositoryChangeSnapshot> {
+/**
+ * Read one checkout into the shape both the audit trail and the repository
+ * panel consume.
+ * @param root - repository root to read.
+ * @param maxCommits - recent commits to include; zero skips the history read.
+ * @returns the bounded snapshot.
+ */
+async function repositorySnapshot(root: string, maxCommits = 0): Promise<RepositoryChangeSnapshot> {
   const branch = await gitOutput(root, ['branch', '--show-current'])
   if (branch === '') throw new Error('当前仓库处于 detached HEAD，无法执行推送')
   const status = await gitOutput(root, ['status', '--short', '--branch'])
@@ -264,6 +220,7 @@ async function repositorySnapshot(root: string): Promise<RepositoryChangeSnapsho
   const trackedDiff = await gitOutput(root, ['diff', 'HEAD', '--no-ext-diff', '--unified=3']).catch(() => '')
   const untracked = await untrackedDiff(root)
   const diff = [trackedDiff, untracked].filter(Boolean).join('\n')
+  const commits = maxCommits > 0 ? await recentCommits(root, maxCommits) : []
   return {
     repositoryRoot: root,
     ...(remote === undefined ? {} : { remote }),
@@ -277,7 +234,108 @@ async function repositorySnapshot(root: string): Promise<RepositoryChangeSnapsho
     status: statusLines.filter(line => !line.startsWith('## ')).join('\n'),
     diffStat,
     diff: truncate(diff, 120_000),
+    ...(commits.length === 0 ? {} : { commits }),
   }
+}
+
+/**
+ * Read the newest commits of one checkout. File lists are omitted: the panel
+ * shows subjects, and per-commit `diff-tree` is one subprocess each.
+ * @param root - repository root.
+ * @param maxCommits - how many commits to keep, newest first.
+ * @returns the commit rows, or none when the checkout has no commits yet.
+ */
+async function recentCommits(root: string, maxCommits: number): Promise<GitCommitAudit[]> {
+  try {
+    const log = (await execFileAsync('git', [
+      'log', `-${maxCommits}`, '--date=iso-strict', '--format=%H%x1f%an%x1f%aI%x1f%s%x1e',
+    ], { cwd: root, maxBuffer: 64 * 1024, encoding: 'utf8' })).stdout.trim()
+    return parseCommitLog(log, maxCommits)
+  } catch {
+    return []
+  }
+}
+
+/**
+ * Reject a path that would escape the checkout.
+ * @param path - repository-relative path from the request.
+ * @returns the path unchanged when it is safe.
+ */
+function safeRelativePath(path: string): string {
+  const trimmed = path.trim()
+  if (trimmed === '' || isAbsolute(trimmed) || trimmed.split(/[/\\]+/u).includes('..')) {
+    throw new Error(`路径无效：${path}`)
+  }
+  return trimmed
+}
+
+/**
+ * Stage explicit paths.
+ * @param root - repository root.
+ * @param paths - repository-relative paths.
+ */
+async function stagePaths(root: string, paths: readonly string[]): Promise<void> {
+  const safe = paths.map(safeRelativePath)
+  if (safe.length === 0) return
+  await execFileAsync('git', ['add', '--', ...safe], { cwd: root, maxBuffer: 512 * 1024, encoding: 'utf8' })
+}
+
+/**
+ * Unstage explicit paths, leaving their worktree content untouched.
+ * @param root - repository root.
+ * @param paths - repository-relative paths.
+ */
+async function unstagePaths(root: string, paths: readonly string[]): Promise<void> {
+  const safe = paths.map(safeRelativePath)
+  if (safe.length === 0) return
+  try {
+    await execFileAsync('git', ['restore', '--staged', '--', ...safe], { cwd: root, maxBuffer: 512 * 1024, encoding: 'utf8' })
+  } catch (error) {
+    // A checkout whose HEAD has no commit yet cannot restore from it.
+    if (!/HEAD/iu.test(errorText(error))) throw error
+    await execFileAsync('git', ['rm', '--cached', '--quiet', '--', ...safe], { cwd: root, maxBuffer: 512 * 1024, encoding: 'utf8' })
+  }
+}
+
+/**
+ * Commit the worktree, or the given paths of it.
+ * @param request - repository root, message, and optional path selection.
+ * @returns the checkout after the commit.
+ */
+async function commitChanges(request: RepositoryCommitRequest): Promise<RepositoryCommitResult> {
+  const root = await repositoryRootFromRequest(request.repositoryRoot)
+  const message = request.message.trim()
+  if (message === '') throw new Error('请填写提交说明')
+  const paths = request.paths?.map(safeRelativePath) ?? []
+  if (paths.length > 0) await stagePaths(root, paths)
+  else if (request.includeUntracked !== false) await execFileAsync('git', ['add', '--all'], { cwd: root, maxBuffer: 128 * 1024, encoding: 'utf8' })
+  else await execFileAsync('git', ['add', '--update'], { cwd: root, maxBuffer: 128 * 1024, encoding: 'utf8' })
+  const staged = await gitOutput(root, ['diff', '--cached', '--name-only'])
+  if (staged === '') throw new Error('没有可提交的改动')
+  await execFileAsync('git', ['commit', '-m', message], { cwd: root, maxBuffer: 512 * 1024, encoding: 'utf8' })
+  const after = await repositorySnapshot(root, 8)
+  return { ...after, commitSha: after.localHead }
+}
+
+/**
+ * Fast-forward the checkout from its upstream, refusing a diverged history.
+ * @param root - repository root.
+ * @returns the checkout after the pull.
+ */
+async function pullRepository(root: string): Promise<RepositoryChangeSnapshot> {
+  await execFileAsync('git', ['fetch', '--prune'], {
+    cwd: root, env: { ...process.env, GIT_TERMINAL_PROMPT: '0' },
+    maxBuffer: 512 * 1024, encoding: 'utf8', timeout: 120_000,
+  })
+  const before = await repositorySnapshot(root)
+  if (before.behind === 0) return { ...before, commits: (await repositorySnapshot(root, 8)).commits ?? [] }
+  if (before.ahead > 0) throw new Error('本地与远端已分叉，请先手动解决冲突')
+  if (before.status.trim() !== '') throw new Error('工作区有未提交的修改，请先提交再同步')
+  await execFileAsync('git', ['merge', '--ff-only', '@{upstream}'], {
+    cwd: root, env: { ...process.env, GIT_TERMINAL_PROMPT: '0' },
+    maxBuffer: 512 * 1024, encoding: 'utf8', timeout: 120_000,
+  })
+  return repositorySnapshot(root, 8)
 }
 
 function repositoryRootFromRequest(requested: string): Promise<string> {
@@ -583,7 +641,7 @@ async function resolveRepositoryRoot(cwd: string): Promise<string | undefined> {
         }
         if (roots.size > 1) return undefined
       }
-      return roots.values().next().value as string | undefined
+      return roots.values().next().value
     } catch {
       return undefined
     }
@@ -604,7 +662,7 @@ export class GitWorkspaceService extends TypertRemoteService {
     maxDiffBytes: schema.number().step(1).min(256).default(24_000),
     maxCommits: schema.number().step(1).min(1).default(8),
     maxCommitFiles: schema.number().step(1).min(1).default(24),
-  }) as schema<Config>
+  })
 
   private readonly config: Required<Config>
   private readonly queues = new WeakMap<Session, Promise<void>>()
@@ -638,7 +696,10 @@ export class GitWorkspaceService extends TypertRemoteService {
     })
   }
 
-  /** Check the canonical GitCode source without changing tracked files. */
+  /**
+   * Check the canonical GitCode source without changing tracked files.
+   * @returns The current remote and checkout status.
+   */
   @Remote('check')
   async check(): Promise<RepositoryUpdateStatus> {
     const root = await resolveRepositoryRoot(process.cwd())
@@ -646,31 +707,50 @@ export class GitWorkspaceService extends TypertRemoteService {
     return repositoryUpdateStatus(root, true)
   }
 
-  /** Clone a remote into a new folder, or fast-forward the matching checkout. */
+  /**
+   * Clone a remote into a new folder, or fast-forward the matching checkout.
+   * @param request - Remote URL and destination checkout options.
+   * @returns The resulting checkout status and path.
+   */
   @Remote('clone')
   async clone(request: RepositoryCloneRequest): Promise<RepositoryCloneResult> {
     return cloneOrSyncRepository(request)
   }
 
-  /** Read branch names advertised by a remote without changing local files. */
+  /**
+   * Read branch names advertised by a remote without changing local files.
+   * @param url - Remote Git URL to query.
+   * @returns The advertised branch names.
+   */
   @Remote('branches')
   async branches(url: string): Promise<RepositoryBranchesResult> {
     return listRemoteBranches(url)
   }
 
-  /** Read the current checkout, worktree status, and bounded unified diff. */
+  /**
+   * Read the current checkout, worktree status, and bounded unified diff.
+   * @param repositoryRoot - Repository directory to inspect.
+   * @returns A bounded checkout and change snapshot.
+   */
   @Remote('inspect')
   async inspect(repositoryRoot: string): Promise<RepositoryChangeSnapshot> {
     return repositorySnapshot(await repositoryRootFromRequest(repositoryRoot))
   }
 
-  /** Commit explicit local changes and push the current branch to origin. */
+  /**
+   * Commit explicit local changes and push the current branch to origin.
+   * @param request - Commit message, path selection, and push options.
+   * @returns The pushed commit and remote result.
+   */
   @Remote('push')
   async push(request: RepositoryPushRequest): Promise<RepositoryPushResult> {
     return pushRepository(request)
   }
 
-  /** Fast-forward the checkout, install locked dependencies, build, and restart the Host. */
+  /**
+   * Fast-forward the checkout, install locked dependencies, build, and restart the Host.
+   * @returns The update result and whether a restart was scheduled.
+   */
   @Remote('update')
   async update(): Promise<RepositoryUpdateResult> {
     const root = await resolveRepositoryRoot(process.cwd())
@@ -697,6 +777,81 @@ export class GitWorkspaceService extends TypertRemoteService {
     }
   }
 
+  /**
+   * Resolve the repository a session workspace belongs to.
+   *
+   * The caller supplies the session's own workspace directory; the Host resolves
+   * it to a root with a plain `rev-parse` and does not guess among child
+   * directories, so an arbitrary path cannot make this walk a tree.
+   * @param directory - absolute session workspace directory.
+   * @returns the absolute repository root, or nothing for a plain workspace.
+   */
+  @Remote('locate')
+  async locate(directory: string): Promise<RepositoryLocation> {
+    const path = directory.trim()
+    if (path === '' || !isAbsolute(path)) return {}
+    try {
+      const root = await gitOutput(resolve(path), ['rev-parse', '--show-toplevel'])
+      return root === '' ? {} : { repositoryRoot: root }
+    } catch {
+      return {}
+    }
+  }
+
+  /**
+   * Read one checkout for the repository panel, including recent commits.
+   * @param repositoryRoot - absolute repository root from `locate`.
+   * @returns the bounded checkout snapshot.
+   */
+  @Remote('state')
+  async state(repositoryRoot: string): Promise<RepositoryChangeSnapshot> {
+    return repositorySnapshot(await repositoryRootFromRequest(repositoryRoot), 20)
+  }
+
+  /**
+   * Stage explicit paths.
+   * @param request - repository root and repository-relative paths.
+   * @returns the checkout after staging.
+   */
+  @Remote('stage')
+  async stage(request: RepositoryPathsRequest): Promise<RepositoryChangeSnapshot> {
+    const root = await repositoryRootFromRequest(request.repositoryRoot)
+    await stagePaths(root, request.paths)
+    return repositorySnapshot(root, 20)
+  }
+
+  /**
+   * Unstage explicit paths without touching their content.
+   * @param request - repository root and repository-relative paths.
+   * @returns the checkout after unstaging.
+   */
+  @Remote('unstage')
+  async unstage(request: RepositoryPathsRequest): Promise<RepositoryChangeSnapshot> {
+    const root = await repositoryRootFromRequest(request.repositoryRoot)
+    await unstagePaths(root, request.paths)
+    return repositorySnapshot(root, 20)
+  }
+
+  /**
+   * Commit the worktree or an explicit path selection.
+   * @param request - repository root, message, and optional paths.
+   * @returns the commit SHA and the checkout after it.
+   */
+  @Remote('commit')
+  async commit(request: RepositoryCommitRequest): Promise<RepositoryCommitResult> {
+    return commitChanges(request)
+  }
+
+  /**
+   * Fast-forward the checkout from its upstream.
+   * @param repositoryRoot - absolute repository root.
+   * @returns the checkout after the pull.
+   */
+  @Remote('pull')
+  async pull(repositoryRoot: string): Promise<RepositoryChangeSnapshot> {
+    return pullRepository(await repositoryRootFromRequest(repositoryRoot))
+  }
+
   private schedule(session: Session, turn: number, phase: 'before' | 'after'): void {
     const previous = this.queues.get(session) ?? Promise.resolve()
     const next = previous.then(() => this.capture(session, turn, phase))
@@ -707,8 +862,21 @@ export class GitWorkspaceService extends TypertRemoteService {
     const cwd = session.header.cwd
     if (cwd === undefined || cwd.trim() === '') return
     const repositoryRoot = await resolveRepositoryRoot(cwd)
-    const commandCwd = repositoryRoot ?? cwd
     const result: GitCheckpoint = { turn, phase, cwd, ...(repositoryRoot === undefined ? {} : { repositoryRoot }) }
+    // A session may intentionally run in a plain workspace. Do not execute
+    // status/diff against that directory: Git's diagnostic and `diff
+    // --no-index` usage text would otherwise be persisted on every turn.
+    if (repositoryRoot === undefined) {
+      result.syncState = 'unknown'
+      result.error = 'cwd is not a Git repository'
+      try {
+        session.append('agent/git-checkpoint', result, { ignorable: true })
+      } catch (error) {
+        this.ctx.logger.warn(`git-workspace: unable to persist checkpoint: ${errorText(error)}`)
+      }
+      return
+    }
+    const commandCwd = repositoryRoot
     const errors: string[] = []
 
     try {

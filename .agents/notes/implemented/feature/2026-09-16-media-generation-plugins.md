@@ -2,6 +2,8 @@
 
 Status: implemented
 
+English | [中文](2026-09-16-media-generation-plugins.zh.md)
+
 ## Problem
 
 The agent needs image and speech generation that can switch subscriptions and models without changing tool code. Images also need to appear in the existing conversation attachment renderer.

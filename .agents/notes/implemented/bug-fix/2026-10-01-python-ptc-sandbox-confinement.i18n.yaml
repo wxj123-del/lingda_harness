@@ -1,0 +1,6 @@
+# Bilingual-pair consistency record (docs/i18n/README.md): the git blob hash of each
+# side as of the last confirmed-consistent state. Both languages carry equal authority;
+# after editing either side, bring the other along and re-record with:
+#   pnpm run verify-translation-pairing --write .agents/notes/implemented/bug-fix/2026-10-01-python-ptc-sandbox-confinement.md
+2026-10-01-python-ptc-sandbox-confinement.md: e608b90a80b53e0ed2f30dd59c0ad61c6decff00
+2026-10-01-python-ptc-sandbox-confinement.zh.md: aad4a5b0993dd0aad21153bd0e004203d48e8af0

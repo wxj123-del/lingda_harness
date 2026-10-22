@@ -75,14 +75,14 @@
 
 .inputInvalid {
   composes: input;
-  border-color: var(--dsw-alias-label-error);
+  border-color: var(--dsw-alias-state-error-primary);
 }
 
 .invalid {
   margin: 0;
   font-size: 12px;
   line-height: 1.5;
-  color: var(--dsw-alias-label-error);
+  color: var(--dsw-alias-state-error-primary);
 }
 
 .hint {
@@ -133,6 +133,8 @@
   flex: 1;
   min-width: 0;
   overflow-x: auto;
+  --dsh-scrollbar-thumb: var(--dsw-alias-scrollbar-bg-l2);
+  --dsh-scrollbar-thumb-hover: var(--dsw-alias-scrollbar-hover-l2);
   padding: 6px 10px;
   border-radius: 8px;
   background: var(--dsw-alias-bg-layer-3);

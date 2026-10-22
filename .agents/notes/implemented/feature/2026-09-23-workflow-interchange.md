@@ -12,6 +12,10 @@ The visual workflow editor could create, publish, copy, and run graphs, but movi
 
 Add a versioned `dsh-workflow` JSON/YAML interchange envelope. Export includes the workflow description, instructions, graph, edges, and viewport; it does not include archives, run history, or secrets. Credential values remain references only. The console can import `.json`, `.yaml`, and `.yml` files with size, node, edge, identifier, and graph-reference bounds. Imported files receive a fresh id and always enter the draft state. The editor exposes explicit JSON and YAML download actions.
 
+## Alternatives considered
+
+Requiring manual reconstruction was rejected because it prevents reviewable transfers. Exporting archives, run history, or credential values was rejected because those data are installation-specific or secret-bearing.
+
 ## Consequences
 
 Workflows can be reviewed in source control or transferred between installations without a command-line step. Imports cannot silently replace a published workflow and must be published again after review. Hand-authored raw workflow objects are accepted for convenience, while unsupported envelope versions fail clearly.
@@ -19,4 +23,3 @@ Workflows can be reviewed in source control or transferred between installations
 ## Validation
 
 Workflow panel and interchange tests pass 20 tests. UI Layout TypeScript passes, and `git diff --check` passes.
-

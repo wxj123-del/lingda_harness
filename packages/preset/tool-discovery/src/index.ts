@@ -8,6 +8,9 @@ import type { Session, SessionEvent } from '@deepseek-ai/dsh-session'
 import type {} from '@deepseek-ai/dsh-session-query'
 import type {} from '@deepseek-ai/dsh-system-prompt'
 import { defineTool } from '@deepseek-ai/dsh-tools'
+import { decideToolCandidates, type DecisionModelOptions } from './decision-model.ts'
+
+export type { DecisionModelOptions } from './decision-model.ts'
 
 /** Cordis plugin name. */
 export const name = 'tool-discovery'
@@ -34,6 +37,8 @@ export interface Config {
   descriptionChars: number
   /** Maximum UTF-8 bytes of the complete rendered search result. */
   resultMaxBytes: number
+  /** Optional local typed-decision endpoint used to rank capability matches. */
+  decisionModel?: DecisionModelOptions
 }
 
 /** Explicit deployment budgets; malformed relationships reject at mount. */
@@ -47,6 +52,12 @@ export const Config: z<Config> = z.object({
   searchLimit: z.number().step(1).min(1).required(),
   descriptionChars: z.number().step(1).min(0).required(),
   resultMaxBytes: z.number().step(1).min(128).required(),
+  decisionModel: z.object({
+    url: z.string().min(1).required(),
+    timeoutMs: z.number().step(1).min(1).required(),
+    minConfidence: z.number().min(0).max(1).required(),
+    candidateLimit: z.number().step(1).min(2).max(255).required(),
+  }).default(undefined as unknown as DecisionModelOptions),
 })
 
 const SEARCH = 'tool_search'
@@ -105,6 +116,19 @@ function relevance(tool: ToolSchema, query: string, terms: string[]): number {
   const description = tool.description.toLowerCase()
   const scores = terms.map(term => words.has(term) ? 10 : name.includes(term) ? 5 : description.includes(term) ? 1 : 0)
   return scores.includes(0) ? 0 : scores.reduce<number>((sum, score) => sum + score, 0)
+}
+
+function lexicalCandidates(
+  candidates: readonly ToolSchema[],
+  query: string,
+  terms: readonly string[],
+  selection: Selection,
+  byFrequency: (selection: Selection, a: ToolSchema, b: ToolSchema) => number,
+): { tool: ToolSchema; score: number }[] {
+  return candidates
+    .map(tool => ({ tool, score: relevance(tool, query, [...terms]) }))
+    .filter(match => match.score > 0)
+    .sort((a, b) => b.score - a.score || byFrequency(selection, a.tool, b.tool))
 }
 
 /**
@@ -227,25 +251,41 @@ export function apply(ctx: Context, config: Config): void {
         .map(tool => tool.name))
       const candidates = selection.catalog.filter(tool => tool.name !== SEARCH && allowed.has(tool.name))
       const exact = candidates.find(tool => tool.name.toLowerCase() === query)
-      const matches = (exact === undefined ? candidates : [exact])
-        .map(tool => ({ tool, score: relevance(tool, query, terms) }))
-        .filter(match => match.score > 0)
-        .sort((a, b) => b.score - a.score || byFrequency(selection, a.tool, b.tool))
-        .slice(0, config.searchLimit)
-      const selected = matches.length > 0 ? matches.map(({ tool }) => ({
-        tool,
-        reason: exact?.name === tool.name ? 'exact-name' : 'lexical-match',
-      })) : selection.catalog
+      const lexical = exact === undefined
+        ? lexicalCandidates(candidates, query, terms, selection, byFrequency)
+        : [{ tool: exact, score: Number.MAX_SAFE_INTEGER }]
+      let selected: { tool: ToolSchema; reason: string }[]
+      if (exact !== undefined) {
+        selected = [{ tool: exact, reason: 'exact-name' }]
+      } else {
+        const modelCandidates = [...candidates]
+          .sort((a, b) => {
+            const score = relevance(b, query, terms) - relevance(a, query, terms)
+            return score || byFrequency(selection, a, b)
+          })
+        const decided = config.decisionModel === undefined
+          ? undefined
+          : await decideToolCandidates(query, modelCandidates, config.decisionModel, exec.signal)
+        if (decided !== undefined && decided.length > 0) {
+          selected = decided.slice(0, config.searchLimit).map(({ tool, confidence }) => ({
+            tool,
+            reason: `decision-model:${confidence.toFixed(2)}`,
+          }))
+        } else {
+          selected = lexical.slice(0, config.searchLimit).map(({ tool }) => ({ tool, reason: 'lexical-match' }))
+        }
+      }
+      const matches = selected.length > 0 ? selected : selection.catalog
         .filter(tool => config.recoveryTools?.includes(tool.name) && allowed.has(tool.name))
         .slice(0, config.searchLimit)
         .map(tool => ({ tool, reason: 'safe-recovery' }))
       const result = {
-        loaded: selected.map(({ tool, reason }) => ({ name: tool.name, description: Array.from(
+        loaded: matches.map(({ tool, reason }) => ({ name: tool.name, description: Array.from(
           new Intl.Segmenter('en', { granularity: 'grapheme' }).segment(tool.description), part => part.segment,
         ).slice(0, config.descriptionChars).join(''), reason })),
-        message: matches.length
+        message: selected.length > 0
           ? 'Loaded tools are available on the next request.'
-          : selected.length
+          : matches.length > 0
             ? 'No matching tool was found; a small safe recovery set is available on the next request.'
             : 'No matching tools. Try a more specific English keyword or exact tool name.',
       }

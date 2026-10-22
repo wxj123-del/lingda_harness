@@ -2,7 +2,7 @@
 
 Status: implemented
 
-English | 中文
+[English](2026-09-23-conversation-terminal-view.md) | 中文
 
 ## Problem
 

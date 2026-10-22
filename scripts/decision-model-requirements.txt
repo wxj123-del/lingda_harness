@@ -1,0 +1,5 @@
+torch==2.8.0
+transformers==5.17.0
+fastapi==0.141.1
+uvicorn==0.54.0
+flash-linear-attention==0.5.2

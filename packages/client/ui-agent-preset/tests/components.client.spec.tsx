@@ -23,14 +23,14 @@ afterEach(cleanup)
 const ROSTER_READY: AgentPresetSettingsState = {
   status: 'ready',
   error: null,
-  options: [{ id: 'standard', trust: 'system', name: '标准模式' }, { id: 'mine', trust: 'user' }],
+  options: [{ id: 'diaosi', trust: 'system', name: '屌丝模式' }, { id: 'mine', trust: 'user' }],
 }
 
 const SEAT_READY: AgentPresetSeatState = {
   showPicker: true,
-  current: 'standard',
+  current: 'diaosi',
   options: [
-    { id: 'standard', trust: 'system', name: '标准模式', description: '完整的编码 agent。' },
+    { id: 'diaosi', trust: 'system', name: '屌丝模式', description: '完整的编码 agent。' },
     { id: 'mine', trust: 'user' },
   ],
   busy: false,
@@ -91,7 +91,7 @@ describe('the new-session chip', () => {
     const actions = renderSeat()
 
     await waitFor(() => { expect(actions.load).toHaveBeenCalledTimes(1) })
-    expect(screen.getByRole('button').textContent).toContain(en.presetStandardName)
+    expect(screen.getByRole('button').textContent).toContain(en.presetDiaosiName)
     expect(screen.getByRole('button').getAttribute('title')).toBe(en.seatHint)
   })
 
@@ -102,7 +102,7 @@ describe('the new-session chip', () => {
 
     // The id alone never said what a preset does; the description is the
     // whole reason a preset can publish metadata at all.
-    expect(screen.getByText(en.presetStandardDescription)).toBeTruthy()
+    expect(screen.getByText(en.presetDiaosiDescription)).toBeTruthy()
     // A preset that published none still reads as a row, with its id standing
     // in for the name.
     expect(screen.getByText(en.noDescription)).toBeTruthy()
@@ -294,13 +294,13 @@ describe('the session-header label', () => {
   it('names the preset the session runs, and never offers a switch', async () => {
     const { load } = renderLabel({
       blank: false,
-      projectionValues: { agentPreset: 'standard' },
+      projectionValues: { agentPreset: 'diaosi' },
     })
 
     await waitFor(() => { expect(load).toHaveBeenCalledTimes(1) })
     // A control here would promise a switch the host refuses outright.
     expect(screen.queryByRole('button')).toBeNull()
-    expect(screen.getByTitle(en.presetStandardDescription).textContent).toBe(en.presetStandardName)
+    expect(screen.getByTitle(en.presetDiaosiDescription).textContent).toBe(en.presetDiaosiName)
   })
 
   it('falls back to the id, and to the generic hint, when metadata is absent', () => {
@@ -312,12 +312,23 @@ describe('the session-header label', () => {
   it('shows the id until the roster resolves it', () => {
     renderLabel({
       blank: false,
-      projectionValues: { agentPreset: 'standard' },
-    }, { options: [] })
+      projectionValues: { agentPreset: 'diaosi' },
+    }, { options: [], status: 'loading' })
 
     // The session's own summary is the authority on which preset it runs; the
     // roster only supplies the display name, and its arrival is a later frame.
-    expect(screen.getByTitle(en.headerHint).textContent).toBe('standard')
+    expect(screen.getByTitle(en.headerHint).textContent).toBe('diaosi')
+  })
+
+  it('renders nothing once the roster resolves without the recorded preset', () => {
+    // A preset the deployment stopped shipping has no name to show, and its
+    // raw id beside the session title reads as a mode the user cannot act on.
+    renderLabel(
+      { blank: false, projectionValues: { agentPreset: 'game-studio' } },
+      { options: [{ id: 'diaosi', trust: 'system' }], status: 'ready' },
+    )
+
+    expect(screen.queryByTitle(en.headerHint)).toBeNull()
   })
 
   it('renders nothing, and reads no roster, when the session records no preset', async () => {

@@ -57,7 +57,7 @@
 
 /* Rail geometry (figma rail spec): 36x36 control boxes centered in the 56px
    rail (10px side padding), 12px vertical rhythm, 18px from the rail top to
-   the whale's box (24px to the 24-wide whale glyph itself). */
+   the mascot mark's box (24px to the 24-wide mark artwork itself). */
 .root.collapsed {
   padding: 0;
 }
@@ -119,6 +119,7 @@
    render stays static. */
 .railIn .iconButton,
 .railIn .newSession,
+.railIn .navigationArea,
 .railIn .panelList,
 .railIn .regionArea {
   animation: rail-in 150ms var(--ds-ease-in-out) backwards;
@@ -256,8 +257,36 @@
   height: 36px;
 }
 
-/* Rail logo swap: collapsed, the toggle rests as the whale mark (brand ink,
-   no hover circle) and hovering reveals the panel icon — the expand
+/* Product navigation seat: a fixed row above the workspace browser. Collapsed,
+   the same seat carries the rail's icon column, so it stays mounted while the
+   rest of the wide content is hidden. */
+.navigationArea {
+  flex: none;
+  min-width: 0;
+  margin-bottom: 10px;
+}
+
+.collapsed .content > .navigationArea,
+.fading .content > .navigationArea {
+  display: block;
+}
+
+.collapsed .navigationArea {
+  width: 36px;
+  margin: 0 auto 12px;
+}
+
+/* In the rail the seat is the second element of the aside's column. */
+.navigationRail > .navigationArea {
+  margin: 0;
+}
+
+.navigationArea:empty {
+  display: none;
+}
+
+/* Rail logo swap: collapsed, the toggle rests as the mascot mark (full-color
+   artwork, no hover circle) and hovering reveals the panel icon — the expand
    affordance (figma sidebar-hover flow). Expanded it is a plain panel icon. */
 .collapsed .toggle .panelIcon {
   display: none;

@@ -1,4 +1,4 @@
-# DeepSeek Harness 架构
+# Lingda Harness 架构
 
 [English](architecture.md) | 中文
 

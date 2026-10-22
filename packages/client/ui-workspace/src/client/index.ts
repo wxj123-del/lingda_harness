@@ -23,17 +23,22 @@ import type {} from '@deepseek-ai/dsh-client-ui-renderer/client'
 import type {} from '@deepseek-ai/dsh-client-ui-layout/client'
 // Type-only: pulls the Session root standard-hook merge.
 import type {} from '@deepseek-ai/dsh-client-ui-session/client'
-import type { WorkspaceBrowserInjected, WorkspacePickerInjected } from './contract/slots.ts'
+import type { MainPanelId } from '@deepseek-ai/dsh-client-ui-layout/client'
+import type {
+  WorkspaceBrowserInjected, WorkspaceFlowPageInjected, WorkspacePickerInjected,
+} from './contract/slots.ts'
 import { UiWorkspaceService } from './navigation.ts'
 import { createWorkspaceViewStore } from './stores.ts'
 import { WorkspaceBrowser } from './rows/WorkspaceBrowser.tsx'
+import { FlowPanelIcon, WorkspaceFlowPage } from './rows/WorkspaceFlowPage.tsx'
 import { WorkspacePicker } from './WorkspacePicker.tsx'
 import { en, zh, type WorkspaceKey } from './locales.ts'
 
 export type { UiWorkspace } from './navigation.ts'
 export type {
   DirectoryFlowOwnerProps, DirectoryFlowSlotName, DirectoryPickingHooks, DirectoryPickingInjected,
-  WorkspaceBrowserInjected, WorkspaceBrowserProps, WorkspacePickerInjected, WorkspacePickerProps,
+  WorkspaceBrowserInjected, WorkspaceBrowserProps, WorkspaceFlowPageInjected, WorkspaceFlowPageProps,
+  WorkspacePickerInjected, WorkspacePickerProps,
 } from './contract/slots.ts'
 export type { WorkspaceKey } from './locales.ts'
 
@@ -51,6 +56,9 @@ declare module '@deepseek-ai/dsh-client-ui-slots' {
 
 /** Dictionary namespace owned by this plugin. */
 const NS = 'workspace'
+
+/** Main-panel key of the flow page (also its sidebar panel-row id). */
+const FLOW_PANEL_ID = 'workspace-flow' as MainPanelId
 
 /**
  * Required services (cordis fiber inject). The target slots are declared by
@@ -96,14 +104,25 @@ export function apply(ctx: Context): void {
     subscribe: listener => ctx.on('connection/reset', listener),
   }
   const pickerFlowSource = flowSource('conversation.hero.workspace.directoryFlow')
+  // One viewing-store handle shared by the browser (writes the flow target)
+  // and the page (reads it): a page mounted in the main column must see the
+  // same instance the folder menu wrote to.
+  const viewStore = createWorkspaceViewStore()
   const openSession: WorkspaceBrowserInjected['open'] = (sessionId) => {
     uiWorkspace.openSession(sessionId)
+  }
+  // Selection only: the browser writes the target into the shared store first
+  // (through its PropsStore actions), so navigation never invents a second
+  // store instance the page would not read.
+  const openFlow: WorkspaceBrowserInjected['openFlow'] = () => {
+    ctx.layout.selectPanel(FLOW_PANEL_ID)
   }
   const browserInjected = (): WorkspaceBrowserInjected => ({
     // Explicit group actions keep their target; unscoped New Session inherits
     // the current Session Workspace before the recent-Workspace fallback.
     startSession: (workspaceId) => { uiWorkspace.startSession(workspaceId) },
     open: openSession,
+    openFlow,
     searchSessions,
     searchResultLimit: sessions.searchResultLimit,
     renameSession: async (sessionId, title) => {
@@ -133,17 +152,48 @@ export function apply(ctx: Context): void {
     createWorkspace: input => workspaces.create(input),
     hooks: { directoryFlow: pickerFlowSource },
   })
+  const flowInjected = (): WorkspaceFlowPageInjected => ({
+    open: openSession,
+    close: () => { ctx.layout.selectPanel(null) },
+  })
   // Each registration declares its directory-flow child in the same call;
   // slot injection follows both the owner and declaration HMR lifetimes.
+  // Browser and page share one store handle: the renderer keeps one root
+  // instance per handle, so both read and write the same viewing state.
   ctx.slots.inject('sidebar.workspaces', () => ctx.slots.register(
     {
       name: 'sidebar.workspaces',
       children: { 'sidebar.workspaces.directoryFlow': { kind: 'single', scope: 'root' } },
-      store: createWorkspaceViewStore(),
+      store: viewStore,
       inject: browserInjected,
       locale: NS,
     },
     WorkspaceBrowser,
+  ))
+  // The flow page occupies the layout's keyed main slot and, once that key is
+  // registered, adds its sidebar panel row so the page is reachable again
+  // after navigating away.
+  ctx.slots.inject('main', () => ctx.slots.register(
+    {
+      name: 'main',
+      key: FLOW_PANEL_ID,
+      store: viewStore,
+      inject: flowInjected,
+      locale: NS,
+    },
+    WorkspaceFlowPage,
+  ))
+  // The Flow page's entry rides the sidebar's product navigation row, which is
+  // visible in every sidebar state; the page itself stays a main-panel key.
+  ctx.slots.inject('sidebar.navigation.panels', () => ctx.slots.register(
+    {
+      name: 'sidebar.navigation.panels',
+      id: FLOW_PANEL_ID,
+      order: 30,
+      label: () => ctx.locale.bind(NS)('flow.page.label'),
+      locale: NS,
+    },
+    FlowPanelIcon,
   ))
   ctx.slots.inject('conversation.hero.workspace', () => ctx.slots.register(
     {

@@ -54,10 +54,13 @@ export const AssistantMarkdown = memo(function AssistantMarkdown({
   const last = blocks.length - 1
   // Tool-call heads render as tool rows in the chat view's grouping pass, so
   // a node that is only those heads (or empty) would paint an empty root
-  // between tool groups — skip the shell unless something visible remains.
+  // between tool groups — skip the shell unless something visible remains. A
+  // reasoning block counts only when it carries text, since the settled row
+  // declines an empty one.
   const hasVisible = streaming
     || interrupted === true
-    || blocks.some(block => block.kind !== 'tool-call')
+    || blocks.some(block => block.kind !== 'tool-call'
+      && (block.kind !== 'reasoning' || block.text.trim() !== ''))
   if (!hasVisible) return null
   const rendered: ReactNode[] = []
   for (let i = 0; i < blocks.length; i++) {
@@ -76,14 +79,29 @@ export const AssistantMarkdown = memo(function AssistantMarkdown({
           />,
         )
         break
-      // Reasoning is trace-only: the thinking prose belongs to the Token trace
-      // detail's output tab, so the transcript never paints it. A live step
-      // still shows a content-free row so a long think cannot look stalled.
-      case 'reasoning':
-        if (streaming && i === last) {
-          rendered.push(<ReasoningRow key={i} t={t} />)
+      // Reasoning renders as one Think row per run of consecutive reasoning
+      // blocks: the live tail sweeps while the step streams, and the settled
+      // row discloses the text so a reader can check how a conclusion was
+      // reached without opening the Token trace.
+      case 'reasoning': {
+        const start = i
+        const group: string[] = [block.text]
+        while (i + 1 < blocks.length) {
+          const next = blocks[i + 1]
+          if (next === undefined || next.kind !== 'reasoning') break
+          group.push(next.text)
+          i += 1
         }
+        rendered.push(
+          <ReasoningRow
+            key={start}
+            t={t}
+            text={group.join('')}
+            running={streaming && i === last}
+          />,
+        )
         break
+      }
       case 'image': {
         // Consecutive image blocks share one gallery so several images tile
         // into rows instead of each opening a one-image group of its own.

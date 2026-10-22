@@ -8,6 +8,11 @@
     'Hiragino Sans GB', 'Microsoft YaHei', 'Helvetica Neue', Helvetica, Arial, sans-serif;
   --ds-font-family-code: 'SF Mono', 'JetBrains Mono', 'Fira Code', Consolas,
     'Liberation Mono', Menlo, Courier, 'PingFang SC', 'Microsoft YaHei';
+  /* Plain stacks under the names component sheets already read. Without these
+     the declarations resolve to nothing and the property falls back to the UA
+     default, so preview and status text quietly leave the product type ramp. */
+  --dsw-font: var(--dsw-font-family);
+  --dsw-font-mono: var(--ds-font-family-code);
   --ds-ease-in-out: cubic-bezier(0.4, 0, 0.2, 1);
   --ds-transition-duration: 0.2s;
   --ds-transition-duration-fast: 0.1s;

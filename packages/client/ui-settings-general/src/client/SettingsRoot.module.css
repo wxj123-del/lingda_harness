@@ -89,7 +89,10 @@
   max-width: calc(100vw - 48px);
   border-radius: 32px;
   overflow: hidden;
-  background: var(--dsw-alias-bg-layer-2);
+  /* Skin-independent: the panel carries its own copy over whatever the page
+     paints, so a translucent page (Liquid Glass and kin) must not bleed
+     through it. See --dsw-alias-bg-dialog. */
+  background: var(--dsw-alias-bg-dialog);
   box-shadow: var(--dsw-elevation-prominent);
   /* Elevated surface: the scrollbar thumb takes the l2 elevation tokens.
      Declared on the panel rather than the scrolling `.options` child so the
@@ -100,14 +103,15 @@
   --dsh-scrollbar-thumb-hover: var(--dsw-alias-scrollbar-hover-l2);
 }
 
-/* Nav rail (figma .Setting-nav 501:29958): 188 wide, pad (12,22,12,0),
-   gap 18, no own fill — the panel white shows through. */
+/* Nav rail (figma .Setting-nav 501:29958): 200 wide — the figma 188 could not
+   hold the longest shipped label ("Archived sessions") without an ellipsis at
+   14px. pad (12,22,12,0), gap 18, no own fill — the panel fill shows through. */
 .nav {
   flex: none;
   display: flex;
   flex-direction: column;
   gap: 18px;
-  width: 188px;
+  width: 200px;
   padding: 22px 12px 0;
   box-sizing: border-box;
 }

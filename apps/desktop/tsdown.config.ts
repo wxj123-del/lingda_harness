@@ -12,7 +12,7 @@ export default defineConfig([
     clean: false,
     deps: { neverBundle: ['electron'] },
   },
-  ...(['preload', 'preload-app'] as const).map(name => ({
+  ...(['preload', 'preload-app', 'preload-pet'] as const).map(name => ({
     // Sandboxed Electron preloads run as CommonJS even though the application package is ESM.
     entry: { [name]: `lib/types/${name}.js` },
     outDir: 'lib',

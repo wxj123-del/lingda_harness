@@ -7,7 +7,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/deepseek-ai/deepseek-harness.git",
+    "url": "git+https://gitcode.com/XJ-Cyber/lingda-harness.git",
     "directory": "packages/client/ui-workspace"
   },
   "type": "module",
@@ -67,6 +67,9 @@
     "@deepseek-ai/dsh-client-ui-slots": "workspace:^",
     "@deepseek-ai/dsh-schedule": "workspace:^",
     "@deepseek-ai/dsh-typert-protocol": "workspace:^",
+    "@deepseek-ai/dsh-tool-todo": "workspace:^",
+    "@deepseek-ai/dsh-session-turn-outline": "workspace:^",
+    "@deepseek-ai/dsh-session-stats": "workspace:^",
     "@deepseek-ai/dsh-session": "workspace:^",
     "@deepseek-ai/dsh-util-workspace-path": "workspace:^",
     "@types/react": "~18.3.1",

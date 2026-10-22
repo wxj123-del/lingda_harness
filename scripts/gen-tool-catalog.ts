@@ -64,6 +64,7 @@ import * as StagehandBrowserTools from '@deepseek-ai/dsh-experimental-browser-us
 import type TeamService from '@deepseek-ai/dsh-experimental-agent-team'
 import * as ToolTeam from '@deepseek-ai/dsh-experimental-tool-agent-team'
 import * as ToolTodo from '@deepseek-ai/dsh-tool-todo'
+import * as TaskState from '@deepseek-ai/dsh-task-state'
 import * as ToolDiscovery from '@deepseek-ai/dsh-tool-discovery'
 import McpResources from '@deepseek-ai/dsh-mcp-resources'
 import * as ToolSubagent from '@deepseek-ai/dsh-tool-subagent'
@@ -628,6 +629,23 @@ const TOOL_PACKAGES: ToolPackage[] = [
     },
     note:
       'todo_write is session-owned state; UIs render the latest todo/write event as a checklist. `allowParallelInProgress` is required with no default, so the catalog states its choice: `true`, whose description invites several `in_progress` items. A deployment choosing `false` receives the same tool with a description asking for exactly one active task.',
+  },
+  {
+    pkg: '@deepseek-ai/dsh-task-state',
+    dir: 'task-state',
+    source: 'packages/todo/task-state/src/index.ts',
+    requires: ['ctx.tools', 'ctx.sessionProjections', 'ctx.systemPrompt', 'owning Agent session'],
+    writes: ['tool/call', 'task/state', 'tool/result'],
+    async mount(ctx) {
+      await mountCatalogChildScope(ctx, (child) => {
+        child.plugin(TaskState, { injectTaskCard: true, recordCommandEvidence: true })
+      }, undefined, ['tools', 'systemPrompt', 'sessionProjections'])
+    },
+    scope: ctx => catalogChildScopes.get(ctx) as Agent,
+    note:
+      'One durable task per session: the snapshot is last-write-wins on task/state, and marking it '
+      + 'succeeded is rejected while any acceptance criterion lacks passing evidence. The per-turn '
+      + 'recitation card is a separate user message, not part of this schema.',
   },
   {
     pkg: '@deepseek-ai/dsh-tool-workflow',

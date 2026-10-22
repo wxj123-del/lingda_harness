@@ -1,7 +1,7 @@
 /** Target-neutral Conversation slot declarations and composed component props. */
 import type { ReactNode, RefObject } from 'react'
 import type { FileAttachmentRef, ImageAttachmentRef } from '@deepseek-ai/dsh-attachment'
-import type { SessionSnapshot } from '@deepseek-ai/dsh-api-session-controller/client'
+import type { ISession, SessionSnapshot } from '@deepseek-ai/dsh-api-session-controller/client'
 import type { FileUploadReceiptId } from '@deepseek-ai/dsh-client-file-upload/client'
 import type { WorkspaceSnapshot } from '@deepseek-ai/dsh-api-workspace-controller/client'
 import type {
@@ -167,8 +167,6 @@ declare module '@deepseek-ai/dsh-client-ui-slots' {
     'conversation.input.overlay': { kind: 'list'; scope: 'session' }
     /** Ambient entries below the composer card. */
     'conversation.composer.dock': { kind: 'list'; scope: 'session' }
-    /** Compact controls at the left of the composer tool row. */
-    'conversation.input.left': { kind: 'list'; scope: 'session' }
     /** Compact controls before the composer submit action. */
     'conversation.input.right': { kind: 'list'; scope: 'session' }
     /** Resident composer body, including the no-Session inert state. */
@@ -273,7 +271,15 @@ export interface ConversationInjected {
 /** Business callbacks injected into the strict Session body. */
 export interface ConversationSessionInjected {
   /** Package-owned View roster source bound only for the Conversation body. */
-  readonly hooks: { readonly conversationViews: ObservableSnapshot<readonly ViewTab[]> }
+  readonly hooks: {
+    readonly conversationViews: ObservableSnapshot<readonly ViewTab[]>
+    /**
+     * Whether the View switcher renders. The body reads it so that hiding the
+     * switcher also returns to Chat: without it a Session parked on another
+     * View would lose its only control for getting back.
+     */
+    readonly showViewTabs: ObservableSnapshot<boolean>
+  }
   /** Bind input draft persistence to the Session-owned store instance. */
   bindDraftMirror: (write: (text: string) => void) => () => void
   /** Select and activate one View while addressing an opaque focus request to it. */
@@ -283,7 +289,11 @@ export interface ConversationSessionInjected {
 /** Business callbacks injected into the strict Session header. */
 export interface ConversationSessionHeaderInjected {
   /** Package-owned View roster source bound only for the Conversation header. */
-  readonly hooks: { readonly conversationViews: ObservableSnapshot<readonly ViewTab[]> }
+  readonly hooks: {
+    readonly conversationViews: ObservableSnapshot<readonly ViewTab[]>
+    /** Whether the View switcher renders; hidden by default. */
+    readonly showViewTabs: ObservableSnapshot<boolean>
+  }
   /** Select a Session through the Session Controller. */
   open: (sessionId: SessionId) => void
   /** Select and activate one registered Conversation View. */
@@ -317,6 +327,8 @@ export interface ComposerBarInjected {
   retryFileUpload: ((id: DraftAttachmentId) => void) | undefined
   toggleCommandMenu: ((selection: EditSelection) => void) | undefined
   stop: (() => void) | undefined
+  /** Ask the selected Session model to rewrite a draft without sending it. */
+  optimizePrompt: ((...args: Parameters<ISession['optimizePrompt']>) => ReturnType<ISession['optimizePrompt']>) | undefined
   hooks: {
     /**
      * Live busy-state submission preference: the delivery mode plain Enter

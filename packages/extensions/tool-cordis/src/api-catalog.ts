@@ -557,6 +557,25 @@ export const SERVICE_API: readonly ServiceApiEntry[] = [
     ],
   },
   {
+    key: 'authoringAssistant',
+    summary: 'Remote drafting service exposed as `ctx.authoringAssistant`; every turn is one auxiliary model request and no Session event.',
+    description: 'Remote drafting service exposed as `ctx.authoringAssistant`; every turn is one auxiliary model request and no Session event.',
+    methods: [
+      {
+        signature: '@Remote(\'generateWorkflow\') async generateWorkflow(request: WorkflowGenerateRequest, signal: AbortSignal): Promise<WorkflowGenerateValue>',
+        description: 'Draft or revise a visual workflow from one chat turn.',
+        parameters: [{ name: 'request', description: 'user instruction, prior turns, and the draft being revised.' }, { name: 'signal', description: 'cancellation for the model call.' }],
+        returns: 'the assistant reply and the accepted draft, or a null draft when the model proposed nothing usable.',
+      },
+      {
+        signature: '@Remote(\'generateKnowledge\') async generateKnowledge(request: KnowledgeGenerateRequest, signal: AbortSignal): Promise<KnowledgeGenerateValue>',
+        description: 'Draft or revise a knowledge base from one chat turn, optionally fetching user-supplied URLs as source material.',
+        parameters: [{ name: 'request', description: 'user instruction, prior turns, the draft being revised, and source URLs.' }, { name: 'signal', description: 'cancellation for fetching and the model call.' }],
+        returns: 'the assistant reply, the accepted draft, and per-URL fetch outcomes.',
+      },
+    ],
+  },
+  {
     key: 'authorization',
     summary: '`ctx.authorization`: a registry of credential-obtaining flows, one attempt at a time per key.',
     description: '`ctx.authorization`: a registry of credential-obtaining flows, one attempt at a time per key.',
@@ -732,6 +751,12 @@ export const SERVICE_API: readonly ServiceApiEntry[] = [
         returns: 'the effect disposer for this exact registration.',
       },
     ],
+  },
+  {
+    key: 'contextRouter',
+    summary: 'Runtime marker consumed by policy layers that must avoid a second history trim.',
+    description: 'Runtime marker consumed by policy layers that must avoid a second history trim.',
+    methods: [],
   },
   {
     key: 'credentials',
@@ -1017,6 +1042,49 @@ export const SERVICE_API: readonly ServiceApiEntry[] = [
         description: 'Atomically edit literal text. When supplied, the version guard is checked before matching so stale content reports `FS_STALE_VERSION`; omission edits the current content without a freshness precondition.',
         parameters: [{ name: 'target', description: 'the resolved target to edit.' }, { name: 'edit', description: 'the literal search/replace request.' }, { name: 'expected', description: 'the version guard; omit for an unconditional edit.' }, { name: 'signal', description: 'aborts before atomic publication takes effect.' }, { name: 'sandboxPolicy', description: 'the per-call mode and workspace root this edit runs under; a sandboxing backend fences the edit by it, the bare backend ignores it. Omit to leave the backend its own default.' }],
         returns: 'the outcome, including the version the edit produced.',
+      },
+    ],
+  },
+  {
+    key: 'gitWorkspace',
+    summary: 'Captures Git metadata independently from Agent modes so the evidence is available to presets, CLI sessions, and the Web trajectory alike.',
+    description: 'Captures Git metadata independently from Agent modes so the evidence is available to presets, CLI sessions, and the Web trajectory alike. Checkout operations are explicit, path-checked, and fast-forward only for existing repositories.',
+    methods: [
+      {
+        signature: '@Remote(\'check\') async check(): Promise<RepositoryUpdateStatus>',
+        description: 'Check the canonical GitCode source without changing tracked files.',
+        parameters: [],
+        returns: 'The current remote and checkout status.',
+      },
+      {
+        signature: '@Remote(\'clone\') async clone(request: RepositoryCloneRequest): Promise<RepositoryCloneResult>',
+        description: 'Clone a remote into a new folder, or fast-forward the matching checkout.',
+        parameters: [{ name: 'request', description: 'Remote URL and destination checkout options.' }],
+        returns: 'The resulting checkout status and path.',
+      },
+      {
+        signature: '@Remote(\'branches\') async branches(url: string): Promise<RepositoryBranchesResult>',
+        description: 'Read branch names advertised by a remote without changing local files.',
+        parameters: [{ name: 'url', description: 'Remote Git URL to query.' }],
+        returns: 'The advertised branch names.',
+      },
+      {
+        signature: '@Remote(\'inspect\') async inspect(repositoryRoot: string): Promise<RepositoryChangeSnapshot>',
+        description: 'Read the current checkout, worktree status, and bounded unified diff.',
+        parameters: [{ name: 'repositoryRoot', description: 'Repository directory to inspect.' }],
+        returns: 'A bounded checkout and change snapshot.',
+      },
+      {
+        signature: '@Remote(\'push\') async push(request: RepositoryPushRequest): Promise<RepositoryPushResult>',
+        description: 'Commit explicit local changes and push the current branch to origin.',
+        parameters: [{ name: 'request', description: 'Commit message, path selection, and push options.' }],
+        returns: 'The pushed commit and remote result.',
+      },
+      {
+        signature: '@Remote(\'update\') async update(): Promise<RepositoryUpdateResult>',
+        description: 'Fast-forward the checkout, install locked dependencies, build, and restart the Host.',
+        parameters: [],
+        returns: 'The update result and whether a restart was scheduled.',
       },
     ],
   },
@@ -1517,6 +1585,12 @@ export const SERVICE_API: readonly ServiceApiEntry[] = [
         returns: 'The effective policy.',
       },
       {
+        signature: 'contextBudget(session: Session): number | undefined',
+        description: 'Return the mode context ceiling without applying it to legacy preset sessions.',
+        parameters: [{ name: 'session', description: 'Session whose active mode supplies the ceiling.' }],
+        returns: 'The token ceiling, or undefined for unmanaged sessions.',
+      },
+      {
         signature: 'allowsTool(session: Session, name: string): boolean',
         description: 'Answer the capability question used by late tool-discovery adapters.\n\nSchema filtering happens in this service too, but discovery is allowed to run after another prompt listener and could otherwise re-add a hidden schema. Keeping this small public predicate lets those adapters apply the same mode ceiling without depending on the concrete service class.',
         parameters: [{ name: 'session', description: 'Session whose active mode is checked.' }, { name: 'name', description: 'Tool name to authorize.' }],
@@ -1526,6 +1600,30 @@ export const SERVICE_API: readonly ServiceApiEntry[] = [
         signature: 'set(agent: Agent, mode: AgentMode): void',
         description: 'Record a durable mode switch and apply its permissions.',
         parameters: [{ name: 'agent', description: 'Agent whose session records the switch.' }, { name: 'mode', description: 'Mode applied to future requests.' }],
+      },
+    ],
+  },
+  {
+    key: 'phoneAccess',
+    summary: 'Owns the single tunnel of one process and answers the card\'s Remote calls.',
+    description: 'Owns the single tunnel of one process and answers the card\'s Remote calls. A second generate stops the tunnel the first one opened before starting another, so a process never holds two.',
+    methods: [
+      {
+        signature: 'async generate(): Promise<PhoneAccessView>',
+        description: 'Open one tunnel to this process\'s Web port and report the scan URL.',
+        parameters: [],
+        returns: 'the card\'s view: the QR payload and the restart command, or a reason.',
+      },
+      {
+        signature: 'current(): PhoneAccessView',
+        description: 'Report the tunnel this process currently holds.',
+        parameters: [],
+        returns: 'the card\'s view, empty when no tunnel is up.',
+      },
+      {
+        signature: 'async stopTunnel(): Promise<void>',
+        description: 'Stop the live tunnel and forget it.',
+        parameters: [],
       },
     ],
   },
@@ -1626,6 +1724,30 @@ export const SERVICE_API: readonly ServiceApiEntry[] = [
     description: 'Host service backing the generated `ctx.remote.session` namespace.',
     methods: [
       {
+        signature: '@Remote(\'workflowStart\') async workflowStart(request: WorkflowRemoteStartRequest): Promise<WorkflowRemoteStartValue>',
+        description: 'Start one editor-owned workflow without routing through a model prompt.',
+        parameters: [{ name: 'request', description: 'Validated workflow script, metadata, and session target.' }],
+        returns: 'The newly allocated run id and start timestamp.',
+      },
+      {
+        signature: '@Remote(\'workflowCancel\') async workflowCancel(request: WorkflowRemoteRunRequest): Promise<{ runId: WorkflowRunId; status: \'cancelling\' }>',
+        description: 'Request cancellation of one editor-owned workflow run.',
+        parameters: [{ name: 'request', description: 'Session and run identity to cancel.' }],
+        returns: 'The run identity and its cancelling status.',
+      },
+      {
+        signature: '@Remote(\'workflowStatus\') async workflowStatus(request: WorkflowRemoteRunRequest): Promise<WorkflowRemoteRunView>',
+        description: 'Read one redacted workflow execution state.',
+        parameters: [{ name: 'request', description: 'Session and run identity to inspect.' }],
+        returns: 'The live or persisted run view.',
+      },
+      {
+        signature: '@Remote(\'workflowList\') async workflowList(sessionId: SessionId, request: WorkflowRemoteRunsRequest): Promise<WorkflowRemoteRunListValue>',
+        description: 'List recent workflow runs for the current editor/session.',
+        parameters: [{ name: 'sessionId', description: 'Session whose runs are listed.' }, { name: 'request', description: 'Optional workflow filter and result limit.' }],
+        returns: 'Recent live and persisted run views.',
+      },
+      {
         signature: 'resolveAgent(sessionId: SessionId): Promise<ApiSessionAgentResult>',
         description: 'Resolve or resume one ordinary Session for another Host API domain.',
         parameters: [{ name: 'sessionId', description: 'Session identity whose Agent owns the operation.' }],
@@ -1660,6 +1782,12 @@ export const SERVICE_API: readonly ServiceApiEntry[] = [
         description: 'Select one Session-local model after explicitly resuming the Session.',
         parameters: [{ name: 'request', description: 'Session identity and requested model selection.' }],
         returns: 'the normalized selection installed for the Session.',
+      },
+      {
+        signature: '@Remote(\'optimizePrompt\') optimizePrompt( request: SessionOptimizePromptRequest, signal: AbortSignal, ): Promise<SessionOptimizePromptValue>',
+        description: 'Rewrite a composer draft with the Session\'s selected model.',
+        parameters: [{ name: 'request', description: 'Session identity, draft text, and optimization posture.' }, { name: 'signal', description: 'cancellation for the auxiliary model call.' }],
+        returns: 'the optimized prompt without changing Session history.',
       },
       {
         signature: '@Remote(\'modelCatalog\') modelCatalog(): Promise<ModelCatalog>',
@@ -3151,6 +3279,43 @@ export const SERVICE_API: readonly ServiceApiEntry[] = [
     ],
   },
   {
+    key: 'workflowSchedules',
+    summary: 'Workflow Schedule Remote and Host dispatcher registry.',
+    description: 'Workflow Schedule Remote and Host dispatcher registry.',
+    methods: [
+      {
+        signature: 'registerDispatcher(dispatcher: WorkflowScheduleDispatcher): () => void',
+        description: 'Register the sole workflow starter used by due Schedule records.',
+        parameters: [{ name: 'dispatcher', description: 'Callback that starts one due workflow.' }],
+        returns: 'A disposer that releases the registration.',
+      },
+      {
+        signature: 'dispatch(agent: Agent, target: WorkflowScheduleTarget, occurrenceAt: string): Promise<void>',
+        description: 'Start one due immutable workflow program through the registered execution owner.',
+        parameters: [{ name: 'agent', description: 'Live root Agent that owns the schedule.' }, { name: 'target', description: 'Published workflow target to execute.' }, { name: 'occurrenceAt', description: 'ISO timestamp assigned to this occurrence.' }],
+        returns: 'The dispatch promise.',
+      },
+      {
+        signature: '@Remote(\'create\') async create(agent: Agent, request: WorkflowScheduleCreateRequest): Promise<WorkflowScheduleRecord>',
+        description: 'Create one one-shot or fixed-rate trigger for an immutable published workflow.',
+        parameters: [{ name: 'agent', description: 'Live root Agent that owns the schedule.' }, { name: 'request', description: 'Schedule timing and published workflow details.' }],
+        returns: 'The durable schedule record.',
+      },
+      {
+        signature: '@Remote(\'list\') async list(agent: Agent, workflowId?: string): Promise<WorkflowScheduleRecord[]>',
+        description: 'List active workflow triggers for the exact Session, optionally filtered by workflow id.',
+        parameters: [{ name: 'agent', description: 'Live root Agent whose Session is queried.' }, { name: 'workflowId', description: 'Optional published workflow identifier filter.' }],
+        returns: 'Active workflow schedule records.',
+      },
+      {
+        signature: '@Remote(\'delete\') async delete(agent: Agent, id: string): Promise<{ readonly id: string; readonly deleted: boolean }>',
+        description: 'Delete one active workflow trigger by its exact Session-local id.',
+        parameters: [{ name: 'agent', description: 'Live root Agent whose Session is changed.' }, { name: 'id', description: 'Session-local schedule identifier.' }],
+        returns: 'The identifier and whether a record was deleted.',
+      },
+    ],
+  },
+  {
     key: 'workspaceController',
     summary: 'Host service backing the generated `ctx.remote.workspace` namespace.',
     description: 'Host service backing the generated `ctx.remote.workspace` namespace.',
@@ -3407,7 +3572,7 @@ export const EVENT_API: readonly EventApiEntry[] = [
     signature: '\'agent/request-context\'(this: Scoped<Agent>, payload: { agent: Agent; turn: number; step: number; messages: Message[]; signal: AbortSignal }, next: () => Promise<Message[]>): Promise<Message[]>',
     summary: 'Bound the model-visible message context immediately before a request is constructed.',
     description: 'Bound the model-visible message context immediately before a request is constructed. Durable session history is never deleted; listeners only choose the request snapshot and may clip oversized tool results.',
-    parameters: [{ name: 'payload', description: '.signal - the current turn\'s cancellation signal.' }],
+    parameters: [{ name: 'payload', description: '.signal - the current turn\'s cancellation signal. Scope-filtered dispatch (`@deepseek-ai/dsh-scope`): agent-scoped listeners receive only that agent.' }],
   },
   {
     name: 'agent/request-error',
@@ -3634,6 +3799,14 @@ export const EVENT_API: readonly EventApiEntry[] = [
     parameters: [],
   },
   {
+    name: 'llm/request-ready',
+    mode: 'parallel',
+    signature: '\'llm/request-ready\'(this: LlmRuntime, options: GenerateOptions, projection: { files: boolean images: boolean }): void | Promise<void>',
+    summary: 'Awaited after provider-neutral file/image projection and immediately before the adapter receives the request.',
+    description: 'Awaited after provider-neutral file/image projection and immediately before the adapter receives the request. Observers may audit the exact harness payload but must not mutate it. Awaiting this boundary lets durability policies persist a final request audit before dispatch.',
+    parameters: [{ name: 'options', description: 'The projected provider-neutral generation request.' }, { name: 'projection', description: 'Whether file and image blocks were projected.' }],
+  },
+  {
     name: 'llm/stream',
     mode: 'waterfall',
     signature: '\'llm/stream\'(this: LlmRuntime, options: GenerateOptions, next: () => AsyncIterable<StreamChunk>): AsyncIterable<StreamChunk>',
@@ -3648,6 +3821,22 @@ export const EVENT_API: readonly EventApiEntry[] = [
     summary: 'The selectable process catalog changed.',
     description: 'The selectable process catalog changed. Payload-free by design: consumers subscribe first, then re-read the complete catalog.',
     parameters: [],
+  },
+  {
+    name: 'schedule/workflow-dispatcher-ready',
+    mode: 'emit',
+    signature: '\'schedule/workflow-dispatcher-ready\': () => void',
+    summary: 'Requests recomputation after the workflow dispatcher becomes available.',
+    description: 'Requests recomputation after the workflow dispatcher becomes available.',
+    parameters: [],
+  },
+  {
+    name: 'schedule/workflow-refresh',
+    mode: 'emit',
+    signature: '\'schedule/workflow-refresh\': (agent: Agent) => void',
+    summary: 'Requests recomputation after a workflow Schedule mutation.',
+    description: 'Requests recomputation after a workflow Schedule mutation.',
+    parameters: [{ name: 'agent', description: 'Exact live owner whose runtime must refold.' }],
   },
   {
     name: 'session-telemetry/record',
@@ -3829,49 +4018,65 @@ export const EVENT_API: readonly EventApiEntry[] = [
     name: 'workflow/agent-end',
     mode: 'emit',
     signature: '\'workflow/agent-end\'(info: WorkflowRunInfo, agent: WorkflowAgentEndInfo): void',
-    summary: 'One `agent()` call settled (clean result, child failure, or run cancellation).',
-    description: 'One `agent()` call settled (clean result, child failure, or run cancellation). Paired with Events[\'workflow/agent-start\'] by `agent.seq`, exactly once per started call on every stop path — on an engine termination path the end is engine-synthesized with outcome `\'cancelled\'`.',
-    parameters: [{ name: 'info', description: 'the run\'s identity snapshot.' }, { name: 'agent', description: 'the call identity plus its outcome.' }],
+    summary: 'One child Agent run settled.',
+    description: 'One child Agent run settled.',
+    parameters: [{ name: 'info', description: 'The workflow run identity snapshot.' }, { name: 'agent', description: 'The child call identity and outcome.' }],
   },
   {
     name: 'workflow/agent-start',
     mode: 'emit',
     signature: '\'workflow/agent-start\'(info: WorkflowRunInfo, agent: WorkflowAgentInfo): void',
-    summary: 'One `agent()` call established a published child run.',
-    description: 'One `agent()` call established a published child run. Paired with Events[\'workflow/agent-end\'] by `agent.seq`. A call that never receives a published run from the provider emits neither event in this pair.',
-    parameters: [{ name: 'info', description: 'the run\'s identity snapshot.' }, { name: 'agent', description: 'the call\'s sequence number, label, phase, and child id.' }],
+    summary: 'One child Agent run started.',
+    description: 'One child Agent run started.',
+    parameters: [{ name: 'info', description: 'The workflow run identity snapshot.' }, { name: 'agent', description: 'The child call identity.' }],
   },
   {
     name: 'workflow/end',
     mode: 'emit',
     signature: '\'workflow/end\'(info: WorkflowRunInfo, result: WorkflowResultInfo): void',
-    summary: 'A workflow run settled (any stop reason).',
-    description: 'A workflow run settled (any stop reason). Fired when WorkflowRun.result resolves. Paired with Events[\'workflow/start\'].',
-    parameters: [{ name: 'info', description: 'the run\'s identity snapshot.' }, { name: 'result', description: 'the outcome data (stop reason, error, agent count) — deliberately WITHOUT the result value (see {@link WorkflowResultInfo}).' }],
+    summary: 'A workflow run settled.',
+    description: 'A workflow run settled.',
+    parameters: [{ name: 'info', description: 'The workflow run identity snapshot.' }, { name: 'result', description: 'The result metadata without the mutable result value.' }],
   },
   {
     name: 'workflow/log',
     mode: 'emit',
     signature: '\'workflow/log\'(info: WorkflowRunInfo, message: string): void',
-    summary: 'The script emitted a narration line (a `log(message)` call).',
-    description: 'The script emitted a narration line (a `log(message)` call).',
-    parameters: [{ name: 'info', description: 'the run\'s identity snapshot.' }, { name: 'message', description: 'the logged message, verbatim.' }],
+    summary: 'The script emitted one narration line.',
+    description: 'The script emitted one narration line.',
+    parameters: [{ name: 'info', description: 'The run identity snapshot.' }, { name: 'message', description: 'The emitted text.' }],
+  },
+  {
+    name: 'workflow/node-end',
+    mode: 'emit',
+    signature: '\'workflow/node-end\'(info: WorkflowRunInfo, node: WorkflowNodeEndInfo): void',
+    summary: 'A visual workflow node reached a terminal state.',
+    description: 'A visual workflow node reached a terminal state.',
+    parameters: [{ name: 'info', description: 'The workflow run identity snapshot.' }, { name: 'node', description: 'The node terminal observation.' }],
+  },
+  {
+    name: 'workflow/node-start',
+    mode: 'emit',
+    signature: '\'workflow/node-start\'(info: WorkflowRunInfo, node: WorkflowNodeStartInfo): void',
+    summary: 'A visual workflow node began execution.',
+    description: 'A visual workflow node began execution.',
+    parameters: [{ name: 'info', description: 'The workflow run identity snapshot.' }, { name: 'node', description: 'The node start observation.' }],
   },
   {
     name: 'workflow/phase',
     mode: 'emit',
     signature: '\'workflow/phase\'(info: WorkflowRunInfo, title: string): void',
-    summary: 'The script entered a phase (a `phase(title)` call) — progress grouping for observers; no execution semantics.',
-    description: 'The script entered a phase (a `phase(title)` call) — progress grouping for observers; no execution semantics.',
-    parameters: [{ name: 'info', description: 'the run\'s identity snapshot.' }, { name: 'title', description: 'the phase title, verbatim.' }],
+    summary: 'The script entered a progress phase.',
+    description: 'The script entered a progress phase.',
+    parameters: [{ name: 'info', description: 'The run identity snapshot.' }, { name: 'title', description: 'The exact phase title.' }],
   },
   {
     name: 'workflow/start',
     mode: 'emit',
     signature: '\'workflow/start\'(info: WorkflowRunInfo): void',
-    summary: 'A workflow run started — the script\'s meta block validated, the body about to execute.',
-    description: 'A workflow run started — the script\'s meta block validated, the body about to execute. Paired with Events[\'workflow/end\'].',
-    parameters: [{ name: 'info', description: 'the run\'s identity snapshot (id + meta).' }],
+    summary: 'A workflow run started; paired with Events[\'workflow/end\'].',
+    description: 'A workflow run started; paired with Events[\'workflow/end\'].',
+    parameters: [{ name: 'info', description: 'The run identity snapshot.' }],
   },
 ]
 
@@ -3884,6 +4089,10 @@ export const TYPE_API: readonly TypeApiEntry[] = [
   {
     name: 'AdmittedPromptContentPart',
     declaration: 'export type AdmittedPromptContentPart = {\n    readonly type: \'text\';\n    readonly text: string;\n} | {\n    readonly type: \'image\';\n    readonly attachment: ImageAttachmentRef;\n} | {\n    readonly type: \'file\';\n    readonly attachment: FileAttachmentRef;\n};',
+  },
+  {
+    name: 'AfterScheduleRecord',
+    declaration: 'export interface AfterScheduleRecord extends ScheduleRecordFields {\n    readonly kind: \'after\';\n    readonly afterSeconds: number;\n}',
   },
   {
     name: 'Agent',
@@ -4038,6 +4247,10 @@ export const TYPE_API: readonly TypeApiEntry[] = [
     declaration: 'export type AssistantStreamRecord = {\n    readonly type: \'text-chunks\';\n    readonly time0: number;\n    readonly index: number;\n    readonly dt: readonly number[];\n    readonly texts: readonly string[];\n} | {\n    readonly type: \'reasoning-chunks\';\n    readonly time0: number;\n    readonly index: number;\n    readonly dt: readonly number[];\n    readonly texts: readonly string[];\n} | {\n    readonly type: \'tool-call-chunks\';\n    readonly time0: number;\n    readonly index: number;\n    readonly dt: readonly number[];\n    readonly id: ToolCallId;\n    readonly name?: string;\n    readonly args: readonly string[];\n} | {\n    readonly type: \'chunk\';\n    readonly time: number;\n    readonly chunk: StreamChunk;\n};',
   },
   {
+    name: 'AtScheduleRecord',
+    declaration: 'export interface AtScheduleRecord extends ScheduleRecordFields {\n    readonly kind: \'at\';\n}',
+  },
+  {
     name: 'AttachmentAdmissionPart',
     declaration: 'export type AttachmentAdmissionPart = PromptContentPart | {\n    readonly type: \'file\';\n    readonly attachment: FileAttachmentRef;\n};',
   },
@@ -4052,6 +4265,14 @@ export const TYPE_API: readonly TypeApiEntry[] = [
   {
     name: 'AttachmentId',
     declaration: 'export type AttachmentId = Branded<\'AttachmentId\'>;',
+  },
+  {
+    name: 'AuthoringChatTurn',
+    declaration: 'export interface AuthoringChatTurn {\n    role: \'user\' | \'assistant\';\n    text: string;\n}',
+  },
+  {
+    name: 'AuthoringNodeKind',
+    declaration: 'export type AuthoringNodeKind = typeof AUTHORING_NODE_KINDS[number];',
   },
   {
     name: 'AuthorizationEntry',
@@ -4454,6 +4675,18 @@ export const TYPE_API: readonly TypeApiEntry[] = [
     declaration: 'export interface DomainTableSpec<K extends string = string, V = unknown> {\n    readonly valueSchema: ZodType<V>;\n    readonly __key?: K;\n}',
   },
   {
+    name: 'DraftKnowledgeDocument',
+    declaration: 'export interface DraftKnowledgeDocument {\n    title: string;\n    content: string;\n    source?: string;\n}',
+  },
+  {
+    name: 'DraftWorkflowEdge',
+    declaration: 'export interface DraftWorkflowEdge {\n    source: number;\n    target: number;\n    sourceHandle?: \'true\' | \'false\';\n}',
+  },
+  {
+    name: 'DraftWorkflowNode',
+    declaration: 'export interface DraftWorkflowNode {\n    kind: AuthoringNodeKind;\n    title: string;\n    instructions: string;\n    config?: {\n        model?: string;\n        tool?: string;\n        condition?: string;\n        output?: string;\n        variable?: string;\n        knowledge?: string;\n        format?: string;\n        language?: string;\n        url?: string;\n        method?: string;\n        template?: string;\n        retries?: number;\n    };\n}',
+  },
+  {
     name: 'DshEnvironment',
     declaration: 'export type DshEnvironment = Readonly<Record<DshEnvironmentKey, string>>;',
   },
@@ -4496,6 +4729,10 @@ export const TYPE_API: readonly TypeApiEntry[] = [
   {
     name: 'EpochHeader',
     declaration: 'export interface EpochHeader {\n    config: LlmCallConfig;\n    adapterDefaults?: LlmCallConfigAdapterDefaults;\n    tools?: ToolSchema[];\n}',
+  },
+  {
+    name: 'EveryScheduleRecord',
+    declaration: 'export interface EveryScheduleRecord extends ScheduleRecordFields {\n    readonly kind: \'every\';\n    readonly everySeconds: number;\n}',
   },
   {
     name: 'FeedbackCategory',
@@ -4596,6 +4833,10 @@ export const TYPE_API: readonly TypeApiEntry[] = [
   {
     name: 'GenericResultView',
     declaration: 'export interface GenericResultView {\n    card: \'generic\';\n    title?: string;\n    content?: ContentBlock[];\n}',
+  },
+  {
+    name: 'GitSyncState',
+    declaration: 'export type GitSyncState = \'synced\' | \'remote-ahead\' | \'local-ahead\' | \'diverged\' | \'different\' | \'unknown\';',
   },
   {
     name: 'GoalActivation',
@@ -4796,6 +5037,18 @@ export const TYPE_API: readonly TypeApiEntry[] = [
   {
     name: 'KnowledgeDocumentId',
     declaration: 'export type KnowledgeDocumentId = Branded<\'KnowledgeDocumentId\'>;',
+  },
+  {
+    name: 'KnowledgeDraft',
+    declaration: 'export interface KnowledgeDraft {\n    title: string;\n    description: string;\n    documents: DraftKnowledgeDocument[];\n}',
+  },
+  {
+    name: 'KnowledgeGenerateRequest',
+    declaration: 'export interface KnowledgeGenerateRequest {\n    message: string;\n    history?: AuthoringChatTurn[];\n    current?: KnowledgeDraft;\n    urls?: string[];\n}',
+  },
+  {
+    name: 'KnowledgeGenerateValue',
+    declaration: 'export interface KnowledgeGenerateValue {\n    reply: string;\n    draft: KnowledgeDraft | null;\n    sources: Array<{\n        url: string;\n        status: \'ok\' | \'failed\';\n        detail?: string;\n    }>;\n}',
   },
   {
     name: 'KnowledgeHit',
@@ -5122,6 +5375,10 @@ export const TYPE_API: readonly TypeApiEntry[] = [
     declaration: 'export type ObjectJsonSchema = JsonSchemaNode & {\n    type: \'object\';\n};',
   },
   {
+    name: 'OneShotScheduleRecord',
+    declaration: 'export type OneShotScheduleRecord = AfterScheduleRecord | AtScheduleRecord;',
+  },
+  {
     name: 'OneShotSubagentDescriptorData',
     declaration: 'export interface OneShotSubagentDescriptorData extends SubagentDescriptorBase {\n    readonly mode: \'one-shot\';\n    readonly label?: string;\n}',
   },
@@ -5132,6 +5389,10 @@ export const TYPE_API: readonly TypeApiEntry[] = [
   {
     name: 'PermissionCatalog',
     declaration: 'export interface PermissionCatalog {\n    options: PresetOption[];\n}',
+  },
+  {
+    name: 'PhoneAccessView',
+    declaration: 'export interface PhoneAccessView {\n    readonly publicUrl?: string;\n    readonly host?: string;\n    readonly scanUrl?: string;\n    readonly restartCommand?: string;\n    readonly error?: string;\n}',
   },
   {
     name: 'PostToolDecision',
@@ -5216,6 +5477,10 @@ export const TYPE_API: readonly TypeApiEntry[] = [
   {
     name: 'PromptFileBinding',
     declaration: 'export interface PromptFileBinding extends Disposable {\n    commit(): void;\n}',
+  },
+  {
+    name: 'PromptOptimizationMode',
+    declaration: 'export type PromptOptimizationMode = \'general\' | \'code\' | \'writing\' | \'analysis\';',
   },
   {
     name: 'PromptSection',
@@ -5318,6 +5583,38 @@ export const TYPE_API: readonly TypeApiEntry[] = [
     declaration: 'export interface ReplayEnvelope {\n    response: unknown;\n    blocks?: readonly unknown[];\n}',
   },
   {
+    name: 'RepositoryBranchesResult',
+    declaration: 'export interface RepositoryBranchesResult {\n    url: string;\n    branches: string[];\n}',
+  },
+  {
+    name: 'RepositoryChangeSnapshot',
+    declaration: 'export interface RepositoryChangeSnapshot {\n    repositoryRoot: string;\n    remote?: string;\n    branch: string;\n    localHead: string;\n    upstreamBranch?: string;\n    upstreamHead?: string;\n    ahead: number;\n    behind: number;\n    syncState: GitSyncState;\n    status: string;\n    diffStat: string;\n    diff: string;\n}',
+  },
+  {
+    name: 'RepositoryCloneRequest',
+    declaration: 'export interface RepositoryCloneRequest {\n    url: string;\n    targetDirectory: string;\n    branch?: string;\n}',
+  },
+  {
+    name: 'RepositoryCloneResult',
+    declaration: 'export interface RepositoryCloneResult {\n    repositoryRoot: string;\n    remote: string;\n    branch: string;\n    localHead: string;\n    remoteHead?: string;\n    action: \'cloned\' | \'synced\' | \'current\';\n    changed: boolean;\n}',
+  },
+  {
+    name: 'RepositoryPushRequest',
+    declaration: 'export interface RepositoryPushRequest {\n    repositoryRoot: string;\n    message?: string;\n    includeUntracked?: boolean;\n}',
+  },
+  {
+    name: 'RepositoryPushResult',
+    declaration: 'export interface RepositoryPushResult extends RepositoryChangeSnapshot {\n    committed: boolean;\n    pushed: boolean;\n    commitSha?: string;\n}',
+  },
+  {
+    name: 'RepositoryUpdateResult',
+    declaration: 'export interface RepositoryUpdateResult extends RepositoryUpdateStatus {\n    updated: boolean;\n    restartScheduled: boolean;\n}',
+  },
+  {
+    name: 'RepositoryUpdateStatus',
+    declaration: 'export interface RepositoryUpdateStatus {\n    repositoryRoot: string;\n    remote: string;\n    branch: string;\n    remoteBranch: string;\n    localHead: string;\n    remoteHead: string;\n    ahead: number;\n    behind: number;\n    state: \'current\' | \'available\' | \'local-ahead\' | \'diverged\' | \'blocked\';\n    reason?: string;\n}',
+  },
+  {
     name: 'RequestContext',
     declaration: 'export interface RequestContext {\n    provider: string;\n    model: string;\n    contextWindow?: number;\n    systemPromptUpdate?: SystemPromptUpdate;\n}',
   },
@@ -5416,6 +5713,10 @@ export const TYPE_API: readonly TypeApiEntry[] = [
   {
     name: 'ScheduledToolPreparation',
     declaration: 'export type ScheduledToolPreparation = {\n    kind: \'dispatch\';\n    exec: ToolRunContext;\n} | {\n    kind: \'post-result\';\n    exec: ToolRunContext;\n    result: ToolExecutionResult;\n} | {\n    kind: \'final-result\';\n    exec: ToolRunContext;\n    result: ToolExecutionResult;\n};',
+  },
+  {
+    name: 'ScheduleRecord',
+    declaration: 'export type ScheduleRecord = OneShotScheduleRecord | EveryScheduleRecord;',
   },
   {
     name: 'Scoped',
@@ -5704,6 +6005,14 @@ export const TYPE_API: readonly TypeApiEntry[] = [
   {
     name: 'SessionOpenWorkspacePathValue',
     declaration: 'export interface SessionOpenWorkspacePathValue {\n    readonly opened: true;\n}',
+  },
+  {
+    name: 'SessionOptimizePromptRequest',
+    declaration: 'export interface SessionOptimizePromptRequest {\n    readonly sessionId: SessionId;\n    readonly draft: string;\n    readonly mode: PromptOptimizationMode;\n}',
+  },
+  {
+    name: 'SessionOptimizePromptValue',
+    declaration: 'export interface SessionOptimizePromptValue {\n    readonly text: string;\n}',
   },
   {
     name: 'SessionPage',
@@ -6846,12 +7155,68 @@ export const TYPE_API: readonly TypeApiEntry[] = [
     declaration: 'export type WorkflowAgentOutcome = \'completed\' | \'failed\' | \'cancelled\';',
   },
   {
+    name: 'WorkflowDraft',
+    declaration: 'export interface WorkflowDraft {\n    title: string;\n    description: string;\n    steps: string[];\n    nodes: DraftWorkflowNode[];\n    edges: DraftWorkflowEdge[];\n}',
+  },
+  {
+    name: 'WorkflowGenerateRequest',
+    declaration: 'export interface WorkflowGenerateRequest {\n    message: string;\n    history?: AuthoringChatTurn[];\n    current?: WorkflowDraft;\n}',
+  },
+  {
+    name: 'WorkflowGenerateValue',
+    declaration: 'export interface WorkflowGenerateValue {\n    reply: string;\n    draft: WorkflowDraft | null;\n}',
+  },
+  {
     name: 'WorkflowMeta',
     declaration: 'export interface WorkflowMeta {\n    name: string;\n    description: string;\n    whenToUse?: string;\n    phases?: WorkflowPhase[];\n}',
   },
   {
+    name: 'WorkflowNodeAudit',
+    declaration: 'export interface WorkflowNodeAudit {\n    readonly correlationId: WorkflowRunId;\n    readonly nodeId: string;\n    readonly label: string;\n    readonly status: WorkflowNodeAuditStatus;\n    readonly startedAt: number;\n    readonly endedAt?: number;\n    readonly durationMs?: number;\n    readonly retryCount: number;\n    readonly inputSummary?: string;\n    readonly outputSummary?: string;\n    readonly error?: string;\n}',
+  },
+  {
+    name: 'WorkflowNodeAuditStatus',
+    declaration: 'export type WorkflowNodeAuditStatus = \'running\' | \'completed\' | \'failed\' | \'skipped\' | \'blocked\' | \'cancelled\';',
+  },
+  {
+    name: 'WorkflowNodeEndInfo',
+    declaration: 'export interface WorkflowNodeEndInfo extends WorkflowNodeStartInfo {\n    status: Exclude<WorkflowNodeAuditStatus, \'running\'>;\n    outputSummary?: string;\n    error?: string;\n    durationMs: number;\n    endedAt: number;\n}',
+  },
+  {
+    name: 'WorkflowNodeStartInfo',
+    declaration: 'export interface WorkflowNodeStartInfo {\n    nodeId: string;\n    label: string;\n    inputSummary?: string;\n    retryCount: number;\n    startedAt: number;\n}',
+  },
+  {
     name: 'WorkflowPhase',
     declaration: 'export interface WorkflowPhase {\n    title: string;\n    detail?: string;\n    provider?: string;\n    model?: string;\n}',
+  },
+  {
+    name: 'WorkflowRemoteRunListValue',
+    declaration: 'export interface WorkflowRemoteRunListValue {\n    readonly runs: readonly WorkflowRemoteRunView[];\n}',
+  },
+  {
+    name: 'WorkflowRemoteRunRequest',
+    declaration: 'export interface WorkflowRemoteRunRequest {\n    readonly sessionId: SessionId;\n    readonly runId: WorkflowRunId;\n}',
+  },
+  {
+    name: 'WorkflowRemoteRunsRequest',
+    declaration: 'export interface WorkflowRemoteRunsRequest {\n    readonly workflowId?: string;\n    readonly limit?: number;\n}',
+  },
+  {
+    name: 'WorkflowRemoteRunStatus',
+    declaration: 'export type WorkflowRemoteRunStatus = \'running\' | \'completed\' | \'cancelled\' | \'error\';',
+  },
+  {
+    name: 'WorkflowRemoteRunView',
+    declaration: 'export interface WorkflowRemoteRunView {\n    readonly runId: WorkflowRunId;\n    readonly workflowId: string;\n    readonly workflowVersion?: number;\n    readonly name: string;\n    readonly status: WorkflowRemoteRunStatus;\n    readonly startedAt: number;\n    readonly endedAt?: number;\n    readonly agentsStarted: number;\n    readonly error?: string;\n    readonly value?: JsonValue;\n    readonly timedOut?: boolean;\n    readonly source: \'visual-editor\' | \'schedule\';\n    readonly inputBytes?: number;\n    readonly timeoutMs?: number;\n    readonly audit?: readonly WorkflowNodeAudit[];\n}',
+  },
+  {
+    name: 'WorkflowRemoteStartRequest',
+    declaration: 'export interface WorkflowRemoteStartRequest {\n    readonly sessionId: SessionId;\n    readonly workflowId: string;\n    readonly script: string;\n    readonly nodeIds: readonly string[];\n    readonly workflowVersion?: number;\n    readonly meta: WorkflowMeta;\n    readonly args?: JsonValue;\n    readonly timeoutMs?: number;\n    readonly source?: \'visual-editor\' | \'schedule\';\n}',
+  },
+  {
+    name: 'WorkflowRemoteStartValue',
+    declaration: 'export interface WorkflowRemoteStartValue {\n    readonly runId: WorkflowRunId;\n    readonly status: \'running\';\n    readonly startedAt: number;\n}',
   },
   {
     name: 'WorkflowResult',
@@ -6874,8 +7239,24 @@ export const TYPE_API: readonly TypeApiEntry[] = [
     declaration: 'export interface WorkflowRunInfo {\n    id: WorkflowRunId;\n    meta: WorkflowMeta;\n}',
   },
   {
+    name: 'WorkflowScheduleCreateRequest',
+    declaration: 'export interface WorkflowScheduleCreateRequest {\n    readonly label: string;\n    readonly workflowId: string;\n    readonly workflowVersion: number;\n    readonly workflowName: string;\n    readonly script: string;\n    readonly nodeIds: readonly string[];\n    readonly args?: JsonValue;\n    readonly timeoutMs?: number;\n    readonly at?: string;\n    readonly everySeconds?: number;\n}',
+  },
+  {
+    name: 'WorkflowScheduleDispatcher',
+    declaration: 'export type WorkflowScheduleDispatcher = (agent: Agent, target: WorkflowScheduleTarget, occurrenceAt: string) => Promise<void>;',
+  },
+  {
+    name: 'WorkflowScheduleRecord',
+    declaration: 'export type WorkflowScheduleRecord = ScheduleRecord & {\n    readonly target: WorkflowScheduleTarget;\n};',
+  },
+  {
+    name: 'WorkflowScheduleTarget',
+    declaration: 'export interface WorkflowScheduleTarget {\n    readonly kind: \'workflow\';\n    readonly workflowId: string;\n    readonly workflowVersion: number;\n    readonly workflowName: string;\n    readonly script: string;\n    readonly nodeIds: readonly string[];\n    readonly args?: JsonValue;\n    readonly timeoutMs?: number;\n}',
+  },
+  {
     name: 'WorkflowStartRequest',
-    declaration: 'export interface WorkflowStartRequest {\n    script: string;\n    meta: WorkflowMeta;\n    args?: unknown;\n    subagentProvider?: string;\n    maxTotalAgents?: number;\n    parent: Agent;\n    signal?: AbortSignal;\n}',
+    declaration: 'export interface WorkflowStartRequest {\n    script: string;\n    meta: WorkflowMeta;\n    args?: unknown;\n    subagentProvider?: string;\n    maxTotalAgents?: number;\n    nodeAudit?: boolean;\n    parent: Agent;\n    signal?: AbortSignal;\n}',
   },
   {
     name: 'WorkflowStopReason',

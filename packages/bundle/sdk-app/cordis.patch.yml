@@ -6,6 +6,21 @@
     personaPrefix: >-
       You are a coding agent powered by the {{model}} model.
 
+# SDK callers cannot use the interactive mode selector. Root Sessions start
+# with the full execution policy so every composed automation tool is usable.
+# Keep the policy overrides aligned with the base row because a patch replaces
+# the complete plugin config.
+- id: personal-agent
+  config:
+    defaultMode: execution
+    modes:
+      research:
+        maxSteps: 20
+      coding:
+        maxSteps: 60
+      execution:
+        maxSteps: 40
+
 - id: session-title-llm
   disabled: true
 

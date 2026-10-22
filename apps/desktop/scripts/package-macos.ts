@@ -72,7 +72,7 @@ export async function packageMacOSArtifacts(
   const { arch, version, artifactsRoot, environment } = request
   const expected = resolveMacOSSigningEnvironment(environment)
   const credentials = resolveMacOSNotarizationEnvironment(environment)
-  const appPath = join(artifactsRoot, `mac${getArchSuffix(Arch[arch])}`, 'DeepSeek Harness.app')
+  const appPath = join(artifactsRoot, `mac${getArchSuffix(Arch[arch])}`, 'Lingda Harness.app')
   const root = await mkdtemp(join(dirname(artifactsRoot), 'notarization-'))
   const zipApp = join(root, 'zip', basename(appPath))
   const dmgApp = join(root, 'dmg', basename(appPath))
@@ -97,7 +97,7 @@ export async function packageMacOSArtifacts(
     if (failures.length > 0) {
       throw new AggregateError(failures.map(result => result.reason), 'desktop macOS packaging: artifact lanes failed')
     }
-    const base = `deepseek-harness-${version}-mac-${arch}`
+    const base = `lingda-harness-${version}-mac-${arch}`
     const artifacts = [
       [dmgOutput, `${base}.dmg`],
       [zipOutput, `${base}.zip`],

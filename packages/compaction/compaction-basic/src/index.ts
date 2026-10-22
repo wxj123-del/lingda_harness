@@ -28,6 +28,9 @@ import {
   selectCompactableRange,
 } from './region.ts'
 import { summarizeWithLlm } from './summarizer.ts'
+import { writeCompactionSidecar } from './sidecar.ts'
+import { sweepCompactionSidecars } from './sidecar-cleanup.ts'
+import type { SidecarInput } from './region.ts'
 import type { SummarizationInput, SummaryResult } from './summarizer.ts'
 import type {
   BasicCompactionConfig,
@@ -44,6 +47,7 @@ export type {
   ResolvedRetention,
   ResolvedTargetPolicy,
 } from './types.ts'
+export type { SummarizationInput, SummaryResult } from './summarizer.ts'
 
 /** Resolve the exact provider/model durably routed for the latest request. */
 function routedTarget(
@@ -111,6 +115,11 @@ export class BasicCompactionEngine extends CompactionEngine {
     maxOverflowRetries: maxOverflowRetriesSchema,
     modelPolicies: z.array(modelPolicy),
     auto: z.boolean(),
+    sidecar: z.boolean(),
+    sidecarRoot: z.string(),
+    sidecarRetentionDays: z.number(),
+    fallbackContextWindow: z.number(),
+    sidecarSweepIntervalMs: z.number(),
   })
 
   /** Resolved and validated compaction configuration. */
@@ -124,6 +133,31 @@ export class BasicCompactionEngine extends CompactionEngine {
     super(ctx)
     this.config = resolveConfig(config)
     if (this.config.auto) this._registerAutomaticCompaction()
+    if (this.config.sidecar) this._sweepSidecarsOnce()
+  }
+
+  /**
+   * Start the sidecar retention sweep: one pass at load, then a periodic pass so
+   * a long-lived host does not accumulate files until its next restart. The
+   * timer is unref'd, so it never keeps the process alive on its own. A resumed
+   * Session may still name an older summary path, so the sweep is age-based and
+   * never runs for a disabled sidecar.
+   */
+  private _sweepSidecarsOnce(): void {
+    const root = this.config.sidecarRoot
+    if (root === undefined || this.config.sidecarRetentionDays <= 0) return
+    const sweep = (): void => {
+      void sweepCompactionSidecars(root, this.config.sidecarRetentionDays, (message) => {
+        this.ctx.logger.warn(message)
+      }).catch((error: unknown) => {
+        this.ctx.logger.warn(`compaction sidecar sweep failed: ${error instanceof Error ? error.message : String(error)}`)
+      })
+    }
+    sweep()
+    if (this.config.sidecarSweepIntervalMs <= 0) return
+    const timer = setInterval(sweep, this.config.sidecarSweepIntervalMs)
+    timer.unref()
+    this.ctx.effect(() => () => { clearInterval(timer) }, 'compaction-basic: sidecar sweep timer')
   }
 
   /**
@@ -290,14 +324,25 @@ export class BasicCompactionEngine extends CompactionEngine {
     const context = (await this.ctx.llm.resolveModelInfo(target.provider, target.model, signal)).context
     assertNoActiveCompaction(agent.session, 'automatic pressure compaction')
     const targetKey = `${target.provider}/${target.model}`
-    if (context === undefined) {
+    const contextWindow = context?.contextWindow ?? (this.config.fallbackContextWindow > 0
+      ? this.config.fallbackContextWindow
+      : undefined)
+    if (contextWindow === undefined) {
       throw new TargetPressureConfigError(
         targetKey,
         `compaction-basic: no context capacity for ${targetKey}; `
-        + 'configure contextWindow on that adapter model',
+        + 'configure contextWindow on that adapter model or set fallbackContextWindow',
       )
     }
-    const spec = resolveCompactSpec(policy, context.contextWindow)
+    if (context === undefined) {
+      // The adapter declares no capacity: the fallback keeps proactive
+      // compaction alive instead of leaving provider overflow as the only exit.
+      this.ctx.logger.warn(
+        `compaction-basic: ${targetKey} declares no contextWindow; `
+        + `using fallbackContextWindow ${String(contextWindow)} for the pressure threshold`,
+      )
+    }
+    const spec = resolveCompactSpec(policy, contextWindow)
     if (measurement.totalTokens < spec.thresholdTokens) return null
 
     // Once pressure qualifies, land the model-free pass before choosing a
@@ -427,6 +472,20 @@ export class BasicCompactionEngine extends CompactionEngine {
         error,
         ...signal === undefined ? {} : { signal },
       }, () => false),
+      ...this.config.sidecar ? {
+        writeSidecar: (input: SidecarInput): string | undefined => {
+          try {
+            return writeCompactionSidecar(this.config.sidecarRoot, input)
+          } catch (error: unknown) {
+            // A sidecar is a recovery aid, never a precondition: a failed write
+            // must not turn a successful compaction into a failed turn.
+            this.ctx.logger.warn(
+              `compaction sidecar write failed: ${error instanceof Error ? error.message : String(error)}`,
+            )
+            return undefined
+          }
+        },
+      } : {},
     }
   }
 }

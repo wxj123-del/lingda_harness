@@ -83,10 +83,10 @@
   font: inherit;
 }
 .textarea { min-height: 180px; resize: vertical; line-height: 1.55; }
-.input:focus, .textarea:focus { outline: 2px solid var(--dsw-alias-interactive-border-focus); outline-offset: 1px; }
+.input:focus, .textarea:focus { outline: 2px solid var(--dsw-alias-state-business-primary); outline-offset: 1px; }
 .actions { display: flex; align-items: center; gap: 10px; margin-top: 28px; }
 .status { color: var(--dsw-alias-state-success-primary); font-size: 13px; }
-.warning { color: var(--dsw-alias-state-warning-primary); font-size: 13px; }
+.warning { color: var(--dsw-alias-state-warn-primary); font-size: 13px; }
 .empty { padding: 28px 8px; color: var(--dsw-alias-label-tertiary); font-size: 13px; line-height: 1.5; }
 
 .steps { display: grid; gap: 8px; margin-top: 24px; }
@@ -95,7 +95,7 @@
 .uploadButton { display: inline-flex; align-items: center; gap: 6px; min-height: 30px; box-sizing: border-box; padding: 0 10px; border: 0.5px solid var(--dsw-alias-border-l2); border-radius: 6px; background: transparent; color: var(--dsw-alias-label-secondary); font-size: 12px; cursor: pointer; }
 .uploadButton:hover { background: var(--dsw-alias-interactive-bg-hover-solid); color: var(--dsw-alias-label-primary); }
 .uploadButton input { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); clip-path: inset(50%); white-space: nowrap; }
-.uploadButton:focus-within { outline: 2px solid var(--dsw-alias-interactive-border-focus); outline-offset: 1px; }
+.uploadButton:focus-within { outline: 2px solid var(--dsw-alias-state-business-primary); outline-offset: 1px; }
 .document { display: grid; gap: 8px; padding: 12px; border: 0.5px solid var(--dsw-alias-border-l2); border-radius: 8px; background: var(--dsw-alias-bg-layer-1); }
 .documentHeader { display: flex; align-items: center; gap: 8px; }
 .documentTitle { flex: 1; }
@@ -108,13 +108,27 @@
 .iconButton { display: inline-flex; align-items: center; justify-content: center; width: 30px; height: 30px; padding: 0; border: 0.5px solid var(--dsw-alias-border-l2); border-radius: 5px; background: transparent; color: var(--dsw-alias-label-tertiary); cursor: pointer; }
 .iconButton:hover { background: var(--dsw-alias-interactive-bg-hover-solid); color: var(--dsw-alias-label-primary); }
 
-.navigation { display: grid; gap: 8px; }
-.navigationButton { display: grid; justify-items: center; gap: 5px; min-height: 58px; padding: 8px 2px; border: 0; border-radius: 7px; background: transparent; color: var(--dsw-alias-label-tertiary); font-size: 11px; cursor: pointer; }
-.navigationButton:hover, .navigationButton[data-active] { background: var(--dsw-alias-bg-base); color: var(--dsw-alias-interactive-label-primary); }
-.navigationIcon { display: inline-flex; }
-.navigationButton > span:last-child { max-width: 100%; overflow-wrap: anywhere; line-height: 14px; }
+/* Product navigation inside the sidebar, above the workspace section: one
+   full-width row per destination, matching the session rows below it. The
+   collapsed rail swaps the same rows for a centered icon column. */
+.navigation {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 1px;
+  min-width: 0;
+}
+.navigationCompact { gap: 4px; }
+.navigationButton { display: flex; align-items: center; gap: 8px; width: 100%; height: 32px; min-width: 0; padding: 0 8px; border: 0; border-radius: 8px; background: transparent; color: var(--dsw-alias-label-secondary); font: inherit; font-size: 13px; line-height: 20px; text-align: start; white-space: nowrap; cursor: pointer; transition: background-color 120ms ease, color 120ms ease; }
+.navigationButton:hover { background: var(--dsw-alias-interactive-bg-hover); color: var(--dsw-alias-label-primary); }
+.navigationButton[data-active] { background: var(--dsw-alias-interactive-bg-active); color: var(--dsw-alias-label-primary); font-weight: 500; }
+.navigationCompact .navigationButton { justify-content: center; width: 36px; height: 36px; padding: 0; color: var(--dsw-alias-label-primary); }
+.navigationIcon { flex: none; display: inline-flex; }
+.navigationLabel { display: block; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 .navigationButton:focus-visible { outline: 2px solid var(--dsw-alias-state-business-primary); outline-offset: -2px; }
-.navigationDivider { height: 0.5px; margin: 4px 10px; background: var(--dsw-alias-border-l2); }
+/* A hairline rule separates the panel destinations from the plugin surface. */
+.navigationDivider { flex: none; height: 0.5px; margin: 4px 8px; background: var(--dsw-alias-border-l2); }
+.navigationCompact .navigationDivider { width: 24px; margin: 4px auto; }
 
 @media (max-width: 780px) {
   .list { flex-basis: 220px; padding: 20px 10px; }

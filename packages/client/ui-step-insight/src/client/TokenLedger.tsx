@@ -15,7 +15,7 @@ import { RequestDetail } from './RequestDetail.tsx'
 import { ContextPreview } from './ContextPreview.tsx'
 import css from './ledger.module.css'
 
-const routeSignalLabels: readonly (readonly [ContextRouteSignal, Parameters<TokenLedgerProps['t']>[0]])[] = [
+const routeSignalKeys: readonly (readonly [ContextRouteSignal, Parameters<TokenLedgerProps['t']>[0]])[] = [
   ['explicit-full', 'contextSignalExplicitFull'],
   ['explicit-fresh', 'contextSignalExplicitFresh'],
   ['co-reference', 'contextSignalCoReference'],
@@ -140,8 +140,10 @@ export function TokenLedger({
     </div>}
     {routeMetrics.requests > 0 && <div className={css.ledgerContext} role="region" aria-label={t('contextMetrics')} data-context-route-metrics="">
       <span><b>{t('contextMetrics')}</b> {routeMetrics.requests} {t('contextMetricRequests')} · {t('contextRouteFresh')} {routeMetrics.fresh} · {t('contextRouteRecent')} {routeMetrics.recent} · {t('contextRouteTask')} {routeMetrics.task} · {t('contextRouteFull')} {routeMetrics.full}</span>
-      <span>{t('contextMetricBudgetWarnings')} {routeMetrics.budgetWarnings} · {t('contextMetricTaskRecall')} {routeMetrics.taskRecalls} · {t('contextMetricCalibrated')} {routeMetrics.calibrated} · {t('contextMetricDropped')} ~{number(routeMetrics.averageDroppedMessages)}</span>
-      <span data-context-route-signals=""><b>{t('contextMetricSignals')}</b> {routeSignalLabels
+      <span>{t('contextMetricBudgetWarnings')} {routeMetrics.budgetWarnings} · {t('contextMetricTaskRecall')} {routeMetrics.taskRecalls} · {t('contextMetricCalibrated')} {routeMetrics.calibrated} · {t('contextMetricFallback')} {routeMetrics.fallbackRequests} · {t('contextMetricConfidence')} {routeMetrics.averageConfidence === null ? '-' : `${Math.round(routeMetrics.averageConfidence * 100)}%`} · {t('contextMetricDropped')} ~{number(routeMetrics.averageDroppedMessages)}</span>
+      <span>{t('contextMetricLexicalRecall')} {routeMetrics.selectedHistoryMessages}/{routeMetrics.candidateHistoryMessages} · {t('contextMetricLowRecall')} {routeMetrics.lowRecallRequests}</span>
+      {(routeMetrics.compactedToolResults > 0 || routeMetrics.deduplicatedToolResults > 0) && <span>{t('contextToolCompactionTotal')} {routeMetrics.compactedToolResults} · {t('contextToolDedup')} {routeMetrics.deduplicatedToolResults} · {number(routeMetrics.toolResultCharsBefore)} → {number(routeMetrics.toolResultCharsAfter)} {t('contextToolChars')}</span>}
+      <span data-context-route-signals=""><b>{t('contextMetricSignals')}</b> {routeSignalKeys
         .filter(([signal]) => routeMetrics.signals[signal] > 0)
         .map(([signal, label]) => `${t(label)} ${routeMetrics.signals[signal]}`)
         .join(' · ') || t('contextMetricSignalsNone')}</span>
@@ -161,6 +163,10 @@ export function TokenLedger({
     {error && <p role="alert" className={css.notice}>{error}</p>}
     <div className={css.workspace}>
       <div className={css.list}>
+        <header className={css.panelHeader}>
+          <h3>{t('requests')}</h3>
+          <span>{visible.length}/{filtered.length}</span>
+        </header>
         {filtered.length > limit && <button className={css.more} type="button" onClick={() =>{  setLimit(value => value + 100) }}>{t('more')} ({visible.length}/{filtered.length})</button>}
         <div className={css.tableScroll}>
           <table className={css.table} aria-label={t('requests')}>

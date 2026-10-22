@@ -4,8 +4,11 @@ import { SlotRegistry } from '@deepseek-ai/dsh-client-ui-renderer/client'
 import { RemoteError, TestRemote } from '@deepseek-ai/dsh-client-test-runtime'
 import { LocaleRuntime } from '@deepseek-ai/dsh-client-locale/client'
 import { apply, inject } from '@deepseek-ai/dsh-client-ui-workspace/client'
-import type { WorkspaceBrowserInjected, WorkspacePickerInjected } from '@deepseek-ai/dsh-client-ui-workspace/client'
+import type {
+  WorkspaceBrowserInjected, WorkspaceFlowPageInjected, WorkspacePickerInjected,
+} from '@deepseek-ai/dsh-client-ui-workspace/client'
 import { WorkspaceBrowser } from '../src/client/rows/WorkspaceBrowser.tsx'
+import { WorkspaceFlowPage } from '../src/client/rows/WorkspaceFlowPage.tsx'
 import { WorkspacePicker } from '../src/client/WorkspacePicker.tsx'
 import { apply as hostApply } from '../src/index.ts'
 
@@ -111,6 +114,44 @@ describe('ui-workspace apply', () => {
     await Promise.resolve()
     expect(after.slots.entries('conversation.hero.workspace')[0]!.component).toBe(WorkspacePicker)
     // expect(after.slots.entries('conversation.empty.workspace')[0]!.component).toBe(WorkspacePicker)
+  })
+
+  it('registers the flow page in the keyed main slot and the sidebar navigation', async () => {
+    const b = await bench()
+    // One root registration declares every hole this package fills: the
+    // browser region, the keyed main slot, and the sidebar navigation list.
+    const frame = b.slots.register({
+      name: 'root',
+      children: {
+        'sidebar.workspaces': { kind: 'single', scope: 'root' },
+        main: { kind: 'keyed', scope: 'root' },
+        'sidebar.navigation.panels': { kind: 'list', scope: 'root' },
+      },
+    } as never, () => null)
+    await b.ctx.plugin({ inject: [...inject], apply }).await()
+    expect(b.slots.entries('main').map(entry => entry.options.key)).toEqual(['workspace-flow'])
+    expect(b.slots.entries('main')[0]!.component).toBe(WorkspaceFlowPage)
+    expect(b.slots.entriesOfSlot('sidebar.navigation.panels').map(({ options }) => options.id)).toEqual(['workspace-flow'])
+    // Menu → page: the callback selects the page; the target rides the store.
+    const browser = (b.slots.entries('sidebar.workspaces')[0]!.inject as () => WorkspaceBrowserInjected)()
+    browser.openFlow()
+    expect(b.selectPanel).toHaveBeenCalledOnce()
+    frame()
+  })
+
+  it('returns from the flow page to the conversation', async () => {
+    const b = await bench()
+    const frame = b.slots.register({
+      name: 'root',
+      children: { main: { kind: 'keyed', scope: 'root' } },
+    } as never, () => null)
+    await b.ctx.plugin({ inject: [...inject], apply }).await()
+    const page = (b.slots.entries('main')[0]!.inject as () => WorkspaceFlowPageInjected)()
+    page.open('session' as never)
+    expect(b.open).toHaveBeenCalledWith('session')
+    page.close()
+    expect(b.selectPanel).toHaveBeenLastCalledWith(null)
+    frame()
   })
 
   it('routes browser actions and picker creation to the services', async () => {

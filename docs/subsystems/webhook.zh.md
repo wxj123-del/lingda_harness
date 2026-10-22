@@ -44,6 +44,31 @@ follow-up 是普通持久 user-role 消息，使用 `source.kind: "webhook"`，�
 
 Generated from source by `scripts/gen-cordis-catalog.ts` (verified fresh by `pnpm run verify-cordis-catalog` in doc-sync; regenerate with `pnpm run gen-cordis-catalog`) — the language sides differ only in locale-specific paired document paths. Signature blocks use a `ts cordis-catalog` fence and keep the original source JSDoc; dispatch modes are defined in the [primer](../cordis-primer.zh.md#dispatch-modes), and the framework-inherited `ctx` API lives in [cordis-api/inherited.md](../cordis-api/inherited.md).
 
+<a id="ctxphoneaccess--phoneaccessservice"></a>
+
+### `ctx.phoneAccess` — `PhoneAccessService`
+
+Owns the single tunnel of one process and answers the card's Remote calls. A second generate stops the tunnel the first one opened before starting another, so a process never holds two.
+
+```ts cordis-catalog
+/**
+ * Open one tunnel to this process's Web port and report the scan URL.
+ * @returns the card's view: the QR payload and the restart command, or a reason.
+ */
+async generate(): Promise<PhoneAccessView>
+
+/**
+ * Report the tunnel this process currently holds.
+ * @returns the card's view, empty when no tunnel is up.
+ */
+current(): PhoneAccessView
+
+/** Stop the live tunnel and forget it. */
+async stopTunnel(): Promise<void>
+```
+
+Source: [`packages/webhook/phone-access/src/index.ts`](../../packages/webhook/phone-access/src/index.ts)
+
 <a id="ctxwebhookruntime--webhookruntime"></a>
 
 ### `ctx.webhookRuntime` — `WebhookRuntime`

@@ -5,6 +5,7 @@
 
 import { SessionLogOffset } from '@deepseek-ai/dsh-session'
 import type { SessionEvent, SessionLogOffset as SessionLogOffsetType } from '@deepseek-ai/dsh-session'
+import { snapshotJsonValue } from '@deepseek-ai/dsh-util-values'
 import type {
   AfterScheduleRecord,
   AtInput,
@@ -16,10 +17,13 @@ import type {
   ScheduleId as ScheduleIdType,
   ScheduleRecord,
   ScheduleView,
+  WorkflowScheduleTarget,
 } from './types.ts'
 
 /** Durable Schedule protocol version implemented by this package. */
 export const SCHEDULE_CHANGE_VERSION = 1 as const
+/** Durable payload version used by deterministic workflow triggers. */
+export const WORKFLOW_SCHEDULE_CHANGE_VERSION = 2 as const
 
 /** Fixed v1 lower bound for a fixed-rate reminder. */
 export const MIN_EVERY_INTERVAL_SECONDS = 300
@@ -383,8 +387,44 @@ function resolveLocalInstant(parts: CalendarParts, timeZone: string): number {
 }
 
 /** Decode the exact v1 after record shape. */
-function decodeAfterRecord(value: unknown): AfterScheduleRecord {
-  if (!isRecord(value) || !hasExactKeys(value, ['id', 'kind', 'prompt', 'afterSeconds', 'scheduledAt'])) {
+function decodeWorkflowTarget(value: unknown): WorkflowScheduleTarget {
+  if (!isRecord(value) || !exactRecordKeys(value, ['kind', 'workflowId', 'workflowVersion', 'workflowName', 'script', 'nodeIds'], ['args', 'timeoutMs'])) {
+    throw new ScheduleLogError('workflow target contains unsupported fields')
+  }
+  if (value['kind'] !== 'workflow') throw new ScheduleLogError('workflow target kind must be "workflow"')
+  const workflowId = value['workflowId']
+  const workflowVersion = value['workflowVersion']
+  const workflowName = value['workflowName']
+  const script = value['script']
+  const nodeIds = value['nodeIds']
+  const timeoutMs = value['timeoutMs']
+  if (typeof workflowId !== 'string' || workflowId.trim() === '' || workflowId.length > 160) throw new ScheduleLogError('workflow target id is invalid')
+  if (!Number.isSafeInteger(workflowVersion) || (workflowVersion as number) < 1) throw new ScheduleLogError('workflow target version is invalid')
+  if (typeof workflowName !== 'string' || workflowName.trim() === '' || workflowName.length > 160) throw new ScheduleLogError('workflow target name is invalid')
+  if (typeof script !== 'string' || script.trim() === '' || script.length > 1_000_000) throw new ScheduleLogError('workflow target script is invalid')
+  if (!Array.isArray(nodeIds) || nodeIds.length === 0 || nodeIds.length > 512 || nodeIds.some(id => typeof id !== 'string' || id.trim() === '' || id.length > 120)) throw new ScheduleLogError('workflow target node manifest is invalid')
+  if (new Set(nodeIds).size !== nodeIds.length) throw new ScheduleLogError('workflow target node manifest contains duplicates')
+  if (timeoutMs !== undefined && (!Number.isSafeInteger(timeoutMs) || (timeoutMs as number) < 1 || (timeoutMs as number) > 86_400_000)) throw new ScheduleLogError('workflow target timeout is invalid')
+  const rawArgs = value['args']
+  const args = rawArgs === undefined ? undefined : snapshotJsonValue(rawArgs)
+  if (rawArgs !== undefined && args === undefined) throw new ScheduleLogError('workflow target args must be JSON data')
+  return Object.freeze({
+    kind: 'workflow', workflowId, workflowVersion: workflowVersion as number, workflowName, script,
+    nodeIds: Object.freeze([...nodeIds] as string[]),
+    ...(args === undefined ? {} : { args: args as never }),
+    ...(timeoutMs === undefined ? {} : { timeoutMs: timeoutMs as number }),
+  })
+}
+
+/** Exact-key helper with optional fields admitted only when present. */
+function exactRecordKeys(value: Record<string, unknown>, required: readonly string[], optional: readonly string[] = []): boolean {
+  const keys = Object.keys(value)
+  return required.every(key => keys.includes(key)) && keys.every(key => required.includes(key) || optional.includes(key))
+}
+
+/** Decode the exact v1/v2 after record shape. */
+function decodeAfterRecord(value: unknown, workflow: boolean): AfterScheduleRecord {
+  if (!isRecord(value) || !exactRecordKeys(value, ['id', 'kind', 'prompt', 'afterSeconds', 'scheduledAt'], workflow ? ['target'] : [])) {
     throw new ScheduleLogError('after schedule must contain exactly id, kind, prompt, afterSeconds, and scheduledAt')
   }
   const prompt = value['prompt']
@@ -395,36 +435,42 @@ function decodeAfterRecord(value: unknown): AfterScheduleRecord {
   if (!Number.isSafeInteger(afterSeconds) || (afterSeconds as number) <= 0) {
     throw new ScheduleLogError('afterSeconds must be a positive safe integer')
   }
+  const target = value['target']
+  if (workflow !== (target !== undefined)) throw new ScheduleLogError('workflow schedule target is required only for version 2')
   return Object.freeze({
     id: decodeId(value['id']),
     kind: 'after',
     prompt,
     afterSeconds: afterSeconds as number,
     scheduledAt: decodeInstant(value['scheduledAt']),
+    ...(target === undefined ? {} : { target: decodeWorkflowTarget(target) }),
   })
 }
 
 /** Decode the exact v1 absolute one-shot record shape. */
-function decodeAtRecord(value: unknown): AtScheduleRecord {
-  if (!isRecord(value) || !hasExactKeys(value, ['id', 'kind', 'prompt', 'scheduledAt'])) {
+function decodeAtRecord(value: unknown, workflow: boolean): AtScheduleRecord {
+  if (!isRecord(value) || !exactRecordKeys(value, ['id', 'kind', 'prompt', 'scheduledAt'], workflow ? ['target'] : [])) {
     throw new ScheduleLogError('at schedule must contain exactly id, kind, prompt, and scheduledAt')
   }
   const prompt = value['prompt']
   if (typeof prompt !== 'string' || prompt.length === 0 || prompt.trim() !== prompt) {
     throw new ScheduleLogError('at prompt must be non-empty and already trimmed')
   }
+  const target = value['target']
+  if (workflow !== (target !== undefined)) throw new ScheduleLogError('workflow schedule target is required only for version 2')
   return Object.freeze({
     id: decodeId(value['id']),
     kind: 'at',
     prompt,
     scheduledAt: decodeInstant(value['scheduledAt']),
+    ...(target === undefined ? {} : { target: decodeWorkflowTarget(target) }),
   })
 }
 
 /** Decode the exact v1 fixed-rate record shape. */
-function decodeEveryRecord(value: unknown): EveryScheduleRecord {
+function decodeEveryRecord(value: unknown, workflow: boolean): EveryScheduleRecord {
   if (!isRecord(value)
-    || !hasExactKeys(value, ['id', 'kind', 'prompt', 'everySeconds', 'scheduledAt'])) {
+    || !exactRecordKeys(value, ['id', 'kind', 'prompt', 'everySeconds', 'scheduledAt'], workflow ? ['target'] : [])) {
     throw new ScheduleLogError('every schedule must contain exactly id, kind, prompt, everySeconds, and scheduledAt')
   }
   const prompt = value['prompt']
@@ -438,22 +484,25 @@ function decodeEveryRecord(value: unknown): EveryScheduleRecord {
     || !Number.isSafeInteger(interval)) {
     throw new ScheduleLogError(`everySeconds must be a safe integer of at least ${MIN_EVERY_INTERVAL_SECONDS}`)
   }
+  const target = value['target']
+  if (workflow !== (target !== undefined)) throw new ScheduleLogError('workflow schedule target is required only for version 2')
   return Object.freeze({
     id: decodeId(value['id']),
     kind: 'every',
     prompt,
     everySeconds: everySeconds as number,
     scheduledAt: decodeInstant(value['scheduledAt']),
+    ...(target === undefined ? {} : { target: decodeWorkflowTarget(target) }),
   })
 }
 
 /** Decode one current durable record variant by its exact discriminator. */
-function decodeScheduleRecord(value: unknown): ScheduleRecord {
+function decodeScheduleRecord(value: unknown, workflow = false): ScheduleRecord {
   if (!isRecord(value)) throw new ScheduleLogError('schedule record must be an object')
   switch (value['kind']) {
-    case 'after': return decodeAfterRecord(value)
-    case 'at': return decodeAtRecord(value)
-    case 'every': return decodeEveryRecord(value)
+    case 'after': return decodeAfterRecord(value, workflow)
+    case 'at': return decodeAtRecord(value, workflow)
+    case 'every': return decodeEveryRecord(value, workflow)
     default: throw new ScheduleLogError('v1 schedule kind must be "after", "at", or "every"')
   }
 }
@@ -465,25 +514,26 @@ function decodeScheduleRecord(value: unknown): ScheduleRecord {
  */
 export function decodeScheduleChange(value: unknown): ScheduleChange {
   if (!isRecord(value)) throw new ScheduleLogError('schedule/change payload must be an object')
-  if (value['version'] !== SCHEDULE_CHANGE_VERSION) {
-    throw new ScheduleLogError('schedule/change version must be 1')
+  if (value['version'] !== SCHEDULE_CHANGE_VERSION && value['version'] !== WORKFLOW_SCHEDULE_CHANGE_VERSION) {
+    throw new ScheduleLogError('schedule/change version must be 1 or 2')
   }
+  const workflow = value['version'] === WORKFLOW_SCHEDULE_CHANGE_VERSION
   switch (value['operation']) {
     case 'create':
       if (!hasExactKeys(value, ['version', 'operation', 'schedule'])) {
         throw new ScheduleLogError('schedule create must contain exactly version, operation, and schedule')
       }
       return Object.freeze({
-        version: SCHEDULE_CHANGE_VERSION,
+        version: workflow ? WORKFLOW_SCHEDULE_CHANGE_VERSION : SCHEDULE_CHANGE_VERSION,
         operation: 'create',
-        schedule: decodeScheduleRecord(value['schedule']),
-      })
+        schedule: decodeScheduleRecord(value['schedule'], workflow),
+      }) as ScheduleChange
     case 'delete': {
       if (!hasExactKeys(value, ['version', 'operation', 'id'])) {
         throw new ScheduleLogError('schedule delete must contain exactly version, operation, and id')
       }
       return Object.freeze({
-        version: SCHEDULE_CHANGE_VERSION,
+        version: workflow ? WORKFLOW_SCHEDULE_CHANGE_VERSION : SCHEDULE_CHANGE_VERSION,
         operation: 'delete',
         id: decodeId(value['id']),
       })
@@ -491,14 +541,14 @@ export function decodeScheduleChange(value: unknown): ScheduleChange {
     case 'dispatch': {
       if (hasExactKeys(value, ['version', 'operation', 'id'])) {
         return Object.freeze({
-          version: SCHEDULE_CHANGE_VERSION,
+          version: workflow ? WORKFLOW_SCHEDULE_CHANGE_VERSION : SCHEDULE_CHANGE_VERSION,
           operation: 'dispatch',
           id: decodeId(value['id']),
         })
       }
       if (hasExactKeys(value, ['version', 'operation', 'id', 'acceptedAt'])) {
         return Object.freeze({
-          version: SCHEDULE_CHANGE_VERSION,
+          version: workflow ? WORKFLOW_SCHEDULE_CHANGE_VERSION : SCHEDULE_CHANGE_VERSION,
           operation: 'dispatch',
           id: decodeId(value['id']),
           acceptedAt: decodeInstant(value['acceptedAt']),

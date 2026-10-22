@@ -221,13 +221,32 @@ flowchart LR
   svc_directoryPicker["ctx.directoryPicker<br/>Workspace-directory picking seam"]
   pkg_host_directory_picker_native["host-directory-picker-native"]
   pkg_host_directory_picker_browse["host-directory-picker-browse"]
+  pkg_context_router["context-router"]
+  svc_contextRouter["ctx.contextRouter<br/>Context route selection and audit service"]
+  pkg_personal_agent["personal-agent"]
+  pkg_host_knowledge["host-knowledge"]
+  pkg_git_workspace["git-workspace"]
+  svc_gitWorkspace["ctx.gitWorkspace<br/>Git workspace evidence and update service"]
+  pkg_api_remotes["api-remotes"]
+  pkg_ui_step_insight["ui-step-insight"]
+  svc_knowledge["ctx.knowledge<br/>Local knowledge-base gateway"]
+  pkg_host_local_skill_import["host-local-skill-import"]
+  svc_localSkillImport["ctx.localSkillImport<br/>Local skill import gateway"]
+  pkg_ui_layout["ui-layout"]
+  svc_personalAgent["ctx.personalAgent<br/>Per-session agent mode and policy service"]
+  pkg_phone_access["phone-access"]
+  svc_phoneAccess["ctx.phoneAccess<br/>Optional phone-access tunnel service"]
+  pkg_ui_settings_plugins["ui-settings-plugins"]
+  pkg_schedule["schedule"]
+  svc_workflowSchedules["ctx.workflowSchedules<br/>Durable workflow schedule service"]
+  pkg_workflow["workflow"]
+  pkg_ui_schedule["ui-schedule"]
   pkg_host_webserver["host-webserver"]
   svc_webServer["ctx.webServer<br/>HTTP route registration"]
   pkg_client_connection["client-connection"]
   pkg_client_modules["client-modules"]
   pkg_client_hmr["client-hmr"]
   svc_clientModules["ctx.clientModules<br/>Client plugin graph host"]
-  pkg_workflow["workflow"]
   svc_workflowEngine["ctx.workflowEngine<br/>Workflow script engine"]
   pkg_tool_workflow["tool-workflow"]
   pkg_webhook["webhook"]
@@ -267,6 +286,7 @@ flowchart LR
   pkg_compaction_basic --> svc_compaction
   pkg_compaction_tool_result_pruner --> svc_toolResultPruner
   pkg_computer_use --> svc_computerUse
+  pkg_context_router --> svc_contextRouter
   pkg_cordis_host_runner --> svc_cordisInspect
   pkg_cordis_host_runner --> svc_dynamicCordisRunner
   pkg_credentials --> svc_credentials
@@ -285,10 +305,13 @@ flowchart LR
   pkg_fs_local --> svc_fs
   pkg_fs_sandbox --> svc_fs
   pkg_fs_ssh --> svc_fs
+  pkg_git_workspace --> svc_gitWorkspace
   pkg_goal --> svc_goals
   pkg_host_directory_picker --> svc_directoryPicker
   pkg_host_directory_picker_browse --> svc_directoryPicker
   pkg_host_directory_picker_native --> svc_directoryPicker
+  pkg_host_knowledge --> svc_knowledge
+  pkg_host_local_skill_import --> svc_localSkillImport
   pkg_host_webserver --> svc_webServer
   pkg_inspector --> svc_inspector
   pkg_invariants --> svc_invariants
@@ -304,6 +327,8 @@ flowchart LR
   pkg_mcp_resources --> svc_mcpResources
   pkg_message_feedback --> svc_messageFeedback
   pkg_permission_presets --> svc_permissionPresets
+  pkg_personal_agent --> svc_personalAgent
+  pkg_phone_access --> svc_phoneAccess
   pkg_plan_mode --> svc_planMode
   pkg_plugin_package_inventory_deepseek --> svc_deepseekLlmApiExtensions
   pkg_ptc_runtime --> svc_ptcRuntime
@@ -313,6 +338,7 @@ flowchart LR
   pkg_sandbox_local --> svc_sandbox
   pkg_sandbox_policy --> svc_sandboxPolicy
   pkg_sandbox_ssh --> svc_sandbox
+  pkg_schedule --> svc_workflowSchedules
   pkg_session --> svc_sessions
   pkg_session_log_deepseek --> svc_deepseekLlmApiExtensions
   pkg_session_persistence --> svc_sessionPersistence
@@ -393,6 +419,8 @@ flowchart LR
   svc_compaction --> pkg_compaction_basic
   svc_computerUse --> pkg_experimental_computer_use_cua_driver_mcp
   svc_computerUse --> pkg_experimental_computer_use_cua_driver_native
+  svc_contextRouter --> pkg_host_knowledge
+  svc_contextRouter --> pkg_personal_agent
   svc_cordisInspect --> pkg_tool_cordis
   svc_credentials --> pkg_api_settings_controller
   svc_credentials --> pkg_llm_deepseek
@@ -403,6 +431,8 @@ flowchart LR
   svc_fileReferences --> pkg_api_session_controller
   svc_fileUploads --> pkg_api_session_controller
   svc_fs --> pkg_tool_fs
+  svc_gitWorkspace --> pkg_api_remotes
+  svc_gitWorkspace --> pkg_ui_step_insight
   svc_invariants --> pkg_agent
   svc_invariants --> pkg_agent_loop
   svc_invariants --> pkg_scope
@@ -411,10 +441,18 @@ flowchart LR
   svc_jobs --> pkg_tool_jobs
   svc_jobs --> pkg_tool_subagent
   svc_jobs --> pkg_tool_terminal
+  svc_knowledge --> pkg_context_router
+  svc_knowledge --> pkg_personal_agent
   svc_llm --> pkg_agent_loop
   svc_llm --> pkg_compaction_basic
+  svc_localSkillImport --> pkg_ui_layout
   svc_lsp --> pkg_tool_lsp
   svc_mcpResources --> pkg_mcp_resources
+  svc_personalAgent --> pkg_context_router
+  svc_personalAgent --> pkg_host_knowledge
+  svc_personalAgent --> pkg_tools
+  svc_phoneAccess --> pkg_api_remotes
+  svc_phoneAccess --> pkg_ui_settings_plugins
   svc_ptcRuntime --> pkg_tools
   svc_ptcRuntime --> pkg_workflow_ptc
   svc_sandbox --> pkg_bash_sandbox
@@ -501,6 +539,9 @@ flowchart LR
   svc_webhookRuntime --> pkg_webhook_github
   svc_workflowEngine --> pkg_tool_ralph
   svc_workflowEngine --> pkg_tool_workflow
+  svc_workflowSchedules --> pkg_api_remotes
+  svc_workflowSchedules --> pkg_ui_schedule
+  svc_workflowSchedules --> pkg_workflow
   svc_workspaceRegistry --> pkg_api_session_controller
   svc_workspaceRegistry --> pkg_api_workspace_controller
   svc_fs -. event gate .-> pkg_fs_observation_policy
@@ -577,6 +618,13 @@ flowchart LR
 | `ctx.web` | `seam` | [`web`](../packages/web/web) | [`web-search-exa`](../packages/web/web-search-exa), [`web-search-perplexity`](../packages/web/web-search-perplexity), [`web-search-deepseek`](../packages/web/web-search-deepseek), [`web-fetch-http`](../packages/web/web-fetch-http) | [`tool-web`](../packages/web/tool-web) | - | Search and fetch providers register into one ctx.web seam; tool-web owns the stable model-facing names. |
 | `ctx.spillStore` | `seam` | [`spill`](../packages/spill/spill) | [`spill-local`](../packages/spill/spill-local) | [`spill-policy`](../packages/spill/spill-policy) | - | The backend saves oversized tool text and returns a model-facing locator plus retrieval hint; spill-policy is the tools/post-execute consumer that decides when to spill. |
 | `ctx.directoryPicker` | `seam` | [`host-directory-picker`](../packages/host/directory-picker) | [`host-directory-picker-native`](../packages/host/directory-picker-native), [`host-directory-picker-browse`](../packages/host/directory-picker-browse) | [`api-workspace-controller`](../packages/api/workspace-controller) | - | Discriminated interaction capability: the native backend opens one OS chooser on the host display, the browse backend serves listing/creation primitives for the in-app browser; dual-face backends fill ui-workspace directory-flow slots from their browser halves (no wire advertisement). |
+| `ctx.contextRouter` | `core` | [`context-router`](../packages/context/context-router) | - | [`personal-agent`](../packages/interaction/personal-agent), [`host-knowledge`](../packages/host/knowledge) | - | Selects bounded context routes and records the evidence used to explain message, tool, and knowledge trimming decisions. |
+| `ctx.gitWorkspace` | `core` | [`git-workspace`](../packages/interaction/git-workspace) | - | [`api-remotes`](../packages/api/remotes), `ui-step-insight` | - | Owns bounded checkout inspection, checkpoint events, guarded clone/push operations, and source-update status for the client surfaces. |
+| `ctx.knowledge` | `core` | [`host-knowledge`](../packages/host/knowledge) | - | [`personal-agent`](../packages/interaction/personal-agent), [`context-router`](../packages/context/context-router) | - | Owns local knowledge storage, indexing, search, session selection, and the optional automatic retrieval listener. |
+| `ctx.localSkillImport` | `core` | [`host-local-skill-import`](../packages/host/local-skill-import) | - | `ui-layout` | - | Scans trusted local skill roots and exposes bounded archives for the authoring surface without handing absolute source paths to the model. |
+| `ctx.personalAgent` | `core` | [`personal-agent`](../packages/interaction/personal-agent) | - | [`context-router`](../packages/context/context-router), [`host-knowledge`](../packages/host/knowledge), [`tools`](../packages/core/tools) | - | Folds durable mode and policy settings and supplies the mode, budget, and retrieval decisions consumed by the loop and related services. |
+| `ctx.phoneAccess` | `core` | [`phone-access`](../packages/webhook/phone-access) | - | [`api-remotes`](../packages/api/remotes), `ui-settings-plugins` | - | Owns the optional ngrok tunnel lifecycle and redacted access view; the Remote adapter and settings card remain usable when the service is absent. |
+| `ctx.workflowSchedules` | `core` | [`schedule`](../packages/schedule/schedule) | - | [`workflow`](../packages/workflow/workflow), [`api-remotes`](../packages/api/remotes), `ui-schedule` | - | Projects schedule records into due occurrences and dispatches them through the workflow target while exposing lifecycle controls over the Remote namespace. |
 | `ctx.webServer` | `core` | [`host-webserver`](../packages/host/webserver) | - | [`client-connection`](../packages/client/connection), [`client-modules`](../packages/client/modules), [`client-hmr`](../packages/client/hmr) | - | Plain node:http carrier: named-route registry, index transform taps, and the static dist fallback; web-transport plugins register their own routes. |
 | `ctx.clientModules` | `core` | [`client-modules`](../packages/client/modules) | - | [`client-hmr`](../packages/client/hmr) | - | Composes the __DSH_BOOT__ entry graph from an incremental dsh.client scan, serves plugin bundles, and notifies rebuilt/graph-changed subscribers. |
 | `ctx.workflowEngine` | `seam` | [`workflow`](../packages/workflow/workflow) | [`workflow-ptc`](../packages/workflow/workflow-ptc) | [`tool-workflow`](../packages/workflow/tool-workflow), [`tool-ralph`](../packages/workflow/tool-ralph) | - | One engine per context, as in bash, with no named-provider registry; the general workflow and fixed Ralph consumers start runs whose agent() calls fan out through ctx.subagents. |

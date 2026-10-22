@@ -22,6 +22,9 @@ function controllerAgents(overrides: object = {}): ApiSessionAgentController {
   return {
     ensureSession: () => Promise.resolve(),
     composeAgent: () => Promise.resolve({ setup: () => {} }),
+    // Fork resumes the preset the source SESSION recorded; the stub answers it
+    // with the same composition the explicit form does.
+    composeStoredAgent: () => Promise.resolve({ setup: () => {} }),
     presetForSession: () => undefined,
     presetForObservation: () => undefined,
     ...overrides,
@@ -272,7 +275,7 @@ describe('Session fork failures', () => {
       (options: CreateAgentOptions) => Promise.resolve(resolvedHandle(ctx, options.sessionId)),
     )
     const controller = new SessionCommandController(ctx, controllerAgents({
-      composeAgent: () => Promise.resolve({ agentPreset: 'minimal', setup: () => {} }),
+      composeStoredAgent: () => Promise.resolve({ agentPreset: 'minimal', setup: () => {} }),
     }), '/default')
 
     const forked = await controller.fork({ sessionId: source.id })

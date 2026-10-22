@@ -18,6 +18,15 @@ exports[`single-slot mounting (declare + renderSlot) > folds class hashes and co
       data-content="2bfa09dc"
       viewBox="0 0 16 16"
     />
+    <img
+      alt=""
+      data-content="921131df"
+      src="data:image/webp;base64,"
+    />
+    <img
+      alt="chart"
+      src="/api/file?path=chart.png"
+    />
   </div>
 </div>
 `;

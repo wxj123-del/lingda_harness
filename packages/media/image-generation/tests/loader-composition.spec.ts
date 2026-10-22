@@ -29,7 +29,7 @@ let root: string | undefined
 let server: ReturnType<typeof createServer> | undefined
 afterEach(async () => {
   await context?.fiber.dispose()
-  if (server) await new Promise<void>((resolve, reject) => { server!.closeAllConnections(); server!.close(error => error ? reject(error) : resolve()) })
+  if (server) await new Promise<void>((resolve, reject) => { server!.closeAllConnections(); server!.close((error) =>{  error ? reject(error) : resolve() }) })
   if (root) await rm(root, { recursive: true, force: true })
   context = undefined; root = undefined; server = undefined
 })
@@ -113,7 +113,7 @@ it('boots both plugins through Loader, runs a real agent turn, saves assets, and
   await agent.whenIdle()
   const results = agent.session.snapshotEvents().filter(event => event.type === 'tool/result')
   expect(results).toHaveLength(2)
-  const blocks = results.map(event => event.data.message.content[0]!)
+  const blocks = results.map(event => event.data.message.content[0])
   expect(blocks.map(block => block.type === 'tool-result' && !!block.isError)).toEqual([false, false])
   const contents = blocks.map((block) => {
     if (block.type !== 'tool-result') throw new Error('Missing tool result block')

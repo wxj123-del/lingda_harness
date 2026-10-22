@@ -31,7 +31,8 @@ const scheduleId = z.unknown().transform((value, context): ScheduleId => {
 
 const scheduleRecord = z.unknown().transform((value, context): ScheduleRecord => {
   try {
-    const change = decodeScheduleChange({ version: 1, operation: 'create', schedule: value }) as Extract<
+    const version = typeof value === 'object' && value !== null && 'target' in value ? 2 : 1
+    const change = decodeScheduleChange({ version, operation: 'create', schedule: value }) as Extract<
       ScheduleChange,
       { operation: 'create' }
     >
@@ -81,7 +82,7 @@ export const scheduleProjectionDefinition = {
     viewSchema: scheduleRecords,
     view: state => state.active,
   },
-  stateVersion: 2,
+  stateVersion: 3,
 } satisfies ProjectionDefinition<'schedule', ScheduleProjectionState>
 
 declare module '@deepseek-ai/dsh-session-projection/types' {

@@ -252,10 +252,10 @@ describe('default product isolation', () => {
     write(root, profile, `export const PROFILE_TEMPLATES = { web: { bundles: ['${experimental}'] } }\n`
       + `export const DEFAULT_PROFILE_BUNDLES = ['${base}']\n`)
     manifest(root, 'apps/cli/package.json', { dsh: { configTrees: [{ path: './config' }] } })
-    write(root, 'apps/cli/config/extra.cordis.yml', [{ name: experimental }])
+    write(root, 'apps/cli/config/agent.cordis.yml', [{ name: experimental }])
     const failures = verifyDefaultProductIsolation(root).failures.join('\n')
     expect(failures).toContain(`${profile} -> ${experimental}`)
-    expect(failures).toContain('apps/cli/config/extra.cordis.yml')
+    expect(failures).toContain('apps/cli/config/agent.cordis.yml')
   })
 
   it.each([false, true])('rejects a declared config tree without composition files when its directory exists: %s', (existing) => {

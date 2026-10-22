@@ -312,7 +312,7 @@
 .imageLabel {
   margin-bottom: 4px;
   overflow-wrap: anywhere;
-  font: var(--dsw-font-sm-13);
+  font: var(--dsw-font-xs-13);
   color: var(--dsw-alias-label-secondary);
 }
 

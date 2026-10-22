@@ -11,6 +11,7 @@ const temporaryDirectories: string[] = []
 const TEST_ORIGIN = 'https://desktop-updates.example.com'
 const TEST_BUCKET = 'test-download-bucket'
 const PRODUCTION_BUCKET = 'production-download-bucket'
+const PRODUCTION_ORIGIN = 'https://download.example.com'
 
 interface Fixture {
   readonly repositoryRoot: string
@@ -38,10 +39,10 @@ async function fixture(
   await writeFile(join(appRoot, 'package.json'), `${JSON.stringify({ version })}\n`)
 
   const [os, arch] = target.split('-') as ['mac' | 'win', 'arm64' | 'x64']
-  const base = `deepseek-harness-${version}-${os}-${arch}`
+  const base = `lingda-harness-${version}-${os}-${arch}`
   const origin = environment === 'test'
     ? TEST_ORIGIN
-    : 'https://download.deepseek.com'
+    : PRODUCTION_ORIGIN
   await writeFile(join(artifactsRoot, `${target}-release.json`), `${JSON.stringify({
     schemaVersion: 1,
     target,
@@ -85,6 +86,7 @@ async function fixture(
       }
       : {
         DSH_DESKTOP_AUTO_UPDATE_ENV: 'production',
+        DOWNLOAD_PROD_ORIGIN: PRODUCTION_ORIGIN,
         DOWNLOAD_PROD_COS_BUCKET: PRODUCTION_BUCKET,
       },
   }
@@ -108,9 +110,9 @@ describe('desktop upload plan', () => {
       bucket: TEST_BUCKET,
     })
     expect(plan.artifacts.map(artifact => artifact.filename)).toEqual([
-      'deepseek-harness-1.2.3-mac-arm64.dmg',
-      'deepseek-harness-1.2.3-mac-arm64.zip',
-      'deepseek-harness-1.2.3-mac-arm64.zip.blockmap',
+      'lingda-harness-1.2.3-mac-arm64.dmg',
+      'lingda-harness-1.2.3-mac-arm64.zip',
+      'lingda-harness-1.2.3-mac-arm64.zip.blockmap',
       'latest-mac.yml',
     ])
     expect(plan.artifacts.at(-1)).toMatchObject({
@@ -123,9 +125,9 @@ describe('desktop upload plan', () => {
     const paths = await fixture('mac-arm64', '1.2.3-alpha.4')
     const plan = await createDesktopUploadPlan('mac-arm64', paths)
     expect(plan.artifacts.map(artifact => artifact.filename)).toEqual([
-      'deepseek-harness-1.2.3-alpha.4-mac-arm64.dmg',
-      'deepseek-harness-1.2.3-alpha.4-mac-arm64.zip',
-      'deepseek-harness-1.2.3-alpha.4-mac-arm64.zip.blockmap',
+      'lingda-harness-1.2.3-alpha.4-mac-arm64.dmg',
+      'lingda-harness-1.2.3-alpha.4-mac-arm64.zip',
+      'lingda-harness-1.2.3-alpha.4-mac-arm64.zip.blockmap',
       'alpha-mac.yml',
     ])
   })
@@ -134,11 +136,11 @@ describe('desktop upload plan', () => {
     const paths = await fixture('win-x64', '2.0.0', 'production')
     const plan = await createDesktopUploadPlan('win-x64', paths)
     expect(plan.artifacts.map(artifact => artifact.filename)).toEqual([
-      'deepseek-harness-2.0.0-win-x64.exe',
+      'lingda-harness-2.0.0-win-x64.exe',
       'latest.yml',
     ])
     expect(plan).toMatchObject({
-      publicUrl: 'https://download.deepseek.com/_/harness/desktop/stable/win-x64/',
+      publicUrl: `${PRODUCTION_ORIGIN}/_/harness/desktop/stable/win-x64/`,
       bucket: PRODUCTION_BUCKET,
     })
   })
@@ -149,7 +151,7 @@ describe('desktop upload plan', () => {
     await writeFile(join(paths.artifactsRoot, 'latest.yml'), `${JSON.stringify({
       version: '1.2.3',
       files: [{
-        url: 'deepseek-harness-1.2.3-win-x64.exe',
+        url: 'lingda-harness-1.2.3-win-x64.exe',
         size: Buffer.byteLength(executable),
         sha512: digest(executable),
       }],
@@ -177,7 +179,7 @@ describe('desktop upload plan', () => {
   it('rejects stale architecture metadata and modified updater bytes', async () => {
     const paths = await fixture('mac-arm64')
     const metadataPath = join(paths.artifactsRoot, 'latest-mac.yml')
-    const zipPath = join(paths.artifactsRoot, 'deepseek-harness-1.2.3-mac-arm64.zip')
+    const zipPath = join(paths.artifactsRoot, 'lingda-harness-1.2.3-mac-arm64.zip')
     await writeFile(zipPath, 'modified')
     await expect(createDesktopUploadPlan('mac-arm64', paths)).rejects.toThrow(/size.*metadata/u)
 
@@ -185,7 +187,7 @@ describe('desktop upload plan', () => {
     await writeFile(metadataPath, `${JSON.stringify({
       version: '1.2.3',
       files: [{
-        url: 'deepseek-harness-1.2.3-mac-x64.zip',
+        url: 'lingda-harness-1.2.3-mac-x64.zip',
         size: Buffer.byteLength(x64),
         sha512: digest(x64),
       }],

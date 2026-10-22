@@ -29,6 +29,8 @@ interface WorkflowStartRequest {
   subagentProvider?: string
   /** Optional per-run total-child ceiling. */
   maxTotalAgents?: number
+  /** Enable trusted visual-node audit bindings for compiler-generated workflows. */
+  nodeAudit?: boolean
   /** The agent on whose behalf the run executes (parent of every child). */
   parent: Agent
   /** Cancels the run when aborted. */
@@ -161,118 +163,142 @@ Source: [`packages/workflow/workflow/src/index.ts`](../../packages/workflow/work
 
 #### `workflow/agent-end` — emit
 
-One `agent()` call settled (clean result, child failure, or run cancellation). Paired with Events['workflow/agent-start'] by `agent.seq`, exactly once per started call on every stop path — on an engine termination path the end is engine-synthesized with outcome `'cancelled'`.
+One child Agent run settled.
 
 ```ts cordis-catalog
 /**
- * One `agent()` call settled (clean result, child failure, or run
- * cancellation). Paired with {@link Events['workflow/agent-start']} by
- * `agent.seq`, exactly once per started call on every stop path — on an
- * engine termination path the end is
- * engine-synthesized with outcome `'cancelled'`.
- * @param info - the run's identity snapshot.
- * @param agent - the call identity plus its outcome.
+ * One child Agent run settled.
+ * @param info - The workflow run identity snapshot.
+ * @param agent - The child call identity and outcome.
  * @mode emit
  */
 'workflow/agent-end'(info: WorkflowRunInfo, agent: WorkflowAgentEndInfo): void
 ```
 
-Source: [`packages/workflow/workflow/src/index.ts`](../../packages/workflow/workflow/src/index.ts)
+Source: [`packages/workflow/workflow/src/types.ts`](../../packages/workflow/workflow/src/types.ts)
 
 <a id="workflowagent-start--emit"></a>
 
 #### `workflow/agent-start` — emit
 
-One `agent()` call established a published child run. Paired with Events['workflow/agent-end'] by `agent.seq`. A call that never receives a published run from the provider emits neither event in this pair.
+One child Agent run started.
 
 ```ts cordis-catalog
 /**
- * One `agent()` call established a published child run. Paired with
- * {@link Events['workflow/agent-end']} by `agent.seq`. A call that never
- * receives a published run from the provider emits neither
- * event in this pair.
- * @param info - the run's identity snapshot.
- * @param agent - the call's sequence number, label, phase, and child id.
+ * One child Agent run started.
+ * @param info - The workflow run identity snapshot.
+ * @param agent - The child call identity.
  * @mode emit
  */
 'workflow/agent-start'(info: WorkflowRunInfo, agent: WorkflowAgentInfo): void
 ```
 
-Source: [`packages/workflow/workflow/src/index.ts`](../../packages/workflow/workflow/src/index.ts)
+Source: [`packages/workflow/workflow/src/types.ts`](../../packages/workflow/workflow/src/types.ts)
 
 <a id="workflowend--emit"></a>
 
 #### `workflow/end` — emit
 
-A workflow run settled (any stop reason). Fired when WorkflowRun.result resolves. Paired with Events['workflow/start'].
+A workflow run settled.
 
 ```ts cordis-catalog
 /**
- * A workflow run settled (any stop reason). Fired when
- * {@link WorkflowRun.result} resolves. Paired with
- * {@link Events['workflow/start']}.
- * @param info - the run's identity snapshot.
- * @param result - the outcome data (stop reason, error, agent count) —
- *   deliberately WITHOUT the result value (see {@link WorkflowResultInfo}).
+ * A workflow run settled.
+ * @param info - The workflow run identity snapshot.
+ * @param result - The result metadata without the mutable result value.
  * @mode emit
  */
 'workflow/end'(info: WorkflowRunInfo, result: WorkflowResultInfo): void
 ```
 
-Source: [`packages/workflow/workflow/src/index.ts`](../../packages/workflow/workflow/src/index.ts)
+Source: [`packages/workflow/workflow/src/types.ts`](../../packages/workflow/workflow/src/types.ts)
 
 <a id="workflowlog--emit"></a>
 
 #### `workflow/log` — emit
 
-The script emitted a narration line (a `log(message)` call).
+The script emitted one narration line.
 
 ```ts cordis-catalog
 /**
- * The script emitted a narration line (a `log(message)` call).
- * @param info - the run's identity snapshot.
- * @param message - the logged message, verbatim.
+ * The script emitted one narration line.
+ * @param info - The run identity snapshot.
+ * @param message - The emitted text.
  * @mode emit
  */
 'workflow/log'(info: WorkflowRunInfo, message: string): void
 ```
 
-Source: [`packages/workflow/workflow/src/index.ts`](../../packages/workflow/workflow/src/index.ts)
+Source: [`packages/workflow/workflow/src/types.ts`](../../packages/workflow/workflow/src/types.ts)
+
+<a id="workflownode-end--emit"></a>
+
+#### `workflow/node-end` — emit
+
+A visual workflow node reached a terminal state.
+
+```ts cordis-catalog
+/**
+ * A visual workflow node reached a terminal state.
+ * @param info - The workflow run identity snapshot.
+ * @param node - The node terminal observation.
+ * @mode emit
+ */
+'workflow/node-end'(info: WorkflowRunInfo, node: WorkflowNodeEndInfo): void
+```
+
+Source: [`packages/workflow/workflow/src/types.ts`](../../packages/workflow/workflow/src/types.ts)
+
+<a id="workflownode-start--emit"></a>
+
+#### `workflow/node-start` — emit
+
+A visual workflow node began execution.
+
+```ts cordis-catalog
+/**
+ * A visual workflow node began execution.
+ * @param info - The workflow run identity snapshot.
+ * @param node - The node start observation.
+ * @mode emit
+ */
+'workflow/node-start'(info: WorkflowRunInfo, node: WorkflowNodeStartInfo): void
+```
+
+Source: [`packages/workflow/workflow/src/types.ts`](../../packages/workflow/workflow/src/types.ts)
 
 <a id="workflowphase--emit"></a>
 
 #### `workflow/phase` — emit
 
-The script entered a phase (a `phase(title)` call) — progress grouping for observers; no execution semantics.
+The script entered a progress phase.
 
 ```ts cordis-catalog
 /**
- * The script entered a phase (a `phase(title)` call) — progress grouping
- * for observers; no execution semantics.
- * @param info - the run's identity snapshot.
- * @param title - the phase title, verbatim.
+ * The script entered a progress phase.
+ * @param info - The run identity snapshot.
+ * @param title - The exact phase title.
  * @mode emit
  */
 'workflow/phase'(info: WorkflowRunInfo, title: string): void
 ```
 
-Source: [`packages/workflow/workflow/src/index.ts`](../../packages/workflow/workflow/src/index.ts)
+Source: [`packages/workflow/workflow/src/types.ts`](../../packages/workflow/workflow/src/types.ts)
 
 <a id="workflowstart--emit"></a>
 
 #### `workflow/start` — emit
 
-A workflow run started — the script's meta block validated, the body about to execute. Paired with Events['workflow/end'].
+A workflow run started; paired with Events['workflow/end'].
 
 ```ts cordis-catalog
 /**
- * A workflow run started — the script's meta block validated, the body
- * about to execute. Paired with {@link Events['workflow/end']}.
- * @param info - the run's identity snapshot (id + meta).
+ * A workflow run started; paired with {@link Events['workflow/end']}.
+ * @param info - The run identity snapshot.
  * @mode emit
  */
 'workflow/start'(info: WorkflowRunInfo): void
 ```
 
-Source: [`packages/workflow/workflow/src/index.ts`](../../packages/workflow/workflow/src/index.ts)
+Source: [`packages/workflow/workflow/src/types.ts`](../../packages/workflow/workflow/src/types.ts)
 <!-- END GENERATED cordis-surface -->

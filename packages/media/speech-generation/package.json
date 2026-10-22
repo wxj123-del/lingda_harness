@@ -7,7 +7,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/deepseek-ai/deepseek-harness.git",
+    "url": "git+https://gitcode.com/XJ-Cyber/lingda-harness.git",
     "directory": "packages/media/speech-generation"
   },
   "type": "module",
@@ -24,8 +24,8 @@
   },
   "files": [
     "lib/index.js",
-    "lib/types/**/*.d.ts",
-    "cordis.patch.yml"
+    "cordis.patch.yml",
+    "lib/types/**/*.d.ts"
   ],
   "license": "MIT",
   "peerDependencies": {

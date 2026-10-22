@@ -66,17 +66,29 @@ declare module '@deepseek-ai/cordis' {
   }
 }
 export interface Config {
+  /** Directory containing the local knowledge-base files and index. */
   dataDirectory: string
+  /** Embedding model identifier used for indexing and retrieval. */
   model: string
+  /** Text prepended to user queries before embedding. */
   queryPrefix: string
+  /** Number of documents processed in one indexing batch. */
   batchSize: number
+  /** Maximum characters accepted from one source document. */
   maxDocumentChars: number
+  /** Maximum characters retained for the indexed library. */
   maxLibraryChars: number
+  /** Maximum chunks retained across one indexing operation. */
   maxChunks: number
+  /** Default chunk size used when a document does not specify one. */
   defaultChunkSize: number
+  /** Default overlap between adjacent document chunks. */
   defaultChunkOverlap: number
+  /** Maximum number of search hits returned for one query. */
   searchLimit: number
+  /** Minimum similarity score accepted as a retrieval hit. */
   similarityThreshold: number
+  /** Maximum estimated tokens returned in the retrieval context. */
   maxResultTokens: number
 }
 const idSchema = z.string().regex(/^[a-zA-Z0-9_-]{1,128}$/)

@@ -12,6 +12,10 @@ Status: implemented
 
 新增经过校验的 `workflow/node-start` 与 `workflow/node-end` 生命周期事件。编译器会在每个可视化节点前后发出事件，包括未选中分支的显式 `skipped` 状态，以及依赖波次失败后下游节点的 `blocked` 状态。绑定只对受信任的编译器可视化运行启用，普通模型编写的工作流脚本无法伪造节点审计记录。PTC guest 会限制摘要大小，Host 负责校验，并在取消时结束仍活跃的节点。Session Controller 会持久化经过脱敏且有上限的审计轨迹，其中包含运行 correlation id，并通过 `WorkflowRemoteRunView` 暴露；编辑器调试流会显示节点生命周期更新。
 
+## Alternatives considered
+
+从子 Agent 事件推断节点状态无法区分图节点和阻塞波次；持久化不受限的输入输出会突破审计数据的大小与脱敏边界，因此均未采用。
+
 ## Consequences
 
 运维人员可以关联运行、波次、节点、重试预算、耗时、结果和有界摘要，同时不会保存密钥或无界 payload。不变式会拒绝重复、未配对、格式错误和未结束的节点生命周期。既有的 agent 生命周期与运行历史保持兼容。

@@ -4,7 +4,7 @@ import type { Message, UserMessage } from '@deepseek-ai/dsh-llm'
 import { CompactionId } from '@deepseek-ai/dsh-compaction'
 import { compactCheckpointSource } from '@deepseek-ai/dsh-compaction/checkpoint'
 import { estimateMessage, estimateToolsTokens } from '@deepseek-ai/dsh-token-meter'
-import { contextCapacity, resolveContextBudget, resolveContextRoute, resolveContextRouteForMessages, selectContextMessages } from '../src/router.ts'
+import { contextCapacity, messageText, resolveContextBudget, resolveContextRoute, resolveContextRouteForMessages, selectContextMessages } from '../src/router.ts'
 
 const user = (text: string): Message => createUserMessage({ source: { kind: 'user' }, content: [{ type: 'text', text }] })
 describe('context router', () => {
@@ -47,16 +47,16 @@ describe('context router', () => {
   })
 
   it('classifies explicit routing language', () => {
-    expect(resolveContextRoute('今天天气怎么样？')).toMatchObject({ scope: 'recent', signal: 'unrelated' })
-    expect(resolveContextRoute('继续刚才的旧任务')).toMatchObject({ scope: 'task', signal: 'task-reference' })
-    expect(resolveContextRoute('换个话题，问个无关的问题')).toMatchObject({ scope: 'fresh', signal: 'explicit-fresh' })
-    expect(resolveContextRoute('请完整回顾全部历史')).toMatchObject({ scope: 'full', signal: 'explicit-full' })
+    expect(resolveContextRoute('今天天气怎么样？')).toMatchObject({ scope: 'recent', signal: 'unrelated', fallback: true })
+    expect(resolveContextRoute('继续刚才的旧任务')).toMatchObject({ scope: 'task', signal: 'task-reference', confidence: 0.82 })
+    expect(resolveContextRoute('换个话题，问个无关的问题')).toMatchObject({ scope: 'fresh', signal: 'explicit-fresh', confidence: 1 })
+    expect(resolveContextRoute('请完整回顾全部历史')).toMatchObject({ scope: 'full', signal: 'explicit-full', confidence: 1 })
   })
 
   it('treats an unrelated unqualified request as fresh', () => {
     const messages = [user('继续实现 context router'), user('继续修复测试')]
-    expect(resolveContextRouteForMessages('今天天气怎么样？', messages, 4)).toMatchObject({ scope: 'fresh', signal: 'unrelated' })
-    expect(resolveContextRouteForMessages('context router 测试失败了', messages, 4)).toMatchObject({ scope: 'recent', signal: 'lexical-match' })
+    expect(resolveContextRouteForMessages('今天天气怎么样？', messages, 4)).toMatchObject({ scope: 'fresh', signal: 'unrelated', confidence: 0.9, fallback: true })
+    expect(resolveContextRouteForMessages('context router 测试失败了', messages, 4)).toMatchObject({ scope: 'recent', signal: 'lexical-match', confidence: 0.74 })
   })
 
   it('does not treat generic Chinese phrases as a task connection', () => {
@@ -88,6 +88,29 @@ describe('context router', () => {
     expect(result.messages).toEqual([prior, answer, current])
   })
 
+  it('anchors automated goal rounds to the prior tool history', () => {
+    const prior = user('创建一个需要持续跟进的目标')
+    const call = createAssistantMessage({
+      source: { provider: 'test', model: 'test' },
+      content: [{ type: 'tool-call', id: ToolCallId('goal-call'), name: 'create_goal', arguments: '{}' }],
+    })
+    const result = createToolResultMessage({
+      callId: ToolCallId('goal-call'),
+      isError: false,
+      content: [{ type: 'text', text: '{"goal":{"id":"goal-1"}}' }],
+    })
+    const round = createUserMessage({
+      source: { kind: 'goal', goalId: 'goal-1', revision: 1, round: 1 } as never,
+      content: [{ type: 'text', text: '<goal_round>Continue working toward the objective.</goal_round>' }],
+    })
+    const messages = [prior, call, result, round]
+    const route = resolveContextRouteForMessages(messageText(round), messages, 4)
+    const selection = selectContextMessages(messages, route, { taskMessages: 8 })
+
+    expect(route.scope).toBe('task')
+    expect(selection.messages).toEqual(messages)
+  })
+
   it('drops old ordinary history for a fresh question but keeps system and current user', () => {
     const messages = [createSystemMessage('system', 'test'), user('旧问题'), user('今天天气怎么样？')]
     const result = selectContextMessages(messages, resolveContextRoute('换个话题').scope === 'fresh'
@@ -115,6 +138,23 @@ describe('context router', () => {
     expect(result.messages.at(-1)).toBe(messages.at(-1))
   })
 
+  it('adaptively recalls matching history for a lexical recent route', () => {
+    const matching = user('context router 的置信度策略需要测试')
+    const messages = [matching, ...Array.from({ length: 5 }, (_, i) => user(`无关轮次 ${i}`)), user('context router 置信度测试失败了')]
+    const route = resolveContextRouteForMessages('context router 置信度测试失败了', messages, 8)
+    const result = selectContextMessages(messages, route, { recentMessages: 2, taskMessages: 8 })
+
+    expect(route).toMatchObject({ scope: 'recent', signal: 'lexical-match' })
+    expect(result.messages).toContain(matching)
+    expect(result.routeEvidence).toMatchObject({ candidateHistoryMessages: 1, selectedHistoryMessages: 1 })
+  })
+
+  it('propagates confidence and fallback into selection audit data', () => {
+    const route = resolveContextRouteForMessages('今天天气怎么样？', [user('修复 context router')], 4)
+    const result = selectContextMessages([user('修复 context router'), user('今天天气怎么样？')], route)
+    expect(result).toMatchObject({ confidence: 0.9, fallback: true })
+  })
+
   it('accepts incremental lexical candidates without changing bounded task selection', () => {
     const matching = user('实现 context router 的接口')
     const unrelated = user('无关轮次')
@@ -128,6 +168,21 @@ describe('context router', () => {
       new Set([String(matching.id)]),
     )
     expect(result.messages).toEqual([matching, current])
+  })
+
+  it('reports related-history candidates and retained matches', () => {
+    const matching = user('实现 context router 的接口')
+    const unrelated = user('天气预报')
+    const current = user('继续 context router 任务')
+    const result = selectContextMessages(
+      [matching, unrelated, current],
+      { scope: 'task', signal: 'lexical-match', reason: 'indexed task match' },
+      { taskMessages: 1 },
+    )
+    expect(result.routeEvidence).toMatchObject({
+      queryTerms: expect.any(Number), candidateHistoryMessages: 1,
+      selectedHistoryMessages: 1, matchedHistoryTerms: expect.any(Number),
+    })
   })
 
   it('bounds durable task recall instead of turning a short continuation into full history', () => {
@@ -291,5 +346,99 @@ describe('context router', () => {
     expect(result.selectedMessageMetaOmitted).toBe(12)
     expect(result.selectedMessageMeta.at(0)?.preview).toBe('history 0')
     expect(result.selectedMessageMeta.at(-1)?.preview).toBe('history 139')
+  })
+
+  it('compacts older plain-text tool results without mutating the source messages', () => {
+    const oldCall = createAssistantMessage({
+      source: { provider: 'test', model: 'test' },
+      content: [{ type: 'tool-call', id: ToolCallId('old-call'), name: 'lookup', arguments: '{}' }],
+    })
+    const oldResult = createToolResultMessage({
+      callId: ToolCallId('old-call'), isError: false, content: [{ type: 'text', text: 'old result '.repeat(100) }],
+    })
+    const newCall = createAssistantMessage({
+      source: { provider: 'test', model: 'test' },
+      content: [{ type: 'tool-call', id: ToolCallId('new-call'), name: 'lookup', arguments: '{}' }],
+    })
+    const newResult = createToolResultMessage({
+      callId: ToolCallId('new-call'), isError: false, content: [{ type: 'text', text: 'new result '.repeat(100) }],
+    })
+    const current = user('继续处理')
+    const result = selectContextMessages(
+      [oldCall, oldResult, newCall, newResult, current],
+      { scope: 'full', reason: 'tool audit' },
+      { toolResultMaxChars: 100, toolResultRecentMessages: 1 },
+    )
+    const oldText = messageText(result.messages[1]!)
+    const newText = messageText(result.messages[3]!)
+    expect(oldText).toContain('旧工具结果已压缩')
+    expect(oldText.length).toBeLessThanOrEqual(100)
+    expect(newText).toContain('new result')
+    expect(newText.length).toBeGreaterThan(100)
+    expect(messageText(oldResult)).toContain('old result '.repeat(2))
+    expect(result.toolAudit).toMatchObject({
+      toolCallMessages: 2,
+      toolResultMessages: 2,
+      compactedToolResults: 1,
+      deduplicatedToolResults: 0,
+    })
+    expect(result.messages.map(message => message.id)).toEqual([oldCall.id, oldResult.id, newCall.id, newResult.id, current.id])
+  })
+
+  it('deduplicates older repeated tool results while preserving call-result pairs', () => {
+    const makeRound = (callId: string) => [
+      createAssistantMessage({
+        source: { provider: 'test', model: 'test' },
+        content: [{ type: 'tool-call', id: ToolCallId(callId), name: 'lookup', arguments: '{}' }],
+      }),
+      createToolResultMessage({
+        callId: ToolCallId(callId), isError: false, content: [{ type: 'text', text: 'same result' }],
+      }),
+    ]
+    const [firstCall, firstResult, secondCall, secondResult] = [...makeRound('first'), ...makeRound('second')]
+    const result = selectContextMessages(
+      [firstCall!, firstResult!, secondCall!, secondResult!, user('继续')],
+      { scope: 'full', reason: 'tool dedupe' },
+      { toolResultRecentMessages: 1 },
+    )
+    expect(messageText(result.messages[1]!)).toBe('[重复工具结果已省略；请使用首次结果]')
+    expect(messageText(result.messages[3]!)).toBe('same result')
+    expect(result.toolAudit?.deduplicatedToolResults).toBe(1)
+    expect(result.messages).toHaveLength(5)
+  })
+
+  it('compacts each tool-result block independently', () => {
+    const first = createAssistantMessage({
+      source: { provider: 'test', model: 'test' },
+      content: [
+        { type: 'tool-call', id: ToolCallId('multi-a'), name: 'lookup', arguments: '{}' },
+        { type: 'tool-call', id: ToolCallId('multi-b'), name: 'lookup', arguments: '{}' },
+      ],
+    })
+    const result = createToolResultMessage({
+      callId: ToolCallId('multi-a'), isError: false, content: [{ type: 'text', text: 'a'.repeat(120) }],
+    })
+    const second = createToolResultMessage({
+      callId: ToolCallId('multi-b'), isError: false, content: [{ type: 'text', text: 'b'.repeat(120) }],
+    })
+    const combined = { ...result, content: [...result.content, ...second.content] }
+    const selected = selectContextMessages([first, combined, user('keep')], { scope: 'full', reason: 'multi-block' }, {
+      toolResultMaxChars: 80,
+      toolResultRecentMessages: 0,
+    })
+    const blocks = selected.messages[1]?.content
+    expect(blocks).toHaveLength(2)
+    expect(blocks?.[0]).toMatchObject({ toolCallId: ToolCallId('multi-a'), content: [{ type: 'text', text: expect.stringContaining('旧工具结果已压缩') }] })
+    expect(blocks?.[1]).toMatchObject({ toolCallId: ToolCallId('multi-b'), content: [{ type: 'text', text: expect.stringContaining('旧工具结果已压缩') }] })
+  })
+
+  it('normalizes non-finite selector options instead of leaking NaN or Infinity', () => {
+    const result = selectContextMessages([user('request')], { scope: 'recent', reason: 'options' }, {
+      recentMessages: Number.NaN,
+      maxTokens: Number.POSITIVE_INFINITY,
+      pluginContextRatio: Number.NaN,
+    })
+    expect(result.estimatedInputTokens).toBeGreaterThan(0)
+    expect(result.budgetExceeded).toBe(false)
   })
 })

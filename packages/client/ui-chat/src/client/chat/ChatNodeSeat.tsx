@@ -36,7 +36,7 @@ function turnOf(node: ChatNode | undefined): number | undefined {
 
 /** Subscribe, apply Turn-process visibility, and dispatch one stable Context key. */
 export const ChatNodeSeat = memo(function ChatNodeSeat({
-  nodeKey, useChatNode, useChatNodeProcess, historyIncomplete, compactTranscript,
+  nodeKey, useChatNode, useChatNodeProcess, compactTranscript,
   cwd, openFile, openSkill, inspectCall, forkAt,
   loadImage, renderMessageImages, fileMentions, useStore, actions, renderSlot, t,
 }: ChatNodeSeatProps) {
@@ -45,34 +45,39 @@ export const ChatNodeSeat = memo(function ChatNodeSeat({
   const turn = turnOf(routedNode)
   const processPresentation = useChatNodeProcess(nodeKey)
   const processSpec = processPresentation?.spec
+  const processGeneration = processPresentation?.turnClosed === false
+    ? null
+    : processSpec?.answerStep
   const storedEntry = useStore(state => processSpec === undefined
     ? undefined
     : storedTurnProcessEntry(state, processSpec.turn))
   const processEntry = processSpec !== undefined
-    && processSpec.answerStep !== null
-    && storedEntry?.answerStep === processSpec.answerStep
+    && storedEntry?.answerStep === processGeneration
     ? storedEntry
     : undefined
-  const processOpen = processEntry !== undefined
+  // Live groups and normal mode start open; compact completed groups start
+  // closed. Once the reader toggles a group, its explicit state wins.
+  const processOpen = processEntry?.open
+    ?? (processPresentation?.turnClosed === false || !compactTranscript)
   const setOpen = useCallback((open: boolean) => {
-    if (processSpec !== undefined && processSpec.answerStep !== null) {
-      actions.setTurnProcessOpen(processSpec.turn, processSpec.answerStep, open)
+    if (processSpec !== undefined) {
+      actions.setTurnProcessOpen(processSpec.turn, processGeneration ?? null, open)
     }
-  }, [actions, processSpec])
+  }, [actions, processGeneration, processSpec])
   const processWindowReady = processSpec !== undefined
     && processPresentation !== undefined
-    && compactTranscript
-    && processSpec.answerAnchorSeq !== null
     && processPresentation.turn === processSpec.turn
-    && processPresentation.turnClosed
-    && !historyIncomplete
   const processMember = routedNode !== undefined
     && processWindowReady
     && !TURN_PROCESS_INDEPENDENT_KINDS.has(routedNode.kind)
     && routedNode.anchorSeq >= processSpec.processStartSeq
-    && routedNode.anchorSeq < processSpec.answerAnchorSeq
+    && (!processPresentation.turnClosed
+      || processSpec.answerAnchorSeq === null
+      || routedNode.anchorSeq < processSpec.answerAnchorSeq)
   const processAnswer = routedNode !== undefined
     && processWindowReady
+    && processPresentation.turnClosed
+    && processSpec.answerStep !== null
     && routedNode.kind === 'assistant-step'
     && routedNode.data.step === processSpec.answerStep
   const ownsDisclosure = routedNode?.kind === 'turn-process' || processAnswer

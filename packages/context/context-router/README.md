@@ -9,8 +9,16 @@ English | [中文](README.zh.md)
 
 ## Summary
 
-`dsh-context-router` keeps the append-only Session log intact while selecting a bounded model-visible request snapshot. It classifies the latest user request as `fresh`, `recent`, `task`, or `full`, preserves system messages and the current user message, and never sends an orphan tool result without its tool call. Each decision also records a machine-readable signal such as `explicit-full`, `co-reference`, `follow-up`, `lexical-match`, `open-turn`, or `unrelated`, so diagnostics can distinguish why a route was chosen instead of treating all `task` routes as equivalent. While a turn is open, every later model step prioritizes that turn's tool working set; if the token budget is exceeded, older working-set units are trimmed atomically before older-turn history. Lexical routing only applies across completed turns.
+`dsh-context-router` keeps the append-only Session log intact while selecting a bounded model snapshot. It classifies requests as `fresh`, `recent`, `task`, or `full`, preserves required messages and tool-call pairs, prioritizes an open turn, and records a machine-readable route signal for diagnostics. Older tool results are compacted only in the request snapshot; durable history remains unchanged.
 
+## Table of Contents
+
+- [Use](#use)
+- [Model Experience](#model-experience)
+- [Known Limitations and Deferred Work](#known-limitations-and-deferred-work)
+- [Dev Note](#dev-note)
+
+<a id="use"></a>
 ## Use
 
 The base bundle mounts this plugin globally. Its defaults retain 16 recent messages, up to 32 task-related messages, and at most 24,000 estimated tokens per request. `fresh` removes old ordinary conversation history; `task` adds older messages sharing request terms; `full` retains the complete history subject to the token budget. The durable log is never deleted or rewritten.
@@ -26,11 +34,15 @@ When `personal-agent` is mounted as well, the router reads the active mode's `ma
     pluginContextRatio: 0.25
     maxTokens: 24000
     safetyMarginTokens: 256
+    toolResultMaxChars: 6000
+    toolResultRecentMessages: 4
 ```
 
 Each request records a `context/router` audit event with the selected scope, reason, message counts, estimated message input, `estimatedRequestTokens` including tool schemas, `estimatedWindowTokens` including the reserved output budget, final message budget, and bounded per-message type, token, and preview metadata. The metadata includes at most 128 messages, keeps only truncated previews, and does not duplicate complete message bodies; the omitted count is recorded separately. When the Session has recorded the provider `contextWindow`, output `maxTokens`, and tool schemas, the router subtracts output and schema reservations from the model window before selecting messages, preventing the fixed budget from overflowing smaller models. The audit separately records `requestOverflowTokens` when the full request envelope (messages, schemas, and reserved output) still exceeds the provider window. If required messages such as the system prompt, current request, or durable checkpoint already exceed the effective budget, the event records `budgetExceeded` and `overflowTokens`, and the UI shows a warning; the router does not drop those invariants just to satisfy the numeric limit. The event is diagnostic and does not become model context. When the provider runtime projects file or image blocks before adapter dispatch, it appends a bounded `finalPayload` audit with the projected message previews and projection flags, so the context preview can distinguish the routed snapshot from the adapter-ready payload; the awaited request-ready checkpoint persists this audit before dispatch.
 
-The `context/router` audit also records the machine-readable route signal, allowing the UI and diagnostics to distinguish explicit requests, co-reference, follow-ups, lexical matches, open turns, and unrelated queries even when they share the same broad scope.
+The `context/router` audit also records the machine-readable route signal, allowing the UI and diagnostics to distinguish explicit requests, co-reference, follow-ups, lexical matches, open turns, and unrelated queries even when they share the same broad scope. Each route also carries deterministic confidence from 0 to 1 and a conservative-fallback marker; explicit instructions score highest, while weakly related ordinary requests only widen recall when bounded evidence supports it. For lexical routes it records bounded counts of candidate history messages, retained matching messages, and matched terms, making a route miss visible instead of silently presenting a zero-hit task recall as success. A lexical `recent` request can reuse the bounded task index to bring back confirmed matching history without turning every request into a full-transcript scan.
+
+Older plain-text tool results are compacted only in the per-request snapshot; the durable Session log is unchanged. The newest `toolResultRecentMessages` results remain intact, older results above `toolResultMaxChars` keep a bounded head/tail preview, existing spill-policy notices are left untouched, and repeated older text results are replaced by a short reference to the first result. The audit records counts and character totals in `toolAudit`, while tool calls and results remain atomic pairs.
 
 Message and tool-schema estimates use the same public heuristic as `token-meter`, so routing decisions and the Token trajectory display share one accounting rule. Within a process, estimates for immutable message and request-header objects are memoized, avoiding repeated pricing of the same long tool chain across selection and audit passes. Passive plugin or retrieval context is capped at 25% of the message budget by default; context belonging to the active open turn is exempt from this secondary cap and remains subject to the overall budget. Set `pluginContextRatio` between 0 and 1 to tune that bound.
 
@@ -48,6 +60,12 @@ Durable task recall uses a per-Session incremental index. The first lookup repla
 
 Task-term matching reuses the same bounded inverted index. Ordinary short requests only scan the bounded recent-user window, and historical task matching does not re-tokenize the full transcript on every request. Each term keeps at most the newest 256 message candidates; high-frequency terms that hit the cap fall back to an exact scan, and the complete durable log remains unchanged.
 
+<a id="dev-note"></a>
+## Dev Note
+
+Routing tests use deterministic Session fixtures and do not call an embedding model or a provider.
+
+<a id="model-experience"></a>
 ## Model Experience
 
 ### Routed request context
@@ -65,5 +83,8 @@ The default router bounds each request to 24,000 estimated tokens and leaves the
 Changing the selected history can reduce the reusable prefix for that request. The router does not rewrite prior messages or compaction records.
 
 ## Known Limitations and Deferred Work
+<a id="known-limitations-and-deferred-work"></a>
 
-Routing is deterministic and local. It does not use embeddings or a second model call; semantic recall beyond explicit references, recency, and shared terms remains a later extension.
+- Routing is deterministic and local. It does not use embeddings or a second model call; semantic recall beyond explicit references, recency, and shared terms remains a later extension.
+
+No runtime invariant companion is published because this package owns request routing rather than a durable replay invariant.

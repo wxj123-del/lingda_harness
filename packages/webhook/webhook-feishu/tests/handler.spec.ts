@@ -9,7 +9,7 @@ import type { FeishuMessageEvent } from '../src/types.ts'
 const servers: Server[] = []
 
 afterEach(async () => {
-  await Promise.all(servers.splice(0).map(server => new Promise<void>(resolve => server.close(() => resolve()))))
+  await Promise.all(servers.splice(0).map(server => new Promise<void>(resolve => server.close(() =>{  resolve() }))))
 })
 
 type MessageHandler = (message: FeishuMessageEvent | null, payload: Record<string, unknown>) => void
@@ -66,7 +66,7 @@ describe('Feishu HTTP callback handler', () => {
       },
     })
     expect(response.status).toBe(202)
-    await vi.waitFor(() => expect(fake.onMessage).toHaveBeenCalledOnce())
+    await vi.waitFor(() =>{  expect(fake.onMessage).toHaveBeenCalledOnce() })
     expect(fake.onMessage.mock.calls[0]?.[0]).toMatchObject({ eventId: 'evt-1', openId: 'ou_sender', text: 'hello from phone' })
   })
 

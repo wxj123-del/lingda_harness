@@ -160,3 +160,63 @@ export interface WorkflowResultInfo {
   /** How many `agent()` calls the run accepted (see {@link WorkflowResult.agentsStarted}). */
   agentsStarted: number
 }
+
+declare module '@deepseek-ai/cordis' {
+  interface Events {
+    /**
+     * A workflow run started; paired with {@link Events['workflow/end']}.
+     * @param info - The run identity snapshot.
+     * @mode emit
+     */
+    'workflow/start'(info: WorkflowRunInfo): void
+    /**
+     * The script entered a progress phase.
+     * @param info - The run identity snapshot.
+     * @param title - The exact phase title.
+     * @mode emit
+     */
+    'workflow/phase'(info: WorkflowRunInfo, title: string): void
+    /**
+     * The script emitted one narration line.
+     * @param info - The run identity snapshot.
+     * @param message - The emitted text.
+     * @mode emit
+     */
+    'workflow/log'(info: WorkflowRunInfo, message: string): void
+    /**
+     * One child Agent run started.
+     * @param info - The workflow run identity snapshot.
+     * @param agent - The child call identity.
+     * @mode emit
+     */
+    'workflow/agent-start'(info: WorkflowRunInfo, agent: WorkflowAgentInfo): void
+    /**
+     * One child Agent run settled.
+     * @param info - The workflow run identity snapshot.
+     * @param agent - The child call identity and outcome.
+     * @mode emit
+     */
+    'workflow/agent-end'(info: WorkflowRunInfo, agent: WorkflowAgentEndInfo): void
+    /**
+     * A visual workflow node began execution.
+     * @param info - The workflow run identity snapshot.
+     * @param node - The node start observation.
+     * @mode emit
+     */
+    'workflow/node-start'(info: WorkflowRunInfo, node: WorkflowNodeStartInfo): void
+    /**
+     * A visual workflow node reached a terminal state.
+     * @param info - The workflow run identity snapshot.
+     * @param node - The node terminal observation.
+     * @mode emit
+     */
+    'workflow/node-end'(info: WorkflowRunInfo, node: WorkflowNodeEndInfo): void
+    /**
+     * A workflow run settled.
+     * @param info - The workflow run identity snapshot.
+     * @param result - The result metadata without the mutable result value.
+     * @mode emit
+     */
+    'workflow/end'(info: WorkflowRunInfo, result: WorkflowResultInfo): void
+  }
+}

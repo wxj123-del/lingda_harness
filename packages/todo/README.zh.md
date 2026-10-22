@@ -9,7 +9,7 @@ kind: "package-group"
 
 ## 概述
 
-todo 组为 agent（智能体）提供可用于规划的会话级任务列表：添加任务、标记进行中、逐项完成，同一份列表跨轮次、跨重新打开的会话持续存在。它只包含一个产品包，提供 `todo_write` 工具；列表属于创建它的 agent 会话，每次更新都会整体替换。交互式宿主会从列表展示当前计划，组本身不附带任何 UI。
+todo 组覆盖两种规划范围。`tool-todo` 为 agent 提供按轮次的清单：`todo_write` 工具，列表跨轮次、跨重新打开的会话持续存在，每次更新整体替换。`task-state` 为跨多轮的工作提供一个持久任务：目标与可验证的验收条件、带证据的完成判定、每轮开头复述的卡片，以及自动命令证据。交互式宿主会从列表展示当前计划，组本身不附带任何 UI。
 
 ## 目录
 
@@ -25,6 +25,7 @@ todo 组为 agent（智能体）提供可用于规划的会话级任务列表：
 | 包 | 职责 | ctx 键 |
 |---|---|---|
 | [`tool-todo`](tool-todo/README.zh.md) | 让 agent 维护会话任务列表：规划任务、更新状态、跟踪进度 | 注册到 `ctx.tools` |
+| [`task-state`](task-state/README.zh.md) | 维护一个带验收条件、证据与每轮复诵卡片的持久任务 | 注册到 `ctx.sessionProjections` |
 
 -----
 
@@ -35,6 +36,7 @@ todo 组为 agent（智能体）提供可用于规划的会话级任务列表：
 - [生成的工具目录](../../docs/tool-catalog.zh.md#deepseek-aidsh-tool-todo)——模型接收的 `todo_write` schema。
 - [生成的配置目录](../../docs/config-catalog.zh.md#deepseek-aidsh-tool-todo)——每个受支持配置字段。
 - [todo_write 工具 Agent Note](../../.agents/notes/archived/feature/2026-06-29-todo-write-tool.md)——原始设计及其备选方案。
+- [长任务持久化 Agent Note](../../.agents/notes/implemented/feature/2026-10-19-long-task-durability.zh.md)——为什么持久任务状态与按轮次清单并存。
 
 -----
 

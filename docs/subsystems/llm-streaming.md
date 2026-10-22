@@ -704,6 +704,8 @@ interface LlmDiscoveredModel {
   contextWindow?: number
   /** Maximum output tokens, when disclosed. */
   maxTokens?: number
+  /** Request modalities when the endpoint exposes them. */
+  inputModalities?: readonly ModelModality[]
 }
 ```
 
@@ -1071,6 +1073,27 @@ The provider topology changed: an adapter registered or unregistered routes, or 
 ```
 
 Source: [`packages/llm/llm/src/types.ts`](../../packages/llm/llm/src/types.ts)
+
+<a id="llmrequest-ready--parallel"></a>
+
+#### `llm/request-ready` — parallel
+
+Awaited after provider-neutral file/image projection and immediately before the adapter receives the request. Observers may audit the exact harness payload but must not mutate it. Awaiting this boundary lets durability policies persist a final request audit before dispatch.
+
+```ts cordis-catalog
+/**
+ * Awaited after provider-neutral file/image projection and immediately
+ * before the adapter receives the request. Observers may audit the exact
+ * harness payload but must not mutate it. Awaiting this boundary lets
+ * durability policies persist a final request audit before dispatch.
+ * @param options - The projected provider-neutral generation request.
+ * @param projection - Whether file and image blocks were projected.
+ * @mode parallel
+ */
+'llm/request-ready'(this: LlmRuntime, options: GenerateOptions, projection: { files: boolean images: boolean }): void | Promise<void>
+```
+
+Source: [`packages/llm/llm/src/index.ts`](../../packages/llm/llm/src/index.ts)
 
 <a id="llmstream--waterfall"></a>
 

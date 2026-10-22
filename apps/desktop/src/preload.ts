@@ -4,8 +4,20 @@ import { contextBridge, ipcRenderer } from 'electron'
 import { DESKTOP_IPC, type DshDesktopApi, type DesktopUpdateState } from './ipc.ts'
 import type { DesktopBackendState } from './backend-controller.ts'
 
+const pet: DshDesktopApi['pet'] = {
+  state: () => ipcRenderer.invoke(DESKTOP_IPC.petState) as Promise<Awaited<ReturnType<DshDesktopApi['pet']['state']>>>,
+  subscribe(listener) {
+    const handle = (_event: Electron.IpcRendererEvent, state: Parameters<Parameters<DshDesktopApi['pet']['subscribe']>[0]>[0]): void => { listener(state) }
+    ipcRenderer.on(DESKTOP_IPC.petStatePush, handle)
+    return () => { ipcRenderer.off(DESKTOP_IPC.petStatePush, handle) }
+  },
+  drag: (delta) => { void ipcRenderer.invoke(DESKTOP_IPC.petDrag, delta) },
+  dragEnd: () => { void ipcRenderer.invoke(DESKTOP_IPC.petDragEnd) },
+}
+
 const api: DshDesktopApi = {
   protocolVersion: 1,
+  pet,
   locale: () => ipcRenderer.invoke(DESKTOP_IPC.localeGet) as Promise<ReturnType<DshDesktopApi['locale']> extends Promise<infer T> ? T : never>,
   plugins: {
     list: () => ipcRenderer.invoke(DESKTOP_IPC.pluginsList) as Promise<ReturnType<DshDesktopApi['plugins']['list']> extends Promise<infer T> ? T : never>,

@@ -3,7 +3,7 @@ import { useMemo, useRef, useState, type ChangeEvent } from 'react'
 import type { LocalSkillArchive, LocalSkillCandidate, LocalSkillScan } from '@deepseek-ai/dsh-api-remotes/client'
 import {
   Button, Input, Modal, IconSearchOutline16, IconFolderOpenOutline16,
-  IconSkillOutline16, IconCodeOutline16, IconEditOutline16, IconNewChatOutline16,
+  IconSkillOutline16, IconBranchOutline16, IconEditOutline16, IconNewChatOutline16,
   IconRefreshOutline16,
 } from '@deepseek-ai/dsh-client-ui-primitives'
 import { SKILL_CATEGORIES, type AuthoringItem, type SkillCategory } from '../../authoring-settings.ts'
@@ -174,7 +174,7 @@ export function SkillsPanel({ items, writable, loading, save, invoke, scanLocalS
       setQuery('')
     } catch { setImportError('skill.importFailed') } finally { setBuiltinImporting(null) }
   }
-  const icon = (skill: CatalogSkill) => skill.category === 'workflow' ? <IconCodeOutline16 size={24} /> : <IconSkillOutline16 size={24} />
+  const icon = (skill: CatalogSkill) => skill.category === 'workflow' ? <IconBranchOutline16 size={24} /> : <IconSkillOutline16 size={24} />
   const useButton = (skill: CatalogSkill) => (
     <Button size="sm" variant="outline" icon={<IconNewChatOutline16 />} disabled={!skill.enabled || skill.userInvocable === false || opening !== null} title={skill.userInvocable === false ? t('skill.modelOnly') : undefined} onClick={() => { void useSkill(skill) }}>
       {t(opening === skill.name ? 'skill.opening' : 'skill.use')}

@@ -269,7 +269,10 @@ export function verifyDefaultProductIsolation(root: string): ProductIsolationRes
     for (const tree of manifest.dsh?.configTrees ?? []) {
       const treePath = resolve(pkg.directory, tree.path)
       const files = existsSync(treePath) && statSync(treePath).isDirectory()
-        ? globSync('**/*.{yml,yaml}', { cwd: treePath, exclude: ['**/*.i18n.yaml', '**/preset.yml'] }) : []
+        // A config tree may also ship roster metadata (for example skill
+        // `agents/openai.yaml` files and `skill-inventory.yml`). Only Cordis
+        // compositions participate in the default-product dependency walk.
+        ? globSync('**/agent.cordis.yml', { cwd: treePath }) : []
       if (files.length === 0) failures.push(`${display(treePath)}: declared config tree has no composition files`)
       for (const path of files) scanConfig(resolve(treePath, path))
     }

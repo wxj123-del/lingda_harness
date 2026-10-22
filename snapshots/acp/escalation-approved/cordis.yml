@@ -24,6 +24,16 @@
   config:
     policy: !!js "(process.env.DSH_PERMISSION_MODE ?? (process.env.DSH_SNAPSHOT === undefined ? 'workspace-write' : 'danger-full-access')) === 'danger-full-access' ? 'never' : 'ask'"
 
+# Recorded automation fixtures exercise the complete tool catalog under the
+# explicitly approved snapshot boundary above.
+- id: personal-agent
+  config:
+    defaultMode: execution
+    modes:
+      execution:
+        sandbox: danger-full-access
+        approval: never
+
 - id: session-persistence-jsonl
   name: '@deepseek-ai/dsh-session-persistence-jsonl'
   config:

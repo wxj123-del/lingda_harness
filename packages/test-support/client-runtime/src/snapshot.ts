@@ -9,6 +9,9 @@
  * - `<svg>` internals collapse to a `data-content` fingerprint on the svg
  *   element: path geometry is print noise, but the fingerprint still flips
  *   when an icon's artwork actually changes.
+ * - An `<img>` whose source is a data URL folds to the same fingerprint with
+ *   the payload elided, so embedded artwork changes stay visible without
+ *   printing its base64.
  */
 import { expect } from 'vitest'
 import type { SnapshotSerializer } from 'vitest'
@@ -42,6 +45,25 @@ function svgsOf(root: Element): Element[] {
   return svgs
 }
 
+/**
+ * Elements of a subtree whose `src` is an inline data URL, root included.
+ * Already-folded images keep `data-content`, so the normalized clone no
+ * longer matches and printing falls through instead of recursing.
+ */
+function embeddedImagesOf(root: Element): Element[] {
+  const inline = (el: Element): boolean =>
+    (el.getAttribute('src') ?? '').startsWith('data:') && !el.hasAttribute('data-content')
+  const images: Element[] = [...root.querySelectorAll('img[src^="data:"]')].filter(inline)
+  if (root.tagName.toLowerCase() === 'img' && inline(root)) images.unshift(root)
+  return images
+}
+
+/** The declared media type of a data URL, without its payload. */
+function dataUrlPrefix(src: string): string {
+  const separator = src.indexOf(',')
+  return separator === -1 ? 'data:' : src.slice(0, separator + 1)
+}
+
 /** Whether serializing this subtree needs a normalized clone. */
 function needsNormalization(root: Element): boolean {
   const scoped = [root, ...root.querySelectorAll('[class]')].some((el) => {
@@ -49,6 +71,7 @@ function needsNormalization(root: Element): boolean {
     return value !== null && value.split(/\s+/).some(token => SCOPED_CLASS.test(token))
   })
   return scoped || svgsOf(root).some(svg => svg.childNodes.length > 0)
+    || embeddedImagesOf(root).length > 0
 }
 
 /**
@@ -70,6 +93,11 @@ export const domSnapshotSerializer: SnapshotSerializer = {
       if (svg.childNodes.length === 0) continue
       svg.setAttribute('data-content', fingerprint(svg.innerHTML))
       svg.replaceChildren()
+    }
+    for (const image of embeddedImagesOf(clone)) {
+      const src = image.getAttribute('src') ?? ''
+      image.setAttribute('data-content', fingerprint(src))
+      image.setAttribute('src', dataUrlPrefix(src))
     }
     return printer(clone, config, indentation, depth, refs)
   },

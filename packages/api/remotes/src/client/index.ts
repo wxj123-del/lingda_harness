@@ -6,9 +6,11 @@ import commandsRemote from '@deepseek-ai/dsh-commands/remote'
 import settingsControllerRemote from '@deepseek-ai/dsh-api-settings-controller/remote'
 import phoneAccessRemote from '@deepseek-ai/dsh-phone-access/remote'
 import goalsRemote from '@deepseek-ai/dsh-goal/remote'
+import workflowSchedulesRemote from '@deepseek-ai/dsh-schedule/remote'
 import llmRemote from '@deepseek-ai/dsh-llm/remote'
 import dynamicRemote from '@deepseek-ai/dsh-cordis-host-runner/remote'
 import pluginInventoryRemote from '@deepseek-ai/dsh-host-plugin-inventory/remote'
+import authoringAssistantRemote from '@deepseek-ai/dsh-host-authoring-assistant/remote'
 import knowledgeRemote from '@deepseek-ai/dsh-host-knowledge/remote'
 import localSkillImportRemote from '@deepseek-ai/dsh-host-local-skill-import/remote'
 import messageFeedbackRemote from '@deepseek-ai/dsh-message-feedback/remote'
@@ -29,6 +31,8 @@ export type { ClientRemote } from '@deepseek-ai/dsh-api-gateway/client'
 export type { PluginInventorySnapshot, ToolUsageSnapshot } from '@deepseek-ai/dsh-host-plugin-inventory/types'
 export type * from '@deepseek-ai/dsh-host-knowledge/types'
 export type * from '@deepseek-ai/dsh-host-local-skill-import/types'
+export type {} from '@deepseek-ai/dsh-host-authoring-assistant/remote'
+export type * from '@deepseek-ai/dsh-host-authoring-assistant/client'
 export type {} from '@deepseek-ai/dsh-host-knowledge/remote'
 export type {} from '@deepseek-ai/dsh-host-local-skill-import/remote'
 export type {} from '@deepseek-ai/dsh-agent-presets/remote'
@@ -36,6 +40,8 @@ export type {} from '@deepseek-ai/dsh-commands/remote'
 export type {} from '@deepseek-ai/dsh-api-settings-controller/remote'
 export type {} from '@deepseek-ai/dsh-phone-access/remote'
 export type {} from '@deepseek-ai/dsh-goal/remote'
+export type {} from '@deepseek-ai/dsh-schedule/remote'
+export type * from '@deepseek-ai/dsh-schedule/client'
 export type {} from '@deepseek-ai/dsh-llm/remote'
 export type {} from '@deepseek-ai/dsh-host-plugin-inventory/remote'
 export type {} from '@deepseek-ai/dsh-message-feedback/remote'
@@ -71,7 +77,7 @@ export type {} from '@deepseek-ai/dsh-settings/types'
 export type {} from '@deepseek-ai/dsh-user-approval/types'
 export type {} from '@deepseek-ai/dsh-user-questions/types'
 export type {} from '@deepseek-ai/dsh-api-session-controller/types'
-export type {} from '@deepseek-ai/dsh-workflow'
+export type {} from '@deepseek-ai/dsh-workflow/types'
 
 /**
  * The carrier's Client-facing types, re-exported so a business package names one
@@ -171,10 +177,10 @@ export async function apply(ctx: Context): Promise<() => Promise<void>> {
   const disposers: Array<() => Promise<void>> = []
   try {
     for (const contribution of [
-      agentPresetsRemote, commandsRemote, settingsControllerRemote, phoneAccessRemote, goalsRemote, llmRemote, dynamicRemote,
+      agentPresetsRemote, commandsRemote, settingsControllerRemote, phoneAccessRemote, goalsRemote, workflowSchedulesRemote, llmRemote, dynamicRemote,
       pluginInventoryRemote, knowledgeRemote, localSkillImportRemote, messageFeedbackRemote,
       sessionFeedbackRemote, fileUploadsRemote, sessionReferencesRemote,
-      permissionPresetsRemote, personalAgentRemote, subagentsRemote, sessionRemote, workspaceRemote, workspaceFilesRemote, terminalRemote,
+      permissionPresetsRemote, personalAgentRemote, authoringAssistantRemote, subagentsRemote, sessionRemote, workspaceRemote, workspaceFilesRemote, terminalRemote,
       gitWorkspaceRemote,
     ]) {
       disposers.push(await ctx.remote.$mount(contribution))

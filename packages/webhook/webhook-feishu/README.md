@@ -11,6 +11,14 @@ English | [中文](README.zh.md)
 
 `dsh-webhook-feishu` connects a Feishu custom app bot to DeepSeek Harness Agent Sessions. Its default WebSocket long connection needs only outbound HTTPS/WSS and no public callback route; its optional HTTP transport registers an exact callback route, handles URL verification, validates the verification token, and parses text messages. In both modes it reuses one Agent Session per chat and sends completed assistant text back through Feishu.
 
+## Table of Contents
+
+- [Configuration](#configuration)
+- [HTTP contract](#http-contract)
+- [Model Experience](#model-experience)
+- [Known Limitations and Deferred Work](#known-limitations-and-deferred-work)
+- [Dev Note](#dev-note)
+
 ## Configuration
 
 | Key | Meaning |
@@ -57,17 +65,21 @@ Each accepted text message becomes an ordinary user-role message in the mapped `
 
 One user message is retained per accepted turn and contributes tokens until ordinary compaction removes or summarizes that history.
 
-#### Control commands
+##### Slash commands
 
-The Feishu adapter executes registered slash commands before entering the Agent loop. Commands such as `/mode qa`, `/mode coding`, and `/compact` do not start a model turn; an unknown slash command returns an admission error instead of being sent to the model. Unambiguous Chinese mode phrases such as `现在是什么模式`, `改为编码模式`, and `切换到研究模式` map to `/mode`. Ordinary text remains model-visible conversation input.
+```markdown
+Registered slash commands such as `/mode qa`, `/mode coding`, and `/compact` execute before the Agent loop; they do not start a model turn. Unknown slash commands return an admission error instead of being sent to the model. Unambiguous Chinese mode phrases map to `/mode`; ordinary text remains model-visible conversation input.
+```
 
 #### KV Cache effect
 
 Append-only after the existing Session prefix; a repeated chat keeps the reusable prefix and adds only the new turn.
 
-#### Reply rendering
+##### Reply rendering
 
+```markdown
 Assistant replies are sent as Feishu post messages with a Markdown element, rather than plain-text messages. Headings, emphasis, lists, tables, links, and fenced code therefore render in Feishu's rich-text surface. Long replies are split at line boundaries before sending.
+```
 
 
 ## Known Limitations and Deferred Work
@@ -75,3 +87,9 @@ Assistant replies are sent as Feishu post messages with a Markdown element, rath
 - **HTTP encryption disabled** — encrypted HTTP callback bodies are not decrypted in this version; the default WebSocket transport avoids this limitation.
 - **In-memory chat map** — chat-to-Agent bindings are lost on process restart; persisted-session resume is deferred. In-process duplicate event ids are bounded to 2048 entries.
 - **Plain text replies** — rich cards, files, images, and streamed partial replies are deferred.
+
+No runtime invariant companion is published because the webhook adapter owns ingress validation and delivery, not a durable replay invariant.
+
+### Dev Note
+
+The adapter owns Feishu ingress verification, command short-circuiting, Session lookup, and reply delivery; the shared Agent and Session services remain the execution authority.

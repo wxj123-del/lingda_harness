@@ -98,6 +98,7 @@ interface BenchOptions {
   commandMenuOpen?: boolean
   busyEnter?: 'queue' | 'steer'
   toggleCommandMenu?: (selection: { start: number; end: number }) => void
+  optimizePrompt?: InputBarProps['optimizePrompt']
 }
 
 /** One pending queue row (the runtime snapshot shape, as the dock tests build it). */
@@ -200,6 +201,10 @@ function bench(over?: BenchOptions) {
     useLexicon: bindSnapshotSelector(shell.lexicon),
     useMenuLauncher: bindSnapshotSelector(menuLauncher),
     stop,
+    optimizePrompt: over?.optimizePrompt ?? (async (draft, _mode, _signal) => ({
+      ok: true as const,
+      value: { text: `${draft}，请补充目标和验收标准` },
+    })),
     // Mirrors the real lookup chain (conversation namespace, then common).
     t: over?.t ?? makeTranslate(zh, commonZh),
     renderSlot,
@@ -1585,6 +1590,22 @@ describe('command launcher chrome and control seats', () => {
     ])
     expect(view.queryByLabelText('Plan mode')).toBeNull()
     expect(view.queryByLabelText('Model')).toBeNull()
+  })
+
+  it('opens prompt optimization and applies the edited result to the composer', async () => {
+    const { view, shell } = bench({ draft: '整理需求' })
+    fireEvent.click(view.getByRole('button', { name: '优化提示词' }))
+    const editor = await view.findByRole('textbox', { name: '优化后的提示词' }) as HTMLTextAreaElement
+    expect(editor.value).toContain('整理需求')
+    fireEvent.change(editor, { target: { value: '整理需求并列出验收标准' } })
+    fireEvent.click(view.getByRole('button', { name: '应用到输入框' }))
+    expect(shell.snapshot.draft).toBe('整理需求并列出验收标准')
+  })
+
+  it('does not offer prompt optimization for slash commands', () => {
+    const { view } = bench({ draft: '/goal 发布版本' })
+    const trigger = view.getByRole('button', { name: '优化提示词' }) as HTMLButtonElement
+    expect(trigger.disabled).toBe(true)
   })
 
   it('passes the textarea selection to the command menu launcher and reflects its expanded state', () => {

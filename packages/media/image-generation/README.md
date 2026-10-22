@@ -63,6 +63,8 @@ The tool result appends to the conversation and preserves earlier request conten
 
 - Reference images currently accept local files or data URLs; existing attachment references are not yet accepted directly.
 
+No runtime invariant companion is published because image generation owns provider requests and attachment persistence, not a replay invariant.
+
 <a id="dev-note"></a>
 ### Dev Note
 

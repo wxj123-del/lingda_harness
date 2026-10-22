@@ -14,6 +14,10 @@ The Host appends a `visual-workflow/run` checkpoint when a visual workflow start
 
 The event is registered in the Session persistence catalog and stores only the redacted run view already exposed by the Remote API. Inputs are represented by byte counts, not payloads.
 
+## Alternatives considered
+
+Keeping history only in the Session Controller was rejected because it disappeared on Host restart. Persisting raw inputs or full run payloads was rejected to avoid retaining secrets and unbounded data.
+
 ## Consequences
 
 Run history survives Host restart and remains available without activating a Session Agent. In-memory running state remains authoritative during execution, while persisted checkpoints provide a durable terminal view. Old or malformed event payloads are ignored by the reconstruction helper instead of being exposed as invalid Remote data.

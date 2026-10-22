@@ -259,7 +259,7 @@ describe('gate graph validation', () => {
 
     expect(ids).toEqual([
       'rescope-vendor', 'publint', 'constraints', 'default-product-isolation', 'package-dependencies', 'application-entrypoints',
-      'dsh-package-licenses', 'package-invariants', 'built-package-invariants', 'node-next-types',
+      'source-artifacts', 'dsh-package-licenses', 'package-invariants', 'built-package-invariants', 'node-next-types',
       'optional-dependency-imports', 'client-packages', 'client-ui-i18n', 'no-bare-dispatcher', 'cordis-config',
       'runtime-closure',
     ])
@@ -294,6 +294,17 @@ describe('gate graph validation', () => {
       const ids = withPnpmEntrypoint(() => gatesForMode(mode).map(subject => subject.id))
 
       expect(ids).toContain('dsh-package-licenses')
+    },
+  )
+
+  it.each(['ci-primary', 'ci-static'] as const)(
+    'uses the pinned production audit command in %s',
+    (mode) => {
+      const gate = withPnpmEntrypoint(() => gatesForMode(mode)
+        .find(subject => subject.id === 'production-audit'))
+
+      expect(gate?.args).toEqual(['/private/pnpm.cjs', 'run', 'audit:prod'])
+      expect(gate?.allowFailure).not.toBe(true)
     },
   )
 
@@ -350,6 +361,17 @@ describe('gate graph validation', () => {
       const ids = withPnpmEntrypoint(() => gatesForMode(mode).map(subject => subject.id))
 
       expect(ids).toContain('application-entrypoints')
+    },
+  )
+
+  it.each(['ci-primary', 'ci-static', 'check-all', 'hygiene'] as const)(
+    'keeps generated source artifact enforcement in %s',
+    (mode) => {
+      const gate = withPnpmEntrypoint(() => gatesForMode(mode)
+        .find(subject => subject.id === 'source-artifacts'))
+
+      expect(gate?.args).toContain('verify-source-artifacts')
+      expect(gate?.allowFailure).not.toBe(true)
     },
   )
 

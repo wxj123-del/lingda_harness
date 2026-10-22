@@ -21,7 +21,32 @@ export const DESKTOP_IPC = {
   updatesCheck: 'dsh-desktop:updates-check',
   updatesInstall: 'dsh-desktop:updates-install',
   updatesState: 'dsh-desktop:updates-state',
+  petState: 'dsh-desktop:pet-state',
+  petStatePush: 'dsh-desktop:pet-state-push',
+  petDrag: 'dsh-desktop:pet-drag',
+  petDragEnd: 'dsh-desktop:pet-drag-end',
+  petToggle: 'dsh-desktop:pet-toggle',
+  petVisible: 'dsh-desktop:pet-visible',
 } as const
+
+/** What the pet window renders; produced by the main process from the Session list. */
+export interface DesktopPetView {
+  readonly phase: 'idle' | 'working' | 'done'
+  /** Running, non-blank Sessions behind this summary. */
+  readonly running: number
+  /** Tally of the Session the pet follows, when it has a todo list. */
+  readonly task?: {
+    readonly title?: string
+    readonly done: number
+    readonly total: number
+    readonly current?: string
+  }
+  /** Locale-resolved copy for this frame. */
+  readonly text: {
+    readonly headline: string
+    readonly done: string
+  }
+}
 
 /** Desktop release update state rendered by desktop-owned UI. */
 export interface DesktopUpdateState {
@@ -52,10 +77,25 @@ export interface DshDesktopApi {
     install(): Promise<void>
     subscribe(listener: (state: DesktopUpdateState) => void): () => void
   }
+  /** The mounted pet window: its state stream and the drag gestures it forwards. */
+  readonly pet: {
+    state(): Promise<DesktopPetView | undefined>
+    subscribe(listener: (state: DesktopPetView) => void): () => void
+    /** Move the window by one pointer delta in screen pixels. */
+    drag(delta: { readonly dx: number; readonly dy: number }): void
+    /** End one drag gesture. */
+    dragEnd(): void
+  }
+}
+
+/** The pet window's own bridge: state plus temporary visibility control. */
+export interface DshDesktopPetApi extends Pick<DshDesktopApi, 'protocolVersion' | 'locale' | 'pet'> {
+  /** Hide the pet until the next launch. */
+  dismiss(): void
 }
 
 /** The narrow bridge exposed to the application renderer. */
-export type DshDesktopApplicationApi = Pick<DshDesktopApi, 'protocolVersion' | 'updates'>
+export type DshDesktopApplicationApi = Pick<DshDesktopApi, 'protocolVersion' | 'updates' | 'pet'>
 
 /** Startup-page controls, unavailable to backend-provided application documents. */
 export interface DshDesktopStartupApi extends Pick<DshDesktopApi, 'protocolVersion' | 'locale'> {

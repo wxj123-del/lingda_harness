@@ -231,7 +231,7 @@ describe('ui-settings-general apply', () => {
     await c.unload(SELF)
     await c.flush()
     for (const [name] of SEATS) expect(ownEntries(c, name)).toHaveLength(0)
-    expect(ownEntries(c, 'settings.general.item')).toHaveLength(0)
+    expect(c.ctx.slots.entries('settings.general.item').filter(entry => entry.locale === NS)).toHaveLength(0)
     expect(c.ctx.slots.spec('settings.general.item')).toBeUndefined()
   })
 })

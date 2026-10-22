@@ -9,9 +9,7 @@ English | [中文](README.zh.md)
 
 ## Summary
 
-`dsh-git-workspace` records bounded Git evidence for local sessions and exposes guarded, explicit clone/sync operations for the repository UI. It records a workspace snapshot before and after each turn with the repository root, origin URL when available, current branch, short status, diff statistics, and a unified diff. When the session cwd is not itself a repository but contains one direct child repository, that child is resolved for the snapshot. Resuming a session that already has Git checkpoints schedules one fresh after-checkpoint immediately, so the UI can reflect repository layout changes without requiring a new user turn. Clone and sync reject unsafe URLs, non-empty unrelated folders, dirty worktrees, and non-fast-forward updates. The event is ignorable and can be rendered by trajectory clients without coupling Git behavior to a particular Agent mode or preset.
-
-The plugin does not mutate the worktree while recording checkpoints. Its Remote update action checks `https://gitcode.com/XJ-Cyber/lingda-harness` directly, even when the checkout has no `gitcode` remote configured. It requires a clean checkout and a fast-forward-only update, installs the frozen lockfile, rebuilds the project, and schedules a Host restart. Dirty, diverged, detached, and local-ahead checkouts are refused.
+`dsh-git-workspace` records bounded Git checkpoints before and after local Agent turns and exposes guarded clone, push, and fast-forward update actions. The snapshot includes repository identity, branch, status, diff statistics, and a bounded diff; a direct child repository is discovered when the session cwd is only a container. Recording never mutates the worktree, and Git failures remain non-fatal to the turn.
 
 ## Use
 
@@ -27,6 +25,14 @@ git-workspace:
 
 The `agent/git-checkpoint` event is the stable integration point for trajectory UIs and exports. Consumers should treat missing or failed Git data as an unavailable snapshot and continue rendering the session.
 
+## Table of Contents
+
+- [Use](#use)
+- [Source map](#source-map)
+- [Model Experience](#model-experience)
+- [Known Limitations and Deferred Work](#known-limitations-and-deferred-work)
+- [Dev Note](#dev-note)
+
 ## Source map
 
 | File | Role |
@@ -34,7 +40,23 @@ The `agent/git-checkpoint` event is the stable integration point for trajectory 
 | [`src/index.ts`](src/index.ts) | Service, config, checkpoint event, and guarded Git operations |
 | [`tests/git-workspace.spec.ts`](tests/git-workspace.spec.ts) | Turn ordering and disabled-plugin coverage |
 
-## Limits
+## Model Experience
+
+### Git checkpoint context
+
+#### What the model sees
+
+The `agent/git-checkpoint` Session event records bounded repository facts for trajectory and export consumers. It is evidence for the human-facing session view, not an extra prompt section or a command schema.
+
+#### Token effect
+
+Checkpoint fields are not added to model requests by this package. A consumer that explicitly renders a checkpoint in context controls any resulting token cost.
+
+#### KV Cache effect
+
+Recording a checkpoint does not change the model request prefix or cache policy.
+
+## Known Limitations and Deferred Work
 
 - Only sessions with an absolute `cwd` are inspected.
 - Output is bounded per field and is not a complete repository export.
@@ -42,3 +64,7 @@ The `agent/git-checkpoint` event is the stable integration point for trajectory 
 - Git failures are recorded on the checkpoint and never fail the Agent turn.
 
 No runtime invariant companion is published because this plugin's contract is the session checkpoint event itself; it owns no separate replay invariant.
+
+### Dev Note
+
+The service owns Git process invocation and checkpoint persistence; UI consumers render the event without gaining mutation authority.

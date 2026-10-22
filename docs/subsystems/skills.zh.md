@@ -244,6 +244,33 @@ interface Config {
 
 Generated from source by `scripts/gen-cordis-catalog.ts` (verified fresh by `pnpm run verify-cordis-catalog` in doc-sync; regenerate with `pnpm run gen-cordis-catalog`) — the language sides differ only in locale-specific paired document paths. Signature blocks use a `ts cordis-catalog` fence and keep the original source JSDoc; dispatch modes are defined in the [primer](../cordis-primer.zh.md#dispatch-modes), and the framework-inherited `ctx` API lives in [cordis-api/inherited.md](../cordis-api/inherited.md).
 
+<a id="ctxauthoringassistant--authoringassistantservice"></a>
+
+### `ctx.authoringAssistant` — `AuthoringAssistantService`
+
+Remote drafting service exposed as `ctx.authoringAssistant`; every turn is one auxiliary model request and no Session event.
+
+```ts cordis-catalog
+/**
+ * Draft or revise a visual workflow from one chat turn.
+ * @param request - user instruction, prior turns, and the draft being revised.
+ * @param signal - cancellation for the model call.
+ * @returns the assistant reply and the accepted draft, or a null draft when the model proposed nothing usable.
+ */
+@Remote('generateWorkflow') async generateWorkflow(request: WorkflowGenerateRequest, signal: AbortSignal): Promise<WorkflowGenerateValue>
+
+/**
+ * Draft or revise a knowledge base from one chat turn, optionally fetching
+ * user-supplied URLs as source material.
+ * @param request - user instruction, prior turns, the draft being revised, and source URLs.
+ * @param signal - cancellation for fetching and the model call.
+ * @returns the assistant reply, the accepted draft, and per-URL fetch outcomes.
+ */
+@Remote('generateKnowledge') async generateKnowledge(request: KnowledgeGenerateRequest, signal: AbortSignal): Promise<KnowledgeGenerateValue>
+```
+
+Source: [`packages/host/authoring-assistant/src/index.ts`](../../packages/host/authoring-assistant/src/index.ts)
+
 <a id="ctxknowledge--knowledgegateway"></a>
 
 ### `ctx.knowledge` — `KnowledgeGateway`

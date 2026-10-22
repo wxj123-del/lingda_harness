@@ -27,6 +27,10 @@ export interface ContextRoute {
   reason: string
   /** Optional for compatibility with callers that construct legacy routes. */
   signal?: ContextRouteSignal
+  /** Deterministic confidence in the route classification, from 0 to 1. */
+  confidence?: number
+  /** True when the router had to fall back because no stronger relation was observable. */
+  fallback?: boolean
 }
 
 /** Bounds for the request snapshot. These values do not alter the Session log. */
@@ -46,6 +50,10 @@ export interface ContextRouterOptions {
    * This reserve is applied only when the provider advertises a context window.
    */
   safetyMarginTokens: number
+  /** Maximum characters kept inline for an older plain-text tool result. */
+  toolResultMaxChars: number
+  /** Number of newest tool-result messages protected from historical compaction. */
+  toolResultRecentMessages: number
 }
 
 /** Provider capacity that constrains the message portion of one request. */
@@ -68,6 +76,12 @@ export interface ContextSelection {
   scope: ContextScope
   reason: string
   signal?: ContextRouteSignal
+  confidence?: number
+  fallback?: boolean
+  /** Bounded lexical evidence for how much related user history survived routing. */
+  routeEvidence?: ContextRouteEvidence
+  /** Bounded accounting for tool-result compaction in this request snapshot. */
+  toolAudit?: ContextToolAudit
   estimatedInputTokens: number
   droppedMessages: number
   /** Whether required messages alone or the selected snapshot exceed the budget. */
@@ -78,6 +92,24 @@ export interface ContextSelection {
   selectedMessageMeta: ContextMessageAudit[]
   /** Number of selected messages omitted from the bounded metadata list. */
   selectedMessageMetaOmitted: number
+}
+
+/** Counts only; query text and message bodies are never duplicated in the audit. */
+export interface ContextRouteEvidence {
+  queryTerms: number
+  candidateHistoryMessages: number
+  selectedHistoryMessages: number
+  matchedHistoryTerms: number
+}
+
+/** Counts and character bounds for tool context retained in one request. */
+export interface ContextToolAudit {
+  toolCallMessages: number
+  toolResultMessages: number
+  toolResultCharsBefore: number
+  toolResultCharsAfter: number
+  compactedToolResults: number
+  deduplicatedToolResults: number
 }
 
 /** Bounded, model-visible metadata; message bodies are intentionally truncated. */
@@ -103,6 +135,8 @@ const DEFAULT_OPTIONS: ContextRouterOptions = {
   pluginContextRatio: 0.25,
   maxTokens: 24_000,
   safetyMarginTokens: 256,
+  toolResultMaxChars: 6_000,
+  toolResultRecentMessages: 4,
 }
 
 const MAX_AUDIT_MESSAGES = 128
@@ -112,7 +146,7 @@ export function resolveContextBudget(
   inputOptions: Partial<ContextRouterOptions> = {},
   capacity: ContextCapacity = {},
 ): number {
-  const options = { ...DEFAULT_OPTIONS, ...inputOptions }
+  const options = resolveRouterOptions(inputOptions)
   if (capacity.contextWindow === undefined) return options.maxTokens
   const available = capacity.contextWindow
     - (capacity.outputBudgetTokens ?? 0)
@@ -138,6 +172,22 @@ const MESSAGE_TEXT_CACHE = new WeakMap<Message, string>()
 const MESSAGE_TOKEN_CACHE = new WeakMap<Message, readonly string[]>()
 const MESSAGE_ESTIMATE_CACHE = new WeakMap<Message, number>()
 const TOOL_SCHEMA_ESTIMATE_CACHE = new WeakMap<object, number>()
+
+function routeDecision(
+  scope: ContextScope,
+  signal: ContextRouteSignal,
+  reason: string,
+  confidence: number,
+  fallback = false,
+): ContextRoute {
+  return {
+    scope,
+    signal,
+    reason,
+    confidence: Math.min(1, Math.max(0, confidence)),
+    ...(fallback ? { fallback: true } : {}),
+  }
+}
 
 /** Extract model-visible text from one message for local routing heuristics. */
 export function messageText(message: Message): string {
@@ -165,13 +215,13 @@ function estimatedMessageTokens(message: Message): number {
 /** Resolve a scope from the user's wording without an embedding or model call. */
 export function resolveContextRoute(query: string): ContextRoute {
   const normalized = query.trim()
-  if (FULL_RE.test(normalized)) return { scope: 'full', signal: 'explicit-full', reason: '用户明确要求完整历史' }
-  if (FRESH_RE.test(normalized)) return { scope: 'fresh', signal: 'explicit-fresh', reason: '用户明确开启新话题或声明与上文无关' }
-  if (COREFERENCE_RE.test(normalized)) return { scope: 'task', signal: 'co-reference', reason: '当前请求包含指代表达，需要召回相关任务上下文' }
-  if (FOLLOW_UP_RE.test(normalized)) return { scope: 'task', signal: 'follow-up', reason: '当前请求是对近期任务的简短追问' }
-  if (ACKNOWLEDGEMENT_RE.test(normalized)) return { scope: 'task', signal: 'acknowledgement', reason: '当前请求是对近期任务的确认或继续指令' }
-  if (TASK_RE.test(normalized)) return { scope: 'task', signal: 'task-reference', reason: '用户引用了当前或之前的任务' }
-  return { scope: 'recent', signal: 'unrelated', reason: '普通连续请求，仅保留近期上下文' }
+  if (FULL_RE.test(normalized)) return routeDecision('full', 'explicit-full', '用户明确要求完整历史', 1)
+  if (FRESH_RE.test(normalized)) return routeDecision('fresh', 'explicit-fresh', '用户明确开启新话题或声明与上文无关', 1)
+  if (COREFERENCE_RE.test(normalized)) return routeDecision('task', 'co-reference', '当前请求包含指代表达，需要召回相关任务上下文', 0.92)
+  if (FOLLOW_UP_RE.test(normalized)) return routeDecision('task', 'follow-up', '当前请求是对近期任务的简短追问', 0.86)
+  if (ACKNOWLEDGEMENT_RE.test(normalized)) return routeDecision('task', 'acknowledgement', '当前请求是对近期任务的确认或继续指令', 0.84)
+  if (TASK_RE.test(normalized)) return routeDecision('task', 'task-reference', '用户引用了当前或之前的任务', 0.82)
+  return routeDecision('recent', 'unrelated', '普通连续请求，仅保留近期上下文', 0.45, true)
 }
 
 /** Refine an unqualified request when its terms do not connect to recent history. */
@@ -182,13 +232,13 @@ export function resolveContextRouteForMessages(
 ): ContextRoute {
   const route = resolveContextRoute(query)
   if (route.scope !== 'recent') return route
-  if (FOLLOW_UP_RE.test(query)) return { scope: 'task', signal: 'follow-up', reason: '当前请求是对近期任务的简短追问' }
-  if (ACKNOWLEDGEMENT_RE.test(query.trim())) return { scope: 'task', signal: 'acknowledgement', reason: '当前请求是对近期任务的确认或继续指令' }
+  if (FOLLOW_UP_RE.test(query)) return routeDecision('task', 'follow-up', '当前请求是对近期任务的简短追问', 0.86)
+  if (ACKNOWLEDGEMENT_RE.test(query.trim())) return routeDecision('task', 'acknowledgement', '当前请求是对近期任务的确认或继续指令', 0.84)
   const queryTerms = new Set(tokens(query))
   if (queryTerms.size === 0) {
     return query.trim() === ''
       ? route
-      : { scope: 'fresh', signal: 'unrelated', reason: '当前请求只包含通用表达，无法建立可靠的历史联系' }
+      : routeDecision('fresh', 'unrelated', '当前请求只包含通用表达，无法建立可靠的历史联系', 0.88, true)
   }
   const prior: Message[] = []
   let seenUsers = 0
@@ -196,14 +246,14 @@ export function resolveContextRouteForMessages(
   // an ordinary short request from scanning and tokenizing a 50K-message tail.
   for (let index = messages.length - 1; index >= 0 && seenUsers <= Math.max(1, recentMessages); index -= 1) {
     const message = messages[index]
-    if (message?.source.kind !== 'user') continue
+    if (message === undefined || !isRoutingUserMessage(message)) continue
     if (seenUsers > 0) prior.unshift(message)
     seenUsers += 1
   }
   const connected = prior.some(message => messageTokens(message).some(term => queryTerms.has(term)))
   return connected
-    ? { ...route, signal: 'lexical-match' }
-    : { scope: 'fresh', signal: 'unrelated', reason: '当前请求与近期用户消息没有可观测的关键词联系' }
+    ? routeDecision('recent', 'lexical-match', '当前请求与近期用户消息存在关键词联系', 0.74)
+    : routeDecision('fresh', 'unrelated', '当前请求与近期用户消息没有可观测的关键词联系', 0.9, true)
 }
 
 function tokens(text: string): string[] {
@@ -253,8 +303,13 @@ function isToolResult(message: Message): boolean {
   return message.source.kind === 'tool'
 }
 
-function isDirectUserMessage(message: Message): boolean {
-  return message.source.kind === 'user'
+/**
+ * Messages that can anchor conversational routing.
+ * Automated goal rounds use a user-role message with a `goal` source; treating
+ * them as unrelated fresh requests would drop the preceding tool pair.
+ */
+export function isRoutingUserMessage(message: Message): boolean {
+  return message.source.kind === 'user' || (message.source as { kind?: string }).kind === 'goal'
 }
 
 function contextMessageKind(message: Message): ContextMessageKind {
@@ -269,6 +324,50 @@ function contextMessageKind(message: Message): ContextMessageKind {
 function contextMessagePreview(message: Message): string {
   const compact = messageText(message).replace(/\s+/gu, ' ').trim()
   return compact.length > 160 ? `${compact.slice(0, 157)}...` : compact
+}
+
+/** Compare the current request with prior direct user messages after selection. */
+function routeEvidence(
+  messages: readonly Message[],
+  selected: ReadonlySet<number>,
+  currentUser: number,
+  candidateMessageIndices: ReadonlySet<number> | undefined,
+  maxHistoryMessages: number,
+): ContextRouteEvidence | undefined {
+  const current = messages[currentUser]
+  if (current === undefined) return undefined
+  const queryTerms = new Set(messageTokens(current))
+  if (queryTerms.size === 0) {
+    return { queryTerms: 0, candidateHistoryMessages: 0, selectedHistoryMessages: 0, matchedHistoryTerms: 0 }
+  }
+  // Keep this diagnostic bounded too: a 50K-message transcript must not turn
+  // the observability pass into a second full-history lexical scan.
+  const candidateIndices = new Set<number>(candidateMessageIndices)
+  let seenUsers = 0
+  for (let index = currentUser - 1; index >= 0 && seenUsers < Math.max(1, maxHistoryMessages); index -= 1) {
+    const message = messages[index]
+    if (message === undefined || !isRoutingUserMessage(message)) continue
+    if (candidateMessageIndices === undefined) candidateIndices.add(index)
+    seenUsers += 1
+  }
+  let candidateHistoryMessages = 0
+  let selectedHistoryMessages = 0
+  const matchedHistoryTerms = new Set<string>()
+  messages.forEach((message, index) => {
+    if (!candidateIndices.has(index)) return
+    const matches = messageTokens(message).filter(term => queryTerms.has(term))
+    if (matches.length === 0) return
+    candidateHistoryMessages += 1
+    if (!selected.has(index)) return
+    selectedHistoryMessages += 1
+    matches.forEach(term => matchedHistoryTerms.add(term))
+  })
+  return {
+    queryTerms: queryTerms.size,
+    candidateHistoryMessages,
+    selectedHistoryMessages,
+    matchedHistoryTerms: matchedHistoryTerms.size,
+  }
 }
 
 function auditMessage(message: Message): ContextMessageAudit {
@@ -323,6 +422,103 @@ function toolResultIds(message: Message): string[] {
   return message.content.flatMap(block => block.type === 'tool-result' ? [String(block.toolCallId)] : [])
 }
 
+const SPILL_NOTICE = 'Full formatted result stored at:'
+const DUPLICATE_TOOL_RESULT_TEXT = '[重复工具结果已省略；请使用首次结果]'
+
+function toolResultText(message: Message): string {
+  return message.content.flatMap(block => block.type === 'tool-result'
+    ? block.content.flatMap(inner => inner.type === 'text' ? [inner.text] : [])
+    : []).join('')
+}
+
+function isSpilledToolResult(message: Message): boolean {
+  const text = toolResultText(message)
+  return text.includes(SPILL_NOTICE) && text.endsWith(')')
+}
+
+function compactText(text: string, maxChars: number): string {
+  if (text.length <= maxChars) return text
+  const marker = `\n...[旧工具结果已压缩，省略 ${text.length - maxChars} 个字符]...\n`
+  if (marker.length >= maxChars) return marker.slice(0, maxChars)
+  const available = Math.max(0, maxChars - marker.length)
+  const head = Math.ceil(available / 2)
+  const tail = Math.floor(available / 2)
+  return `${text.slice(0, head)}${marker}${tail > 0 ? text.slice(-tail) : ''}`
+}
+
+function replaceToolResultText(message: Message, replacement: string | ((text: string) => string)): Message {
+  return {
+    ...message,
+    content: message.content.map((block) => {
+      if (block.type !== 'tool-result' || block.content.some(inner => inner.type !== 'text')) return block
+      const text = block.content.map(inner => inner.type === 'text' ? inner.text : '').join('')
+      return { ...block, content: [{ type: 'text', text: typeof replacement === 'function' ? replacement(text) : replacement }] }
+    }),
+  }
+}
+
+function toolResultFingerprint(message: Message): string | undefined {
+  if (isSpilledToolResult(message)) return undefined
+  const blocks = message.content.flatMap(block => block.type === 'tool-result' ? [block] : [])
+  if (blocks.length === 0 || blocks.some(block => block.content.some(inner => inner.type !== 'text'))) return undefined
+  return JSON.stringify(blocks.map(block => ({
+    isError: block.isError === true,
+    content: block.content.map(inner => inner.type === 'text' ? inner.text : ''),
+  })))
+}
+
+function compactToolResults(messages: readonly Message[], options: ContextRouterOptions): {
+  messages: Message[]
+  audit?: ContextToolAudit
+} {
+  const toolCallMessages = messages.filter(message => toolCallIds(message).length > 0).length
+  const resultIndices = messages.flatMap((message, index) => toolResultIds(message).length > 0 ? [index] : [])
+  if (toolCallMessages === 0 && resultIndices.length === 0) return { messages: [...messages] }
+
+  const recentCount = Math.max(0, Math.floor(options.toolResultRecentMessages))
+  const protectedIndices = new Set(recentCount === 0 ? [] : resultIndices.slice(-recentCount))
+  const seen = new Set<string>()
+  let compactedToolResults = 0
+  let deduplicatedToolResults = 0
+  let toolResultCharsBefore = 0
+  let toolResultCharsAfter = 0
+  const resultIndexSet = new Set(resultIndices)
+  const transformedByIndex = new Map<number, Message>()
+  for (const index of [...resultIndices].reverse()) {
+    const message = messages[index]
+    if (message === undefined) continue
+    const before = toolResultText(message)
+    toolResultCharsBefore += before.length
+    const fingerprint = toolResultFingerprint(message)
+    const duplicate = fingerprint !== undefined && seen.has(fingerprint) && !protectedIndices.has(index)
+    if (fingerprint !== undefined) seen.add(fingerprint)
+    let transformed = message
+    if (duplicate) {
+      transformed = replaceToolResultText(message, DUPLICATE_TOOL_RESULT_TEXT)
+      deduplicatedToolResults += 1
+    } else if (!protectedIndices.has(index) && !isSpilledToolResult(message) && before.length > options.toolResultMaxChars) {
+      transformed = replaceToolResultText(message, text => compactText(text, Math.max(64, Math.floor(options.toolResultMaxChars))))
+      compactedToolResults += 1
+    }
+    toolResultCharsAfter += toolResultText(transformed).length
+    transformedByIndex.set(index, transformed)
+  }
+  const next = messages.map((message, index) => resultIndexSet.has(index)
+    ? transformedByIndex.get(index) ?? message
+    : message)
+  return {
+    messages: next,
+    audit: {
+      toolCallMessages,
+      toolResultMessages: resultIndices.length,
+      toolResultCharsBefore,
+      toolResultCharsAfter,
+      compactedToolResults,
+      deduplicatedToolResults,
+    },
+  }
+}
+
 function closeToolPairs(messages: readonly Message[], selected: Set<number>): Set<number> {
   const owners = new Map<string, number>()
   const results = new Map<string, number>()
@@ -360,6 +556,7 @@ function trimToBudget(
   maxTokens: number,
   priorityStart = -1,
   pluginContextBudget = Number.POSITIVE_INFINITY,
+  preferred: ReadonlySet<number> = new Set(),
 ): Set<number> {
   const selected = new Set<number>(mandatory)
   let used = [...selected].reduce((sum, index) => {
@@ -385,6 +582,9 @@ function trimToBudget(
       const leftOpenTurn = priorityStart >= 0 && left >= priorityStart
       const rightOpenTurn = priorityStart >= 0 && right >= priorityStart
       if (leftOpenTurn !== rightOpenTurn) return leftOpenTurn ? -1 : 1
+      const leftPreferred = preferred.has(left)
+      const rightPreferred = preferred.has(right)
+      if (leftPreferred !== rightPreferred) return leftPreferred ? -1 : 1
       const priority = optionalMessagePriority(messages[right] as Message) - optionalMessagePriority(messages[left] as Message)
       return priority !== 0 ? priority : right - left
     })
@@ -451,8 +651,8 @@ export function selectContextMessages(
   /** Message IDs returned by the incremental lexical index for task matching. */
   taskCandidateMessageIds?: ReadonlySet<string>,
 ): ContextSelection {
-  const options = { ...DEFAULT_OPTIONS, ...inputOptions }
-  const currentUser = messages.findLastIndex(isDirectUserMessage)
+  const options = resolveRouterOptions(inputOptions)
+  const currentUser = messages.findLastIndex(isRoutingUserMessage)
   const system = new Set(messages.flatMap((message, index) => message.role === 'system' ? [index] : []))
   const mandatory = new Set(system)
   if (currentUser >= 0) mandatory.add(currentUser)
@@ -463,6 +663,7 @@ export function selectContextMessages(
   const turnStart = Math.max(0, Math.min(currentTurnStart, messages.length))
 
   const selected = new Set<number>(mandatory)
+  const evidenceCandidateIndices = new Set<number>()
   if (currentTurnStart >= 0) {
     for (let index = turnStart; index < messages.length; index += 1) selected.add(index)
   }
@@ -476,8 +677,8 @@ export function selectContextMessages(
     const limit = route.scope === 'task' ? options.taskMessages : options.recentMessages
     const tailStart = Math.max(0, messages.length - limit)
     for (let index = tailStart; index < messages.length; index += 1) selected.add(index)
-    if (route.scope === 'task' && currentUser >= 0) {
-      if (taskMessageIds !== undefined) {
+    if ((route.scope === 'task' || route.signal === 'lexical-match') && currentUser >= 0) {
+      if (route.scope === 'task' && taskMessageIds !== undefined) {
         const boundedTaskMessageIds = new Set([...taskMessageIds].slice(-Math.max(1, Math.floor(options.taskMessages))))
         messages.forEach((message, index) => {
           if (boundedTaskMessageIds.has(String(message.id))) selected.add(index)
@@ -486,7 +687,7 @@ export function selectContextMessages(
       const current = messages[currentUser]
       const queryTokens = current === undefined ? new Set<string>() : new Set(messageTokens(current))
       if (current !== undefined && COREFERENCE_RE.test(messageText(current))) {
-        const priorUser = messages.findLastIndex((message, index) => index < currentUser && isDirectUserMessage(message))
+        const priorUser = messages.findLastIndex((message, index) => index < currentUser && isRoutingUserMessage(message))
         if (priorUser >= 0) {
           const recallEnd = Math.min(currentUser, priorUser + options.recallMessages)
           for (let index = priorUser; index < recallEnd; index += 1) selected.add(index)
@@ -498,7 +699,10 @@ export function selectContextMessages(
           && message.source.kind !== 'plugin'
           && !taskCandidateMessageIds.has(String(message.id))) return
         const matched = messageTokens(message).some(token => queryTokens.has(token))
-        if (matched) selected.add(index)
+        if (matched) {
+          selected.add(index)
+          evidenceCandidateIndices.add(index)
+        }
       })
     }
   }
@@ -511,17 +715,31 @@ export function selectContextMessages(
     options.maxTokens,
     currentTurnStart,
     Math.floor(options.maxTokens * options.pluginContextRatio),
+    evidenceCandidateIndices,
   )
   const bounded = closeToolPairs(messages, new Set([...budgeted].filter(index => closed.has(index))))
-  const result = messages.filter((_message, index) => bounded.has(index))
+  const selectedMessages = messages.filter((_message, index) => bounded.has(index))
+  const compacted = compactToolResults(selectedMessages, options)
+  const result = compacted.messages
   const metadata = auditContextMessages(result)
   const estimatedInputTokens = metadata.estimatedInputTokens
   const overflowTokens = Math.max(0, estimatedInputTokens - options.maxTokens)
+  const evidence = routeEvidence(
+    messages,
+    bounded,
+    currentUser,
+    evidenceCandidateIndices.size === 0 ? undefined : evidenceCandidateIndices,
+    options.taskMessages,
+  )
   return {
     messages: result,
     scope: route.scope,
     reason: route.reason,
     ...(route.signal === undefined ? {} : { signal: route.signal }),
+    ...(route.confidence === undefined ? {} : { confidence: route.confidence }),
+    ...(route.fallback === undefined ? {} : { fallback: route.fallback }),
+    ...(evidence === undefined ? {} : { routeEvidence: evidence }),
+    ...(compacted.audit === undefined ? {} : { toolAudit: compacted.audit }),
     estimatedInputTokens,
     droppedMessages: Math.max(0, messages.length - result.length),
     budgetExceeded: overflowTokens > 0,
@@ -533,12 +751,16 @@ export function selectContextMessages(
 
 /** Merge optional configuration with conservative defaults. */
 export function resolveRouterOptions(input: Partial<ContextRouterOptions> | undefined): ContextRouterOptions {
+  const finite = (value: number | undefined, fallback: number): number =>
+    value !== undefined && Number.isFinite(value) ? value : fallback
   return {
-    recentMessages: Math.max(1, Math.floor(input?.recentMessages ?? DEFAULT_OPTIONS.recentMessages)),
-    taskMessages: Math.max(1, Math.floor(input?.taskMessages ?? DEFAULT_OPTIONS.taskMessages)),
-    recallMessages: Math.max(1, Math.floor(input?.recallMessages ?? DEFAULT_OPTIONS.recallMessages)),
-    pluginContextRatio: Math.min(1, Math.max(0, input?.pluginContextRatio ?? DEFAULT_OPTIONS.pluginContextRatio)),
-    maxTokens: Math.max(1, Math.floor(input?.maxTokens ?? DEFAULT_OPTIONS.maxTokens)),
-    safetyMarginTokens: Math.max(0, Math.floor(input?.safetyMarginTokens ?? DEFAULT_OPTIONS.safetyMarginTokens)),
+    recentMessages: Math.max(1, Math.floor(finite(input?.recentMessages, DEFAULT_OPTIONS.recentMessages))),
+    taskMessages: Math.max(1, Math.floor(finite(input?.taskMessages, DEFAULT_OPTIONS.taskMessages))),
+    recallMessages: Math.max(1, Math.floor(finite(input?.recallMessages, DEFAULT_OPTIONS.recallMessages))),
+    pluginContextRatio: Math.min(1, Math.max(0, finite(input?.pluginContextRatio, DEFAULT_OPTIONS.pluginContextRatio))),
+    maxTokens: Math.max(1, Math.floor(finite(input?.maxTokens, DEFAULT_OPTIONS.maxTokens))),
+    safetyMarginTokens: Math.max(0, Math.floor(finite(input?.safetyMarginTokens, DEFAULT_OPTIONS.safetyMarginTokens))),
+    toolResultMaxChars: Math.max(64, Math.floor(finite(input?.toolResultMaxChars, DEFAULT_OPTIONS.toolResultMaxChars))),
+    toolResultRecentMessages: Math.max(0, Math.floor(finite(input?.toolResultRecentMessages, DEFAULT_OPTIONS.toolResultRecentMessages))),
   }
 }

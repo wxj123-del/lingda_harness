@@ -9,7 +9,7 @@ kind: "package-reference"
 
 ## 概述
 
-本包渲染 Web GUI 的后台任务界面：一个会话头部动作，打开后以弹层列出本会话可见的任务。它经运行时提供的 `jobsBySession` 镜像读取宿主计算的注册表状态，自身不发任何 RPC。触发器只在会话至少有一个任务时出现，角标计数运行中与停止中的任务；终态行保持可见并弱化，直到注册表把它们丢弃。模型对同一批任务的视角属于 `dsh-tool-jobs`；本包是给人类看的只读投影。
+本包渲染 Web GUI 中只读的后台任务控件。任务动作通过 `jobsBySession` 镜像列出当前 Session 可见的工作，不发起模型请求。任务语义仍由 `dsh-tool-jobs` 负责。
 
 ## 目录
 
@@ -25,7 +25,7 @@ kind: "package-reference"
 <a id="use-this-package"></a>
 ## 使用本包
 
-与运行时一起挂载本插件；只要会话至少有一个任务，任务动作就会出现在会话头部。点击打开弹层：活跃行在前按开始时间升序，随后终态行按结束时间降序，每行显示生产者 kind、标签、状态，以及一个活跃时每秒跳动、完成后冻结的已耗时。
+与运行时一起挂载本插件；只要会话至少有一个任务，任务动作就会出现在会话头部。点击打开任务弹层：活跃行在前按开始时间升序，随后终态行按结束时间降序，每行显示生产者 kind、标签、状态，以及一个活跃时每秒跳动、完成后冻结的已耗时。
 
 ### 关闭与边界
 
@@ -39,7 +39,7 @@ Escape 关闭列表并把焦点交还触发器，在其外部按下指针同理�
 <details>
 <summary>实现细节——点击展开</summary>
 
-本包向 `conversation.session.header.actions` 贡献一个条目（`JobListAction`），数据完全来自会话控制器绑定从 `session/jobs` 帧折叠出的 `jobsBySession` 列表镜像——不发 RPC，除弹层开合外不持有任何状态。角标计数 `running` 加 `stopping`，为零时省略。行序为活跃行在前按 `startedAt` 升序、终态行按 `finishedAt` 降序，毫秒并列按启动顺序打破；缺少 `finishedAt` 的终态行读作零而不是负数，超过一小时的耗时停留在小时单位。终态行保持可见，因为失败任务的 `detail` 是其失败唯一可读之处。行为由 [Web 后台任务展示 Agent Note](../../../.agents/notes/implemented/feature/2026-08-08-web-background-job-display.zh.md) 规定。
+本包向 `conversation.session.header.actions` 贡献一个条目：`JobListAction` 投影会话控制器绑定从 `session/jobs` 帧折叠出的 `jobsBySession` 列表镜像。角标计数 `running` 加 `stopping`，为零时省略。行序为活跃行在前按 `startedAt` 升序、终态行按 `finishedAt` 降序，毫秒并列按启动顺序打破；缺少 `finishedAt` 的终态行读作零而不是负数，超过一小时的耗时停留在小时单位。终态行保持可见，因为失败任务的 `detail` 是其失败唯一可读之处。行为由 [Web 后台任务展示 Agent Note](../../../.agents/notes/implemented/feature/2026-08-08-web-background-job-display.zh.md) 规定。
 
 </details>
 

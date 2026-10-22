@@ -49,7 +49,7 @@ interface WebOptions {
 function webCommand(): Command {
   return new Command()
     .name('dsh --profile web')
-    .description('Serve the DeepSeek Harness browser UI.')
+    .description('Serve the Lingda Harness browser UI.')
     .helpOption('-h, --help', 'show this help')
     .option('--mobile', 'allow phone/LAN access on the local network')
     .option('--host <host>', 'bind host')

@@ -3,6 +3,9 @@ import type {
   KnowledgeBase,
   KnowledgeBaseDraft,
   KnowledgeChunk,
+  KnowledgeDraft,
+  KnowledgeGenerateRequest,
+  KnowledgeGenerateValue,
   KnowledgeOverview,
   KnowledgeSearch,
   LegacyKnowledgeBase,
@@ -14,10 +17,13 @@ import {
   IconChevronLeftOutline14,
   IconCheckOutline16,
   IconFolderOpenOutline16,
+  IconNewChatOutline16,
   IconPlusOutline16,
   IconRefreshOutline16,
 } from '@deepseek-ai/dsh-client-ui-primitives'
 import type { LayoutKey } from '../locales.ts'
+import { knowledgeDocumentsFromDraft } from '../../authoring-draft.ts'
+import { AuthoringChat, type AuthoringChatMessage } from './AuthoringChat.tsx'
 import css from './KnowledgePanel.module.css'
 
 type Id = KnowledgeBase['id']
@@ -41,6 +47,8 @@ export interface KnowledgePanelProps {
   ) => Promise<RemoteResult<KnowledgeSearch>>
   importLegacy: (items: LegacyKnowledgeBase[]) => Promise<RemoteResult<number>>
   legacy: LegacyKnowledgeBase[] | undefined
+  /** Optional conversational drafting path; the entry hides without it. */
+  generate?: (request: KnowledgeGenerateRequest) => Promise<KnowledgeGenerateValue>
   writable: boolean
   t: (key: LayoutKey) => string
 }
@@ -97,6 +105,13 @@ export function KnowledgePanel(props: KnowledgePanelProps) {
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [preview, setPreview] = useState<KnowledgeChunk[] | null>(null)
+  const [chatOpen, setChatOpen] = useState(false)
+  const [chatMessages, setChatMessages] = useState<AuthoringChatMessage[]>([])
+  const [chatDrafts, setChatDrafts] = useState<ReadonlyMap<string, KnowledgeDraft>>(new Map())
+  const [lastChatDraft, setLastChatDraft] = useState<KnowledgeDraft | null>(null)
+  const [chatBusy, setChatBusy] = useState(false)
+  const [chatError, setChatError] = useState<string | null>(null)
+  const [sourceUrls, setSourceUrls] = useState('')
   const refresh = async () => {
     try {
       const next = unwrap(await props.overview())
@@ -257,8 +272,7 @@ export function KnowledgePanel(props: KnowledgePanelProps) {
       setBusy(false)
     }
   }
-  const upload = async (event: ChangeEvent<HTMLInputElement>) => {
-    const files = [...(event.currentTarget.files ?? [])]
+  const upload = async (event: ChangeEvent<HTMLInputElement>) => {    const files = [...(event.currentTarget.files ?? [])]
     event.currentTarget.value = ''
     const added: KnowledgeBase['documents'] = []
     setError(null)
@@ -277,6 +291,55 @@ export function KnowledgePanel(props: KnowledgePanelProps) {
       setError(props.t('kb.fileError'))
     }
   }
+  const generateKnowledge = async (text: string): Promise<void> => {
+    const generate = props.generate
+    if (generate === undefined || chatBusy) return
+    const userMessage: AuthoringChatMessage = { id: `u-${Date.now()}`, role: 'user', text }
+    setChatMessages([...chatMessages, userMessage])
+    setChatBusy(true)
+    setChatError(null)
+    try {
+      const urls = sourceUrls.split(/[\s,;]+/u).map(url => url.trim()).filter(url => url !== '')
+      const result = await generate({
+        message: text,
+        history: chatMessages.map(message => ({ role: message.role, text: message.text })),
+        ...(lastChatDraft === null ? {} : { current: lastChatDraft }),
+        ...(urls.length === 0 ? {} : { urls }),
+      })
+      if (result.draft !== null) setLastChatDraft(result.draft)
+      const id = `a-${Date.now()}`
+      if (result.draft !== null) setChatDrafts(next => new Map(next).set(id, result.draft as KnowledgeDraft))
+      setChatMessages(current => [...current, {
+        id,
+        role: 'assistant',
+        text: result.reply,
+        ...(result.draft === null ? {} : { draftReady: true }),
+        ...(result.sources.length === 0 ? {} : { sources: result.sources }),
+      }])
+    } catch (cause) {
+      setChatError(cause instanceof Error ? cause.message : String(cause))
+    } finally {
+      setChatBusy(false)
+    }
+  }
+  const applyKnowledgeDraft = (messageId: string): void => {
+    const accepted = chatDrafts.get(messageId)
+    if (accepted === undefined) return
+    const documents = knowledgeDocumentsFromDraft(accepted)
+    const next: KnowledgeBaseDraft = {
+      ...freshBase(overview?.defaults ?? { mode: 'recursive', size: 400, overlap: 60 }),
+      title: accepted.title,
+      description: accepted.description,
+      documents: documents as KnowledgeBaseDraft['documents'],
+    }
+    setDraft(next)
+    setSavedDraft(JSON.stringify(next))
+    setDocumentId(documents[0]?.id ?? null)
+    setChatOpen(false)
+    setPreview(null)
+    setSearchResult(null)
+    setTab('documents')
+  }
   if (!overview)
     return (
       <main className={css.page}>
@@ -290,6 +353,29 @@ export function KnowledgePanel(props: KnowledgePanelProps) {
         </div>
       </main>
     )
+  if (!draft && chatOpen && props.generate !== undefined)
+    return <AuthoringChat
+      title={props.t('kb.aiTitle')}
+      intro={props.t('kb.aiIntro')}
+      placeholder={props.t('kb.aiPlaceholder')}
+      messages={chatMessages}
+      busy={chatBusy}
+      error={chatError}
+      accessory={<label className={css.assistantSources}>
+        <span>{props.t('kb.aiSources')}</span>
+        <input
+          type="url"
+          multiple
+          value={sourceUrls}
+          placeholder="https://example.com/a, https://example.com/b"
+          onChange={(event) => { setSourceUrls(event.currentTarget.value) }}
+        />
+      </label>}
+      onSend={(text) => { void generateKnowledge(text) }}
+      onApply={applyKnowledgeDraft}
+      onClose={() => { setChatOpen(false) }}
+      t={props.t}
+    />
   if (!draft)
     return (
       <main className={css.page}>
@@ -297,6 +383,20 @@ export function KnowledgePanel(props: KnowledgePanelProps) {
           <header className={css.header}>
             <h1>{props.t('nav.knowledge')}</h1>
             <div className={css.actions}>
+              {props.generate !== undefined && <Button
+                variant="outline"
+                icon={<IconNewChatOutline16 />}
+                disabled={!props.writable}
+                onClick={() => {
+                  setChatOpen(true)
+                  setChatMessages([])
+                  setChatDrafts(new Map())
+                  setLastChatDraft(null)
+                  setChatError(null)
+                }}
+              >
+                {props.t('kb.aiGenerate')}
+              </Button>}
               <Button
                 icon={<IconRefreshOutline16 />}
                 onClick={() => {

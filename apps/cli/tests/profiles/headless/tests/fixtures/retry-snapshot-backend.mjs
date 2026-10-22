@@ -21,6 +21,9 @@ class RetrySnapshotAdapter extends LlmAdapter {
   }
 
   async * stream(options) {
+    if (options.purpose === 'session-title') {
+      throw new LlmError('snapshot title unavailable', 'INVALID_REQUEST')
+    }
     const messages = JSON.stringify(options.messages)
     this.requests++
     if (this.requests === 1) {

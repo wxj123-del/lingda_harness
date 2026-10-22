@@ -53,7 +53,7 @@ describe('Skill marketplace', () => {
 
   it('imports a built-in Skill into my Skills with one click', async () => {
     const { save } = setup()
-    const card = screen.getAllByRole('article')[0]
+    const card = screen.getAllByRole('article')[0]!
     fireEvent.click(within(card).getByRole('button', { name: '一键导入' }))
     await waitFor(() => { expect(save).toHaveBeenCalledWith(expect.objectContaining({ id: 'builtin-skill-make-skill', title: '创建 Skill', enabled: true })) })
   })

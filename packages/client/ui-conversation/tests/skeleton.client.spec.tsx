@@ -23,6 +23,7 @@ import { SessionInputShell } from '../src/client/input/facade.ts'
 import { en, zh } from '../src/client/locales.ts'
 import { ConversationRoot } from '../src/client/skeleton/ConversationRoot.tsx'
 import { ConversationSession, ConversationSessionHeader } from '../src/client/skeleton/ConversationSession.tsx'
+import type { ConversationSessionHeaderProps } from '../src/client/skeleton/ConversationSession.tsx'
 import { conversationPhase } from '../src/client/contract/snapshot.ts'
 import { HeroShell } from '../src/client/skeleton/EmptyHero.tsx'
 import type { HeroShellProps } from '../src/client/skeleton/EmptyHero.tsx'
@@ -128,6 +129,8 @@ function mount(
     viewTabs?: ViewTab[]
     /** Active Conversation View used to verify view-owned composer visibility. */
     activeView?: string | null
+    /** Whether the View switcher renders; the shipped default is off. */
+    showViewTabs?: boolean
   } = {},
 ) {
   const root = sid('root')
@@ -177,6 +180,7 @@ function mount(
     { id: 'trajectory', label: 'Trajectory' },
   ]
   const useConversationViews: SessionSlotProps['useConversationViews'] = selector => selector(viewTabs)
+  const useShowViewTabs: ConversationSessionHeaderProps['useShowViewTabs'] = selector => selector(options.showViewTabs ?? true)
   const activeView = createSnapshotStore<string | null>(options.activeView ?? 'chat')
   /** Owner share handed to the two composer tool-row seats, per render. */
   const seatOwners: { key: string; owner: unknown }[] = []
@@ -199,6 +203,7 @@ function mount(
           useSession={useSession}
           useConversation={useConversation}
           useConversationViews={useConversationViews}
+          useShowViewTabs={useShowViewTabs}
           useChat={useChat}
           useTrajectory={useTrajectory}
           useSessions={props.useSessions}
@@ -226,6 +231,7 @@ function mount(
           useSession={useSession}
           useConversation={useConversation}
           useConversationViews={useConversationViews}
+          useShowViewTabs={useShowViewTabs}
           useChat={useChat}
           useTrajectory={useTrajectory}
           useSessions={props.useSessions}
@@ -274,6 +280,7 @@ function mount(
           useLexicon={bindSnapshotSelector(wiring.lexicon)}
           useMenuLauncher={bindSnapshotSelector(createSnapshotStore<string | null>(null))}
           stop={stop}
+          optimizePrompt={undefined}
           t={t}
           renderSlot={((key: string, seatOwner: object) => {
             // The bar's own seats: recorded so a case can assert what share
@@ -328,11 +335,10 @@ function mount(
 }
 
 describe('Hero chrome', () => {
-  it('renders the English preview badge through the hero locale seat', () => {
+  it('renders the headline and hands the brand mark its owner share', () => {
     const renderSlot = vi.fn<HeroShellProps['renderSlot']>(() => null)
     const view = render(<HeroShell t={makeTranslate(en, commonEn)} renderSlot={renderSlot} />)
     expect(view.getByText('Into the Unknown')).toBeTruthy()
-    expect(view.getByText('Preview')).toBeTruthy()
     expect(renderSlot).toHaveBeenCalledOnce()
     expect(renderSlot.mock.calls[0]?.[0]).toBe('conversation.hero.brand.mark')
     const brandMarkOwner = renderSlot.mock.calls[0]?.[1]
@@ -342,6 +348,16 @@ describe('Hero chrome', () => {
     expect(brandMarkOwner.size).toBe(34)
     expect(brandMarkOwner.className).toBeTypeOf('string')
     expect(renderSlot.mock.calls[0]?.[2]?.fallback).toBeTruthy()
+  })
+
+  it('falls back to the mascot mark sized for the headline', () => {
+    const renderSlot = ((_key: string, _owner: unknown, options?: { fallback?: ReactNode }) =>
+      options?.fallback ?? null) as HeroShellProps['renderSlot']
+    const view = render(<HeroShell t={makeTranslate(en, commonEn)} renderSlot={renderSlot} />)
+    const mark = view.container.querySelector('img')
+    expect(mark?.getAttribute('src')).toMatch(/^data:image\/webp;base64,/)
+    expect(mark?.getAttribute('width')).toBe('34')
+    expect(mark?.getAttribute('aria-hidden')).toBe('true')
   })
 })
 
@@ -489,7 +505,6 @@ describe('ConversationRoot resident composer', () => {
     expect(host).not.toBeNull()
     expect(header?.getAttribute('aria-hidden')).toBe('true')
     expect(b.view.getByText('探索未至之境')).toBeTruthy()
-    expect(b.view.getByText('预览版')).toBeTruthy()
     expect(b.view.queryByTestId('view-chat')).toBeNull()
     // The same machine-backed textarea is live in the hero, and the
     // persistence mirror stays bound (ConversationSession mounts chrome-hidden
@@ -574,6 +589,76 @@ describe('ConversationRoot resident composer', () => {
     expect(b.view.container.querySelector('[data-conversation-scroll]')?.contains(after)).toBe(true)
     expect(b.view.queryByTestId('hero-headline')).toBeNull()
     expect(b.view.getByTestId('view-chat')).toBeTruthy()
+  })
+
+  it('hides the session view switcher unless the preference enables it', () => {
+    const viewTabs: ViewTab[] = [
+      { id: 'chat', label: 'Chat' },
+      { id: 'trajectory', label: 'Trajectory' },
+    ]
+    const hidden = mount(sessionSnapshotOf(), undefined, undefined, { viewTabs, showViewTabs: false })
+    expect(hidden.view.queryByRole('tablist')).toBeNull()
+    expect(hidden.view.getByTestId('view-chat')).toBeTruthy()
+
+    const shown = mount(sessionSnapshotOf(), undefined, undefined, { viewTabs, showViewTabs: true })
+    expect(shown.view.getByRole('tablist')).toBeTruthy()
+    expect(shown.view.getByRole('tab', { name: 'Trajectory' })).toBeTruthy()
+  })
+
+  it('keeps the header to one row of tabs and moves the rest into an overflow menu', () => {
+    const viewTabs: ViewTab[] = [
+      { id: 'chat', label: 'Chat' },
+      { id: 'trajectory', label: 'Trajectory' },
+      { id: 'map', label: 'Map' },
+      { id: 'repository', label: 'Repository' },
+      { id: 'workflow', label: 'Workflow' },
+      { id: 'terminal', label: 'Terminal' },
+    ]
+    const b = mount(sessionSnapshotOf(), undefined, undefined, { viewTabs, showViewTabs: true })
+    // Three inline tabs; the remainder is behind the overflow trigger.
+    expect(b.view.getAllByRole('tab').map(tab => tab.textContent)).toEqual([
+      'Chat', 'Trajectory', 'Map',
+    ])
+    const more = b.view.getByRole('button', { name: '更多视图' })
+    fireEvent.click(more)
+    expect(b.view.getAllByRole('menuitem').map(item => item.textContent)).toEqual([
+      'Repository', 'Workflow', 'Terminal',
+    ])
+    // Choosing an overflow View selects it and closes the menu.
+    fireEvent.click(b.view.getByRole('menuitem', { name: 'Terminal' }))
+    expect(b.store.store.getSnapshot().view).toBe('terminal')
+    expect(b.view.queryByRole('menu')).toBeNull()
+    expect(b.view.getByTestId('view-terminal')).toBeTruthy()
+  })
+
+  it('keeps the active overflow View as an inline tab', () => {
+    const viewTabs: ViewTab[] = [
+      { id: 'chat', label: 'Chat' },
+      { id: 'trajectory', label: 'Trajectory' },
+      { id: 'map', label: 'Map' },
+      { id: 'terminal', label: 'Terminal' },
+    ]
+    const b = mount(sessionSnapshotOf(), undefined, undefined, { viewTabs, showViewTabs: true })
+    act(() => { b.store.actions.setView('terminal') })
+    b.rerender()
+    expect(b.view.getAllByRole('tab').map(tab => tab.textContent)).toEqual([
+      'Chat', 'Trajectory', 'Terminal',
+    ])
+    expect(b.view.getByRole('tab', { name: 'Terminal' }).getAttribute('aria-selected')).toBe('true')
+  })
+
+  it('returns to Chat when the switcher is hidden on another View', () => {
+    const viewTabs: ViewTab[] = [
+      { id: 'chat', label: 'Chat' },
+      { id: 'trajectory', label: 'Trajectory' },
+    ]
+    // The stored selection outlives the preference, so a Session parked on
+    // another View must not lose its only way back when the switcher hides.
+    const hidden = mount(sessionSnapshotOf(), undefined, undefined, { viewTabs, showViewTabs: false })
+    act(() => { hidden.store.actions.setView('trajectory') })
+    expect(hidden.view.queryByRole('tablist')).toBeNull()
+    expect(hidden.view.getByTestId('view-chat')).toBeTruthy()
+    expect(hidden.view.queryByTestId('view-trajectory')).toBeNull()
   })
 
   it('keeps the Chat fallback selected by id when a view is inserted before it', () => {

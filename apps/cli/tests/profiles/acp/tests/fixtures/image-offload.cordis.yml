@@ -22,6 +22,12 @@
     provider: deepseek-official
     model: deepseek-v4-flash-vision-exp
 
+# This scenario exercises the native read_image tool after request assembly;
+# opt into the coding mode so the personal-agent capability gate exposes it.
+- id: personal-agent
+  config:
+    defaultMode: coding
+
 - id: session-persistence-jsonl
   name: '@deepseek-ai/dsh-session-persistence-jsonl'
   config:

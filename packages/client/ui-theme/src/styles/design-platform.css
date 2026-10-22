@@ -158,6 +158,11 @@ body {
   --dsw-alias-bg-layer-1: var(--dsw-static-neutral-bluish-00);
   --dsw-alias-bg-layer-2: var(--dsw-static-neutral-bluish-00);
   --dsw-alias-bg-layer-3: var(--dsw-static-neutral-bluish-00);
+  /* Overlay surface that holds its own text above the shell (dialogs, the
+     settings panel). It resolves through the menu surface, which skins keep
+     opaque: a translucent page under a translucent dialog makes the dialog's
+     own copy unreadable, so this pair never follows the page base. */
+  --dsw-alias-bg-dialog: var(--dsw-specific-menu);
   --dsw-alias-bg-mask-1: rgba(0, 0, 0, 0.24);
   --dsw-alias-bg-mask-2: rgba(0, 0, 0, 0.12);
   --dsw-alias-bg-mask-3: rgba(0, 0, 0, 0.48);

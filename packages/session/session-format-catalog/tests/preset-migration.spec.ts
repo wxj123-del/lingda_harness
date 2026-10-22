@@ -21,7 +21,7 @@ describe('catalog preset migration', () => {
     const restore = sessionFormatCatalog.createRestore(header, { recovery: 'strict', validation: 'current' })
     for (const row of source) restore.decodeRow(row)
     const artifact = restore.finish()
-    expect(artifact.header).toMatchObject({ version: 3, id: 'code', agentPreset: 'ptc', isSeeded: true })
+    expect(artifact.header).toMatchObject({ version: sessionFormatCatalog.currentVersion, id: 'code', agentPreset: 'ptc', isSeeded: true })
     expect(artifact.inheritedEventCount).toBe(2)
     expect(artifact.events.map(event => event.seq)).toEqual([0, 1, 2, 3, 4, 5])
     expect(artifact.events.filter(event => event.type === 'agent-preset/selected').map(event => event.data))
@@ -30,9 +30,9 @@ describe('catalog preset migration', () => {
     expect(JSON.stringify({ header, source })).toBe(before)
   })
 
-  it('does not reinterpret a native v3 custom preset named code', () => {
+  it('does not reinterpret a current custom preset named code', () => {
     const header = {
-      type: 'session', version: 3, id: 'native', createdAt: 1, isSeeded: false,
+      type: 'session', version: sessionFormatCatalog.currentVersion, id: 'native', createdAt: 1, isSeeded: false,
       delegationDepth: 0, agentPreset: 'code',
     }
     const row = { type: 'agent-preset/selected', seq: 0, time: 1, data: { agentPreset: 'code' } }

@@ -63,6 +63,8 @@ The tool result appends to the conversation and preserves earlier request conten
 
 - The current `ContentBlock` vocabulary has image and file blocks but no audio block, so the plugin returns an audio file attachment; inline playback requires coordinated session, transport, and client changes.
 
+No runtime invariant companion is published because speech generation owns audio artifacts rather than a separate replay invariant.
+
 <a id="dev-note"></a>
 ### Dev Note
 

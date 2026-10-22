@@ -9,7 +9,7 @@ English | [中文](README.zh.md)
 
 ## Summary
 
-The todo group gives agents a session-level task list to plan with: add tasks, mark them in progress, and check them off, with the same list persisting across turns and reopened sessions. It is one product package that provides the `todo_write` tool; the list belongs to the agent session that created it, and each update replaces the whole list. Interactive hosts show the standing plan from the list, while the group itself ships no UI.
+The todo group covers two planning scopes. `tool-todo` gives an agent a per-turn checklist: the `todo_write` tool, whose list persists across turns and reopened sessions and is replaced wholesale on every update. `task-state` gives an agent one durable task for work spanning many turns: an objective with verifiable acceptance criteria, evidence-gated completion, a card restated at the start of every turn, and automatic command evidence. Interactive hosts show the standing plan from the list, while the group itself ships no UI.
 
 ## Table of Contents
 
@@ -25,6 +25,7 @@ The todo group gives agents a session-level task list to plan with: add tasks, m
 | Package | Role | ctx key |
 |---|---|---|
 | [`tool-todo`](tool-todo/README.md) | Lets the agent maintain a session task list: plan tasks, update status, and track progress | registers on `ctx.tools` |
+| [`task-state`](task-state/README.md) | Keeps one durable task with acceptance criteria, evidence, and a per-turn recitation card | registers on `ctx.sessionProjections` |
 
 -----
 
@@ -35,6 +36,7 @@ The todo group gives agents a session-level task list to plan with: add tasks, m
 - [Generated tool catalog](../../docs/tool-catalog.md#deepseek-aidsh-tool-todo) — the `todo_write` schema the model receives.
 - [Generated configuration catalog](../../docs/config-catalog.md#deepseek-aidsh-tool-todo) — every accepted config field.
 - [todo_write tool Agent Note](../../.agents/notes/archived/feature/2026-06-29-todo-write-tool.md) — the original design and its alternatives.
+- [Long-task durability Agent Note](../../.agents/notes/implemented/feature/2026-10-19-long-task-durability.md) — why durable task state sits beside the per-turn list.
 
 -----
 

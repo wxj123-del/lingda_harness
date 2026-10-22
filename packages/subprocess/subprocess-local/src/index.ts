@@ -48,6 +48,43 @@ import { LocalTerminalHandle } from './terminal.ts'
 
 const requireNodePty = createLazyRequire<typeof NodePty>('node-pty', import.meta.url)
 
+// The host has one process-wide exit hook. Keep its state on globalThis so
+// duplicated ESM module instances (test workers, loaders, or bundled copies)
+// cannot each install another listener.
+type HostExitCallback = () => void
+interface HostExitState {
+  runtimes: Set<HostExitCallback>
+  listener: (() => void) | undefined
+}
+
+const HOST_EXIT_STATE = Symbol.for('deepseek-harness.subprocess-local.host-exit')
+const hostExitGlobal = globalThis as typeof globalThis & { [HOST_EXIT_STATE]?: HostExitState }
+const hostExitState: HostExitState = hostExitGlobal[HOST_EXIT_STATE] ?? { runtimes: new Set(), listener: undefined }
+hostExitGlobal[HOST_EXIT_STATE] = hostExitState
+
+function registerHostExitRuntime(callback: HostExitCallback): () => void {
+  hostExitState.runtimes.add(callback)
+  // Rebind one dispatcher for each registration. This keeps exactly one
+  // process listener while giving hosts that removed a listener directly a
+  // fresh, installed callback.
+  if (hostExitState.listener !== undefined) process.off('exit', hostExitState.listener)
+  const listener = (): void => {
+    for (const registered of [...hostExitState.runtimes]) registered()
+  }
+  hostExitState.listener = listener
+  process.prependListener('exit', listener)
+  return () => { unregisterHostExitRuntime(callback) }
+}
+
+function unregisterHostExitRuntime(callback: HostExitCallback): void {
+  hostExitState.runtimes.delete(callback)
+  const listener = hostExitState.listener
+  if (hostExitState.runtimes.size === 0 && listener !== undefined) {
+    process.off('exit', listener)
+    hostExitState.listener = undefined
+  }
+}
+
 /**
  * Local subprocess service: platform-selected managed ranges, Node-shaped stdio
  * dispositions (raw pipes, inherit, bounded tail-keep collection with spill
@@ -74,11 +111,10 @@ export class LocalSubprocessRuntime extends SubprocessRuntime {
   constructor(ctx: Context) {
     super(ctx)
     ctx.effect(() => {
-      const onHostExit = (): void => { this.terminateForHostExit() }
-      process.prependListener('exit', onHostExit)
+      const unregister = registerHostExitRuntime(() => { this.terminateForHostExit() })
       return async () => {
         await this.disposeManagedProcesses()
-        process.off('exit', onHostExit)
+        unregister()
       }
     }, 'local subprocess teardown')
   }

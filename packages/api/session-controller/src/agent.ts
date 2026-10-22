@@ -12,7 +12,7 @@ import { ReasoningEffortId } from '@deepseek-ai/dsh-llm'
 import type { Session, SessionId } from '@deepseek-ai/dsh-session'
 import type { SessionInspection } from '@deepseek-ai/dsh-session-persistence'
 import { SessionQueryError, type SessionObservation } from '@deepseek-ai/dsh-session-query'
-import { RemoteError } from '@deepseek-ai/dsh-typert-protocol'
+import { RemoteError, remoteErrorOf } from '@deepseek-ai/dsh-typert-protocol'
 import type {} from '@deepseek-ai/dsh-typert-registry'
 import type { ModelSelection } from './types.ts'
 
@@ -389,6 +389,35 @@ export class ApiSessionAgentController {
     }
   }
 
+  /**
+   * Compose from the preset a Session RECORDED, falling back to the deployment
+   * default when that preset no longer exists.
+   *
+   * A removed preset must not make its sessions unopenable: the log records
+   * which composition a session ran, and a deployment that drops one keeps the
+   * transcript readable on whatever the default now is. An explicit request for
+   * a missing preset is a different case and still fails ({@link composeAgent}),
+   * because a caller naming one has to learn that it is gone.
+   * @param storedPreset - preset id read back from the Session, if any.
+   * @returns the resolved preset identity and Agent setup callback.
+   */
+  async composeStoredAgent(storedPreset: string | undefined): Promise<{
+    readonly agentPreset?: string
+    readonly setup: AgentSetup
+  }> {
+    if (storedPreset === undefined) return this.composeAgent(undefined)
+    try {
+      return await this.composeAgent(storedPreset)
+    } catch (error) {
+      if (!isAgentPresetNotFound(error)) throw error
+      this.ctx.logger.warn(
+        `session recorded agent preset "${storedPreset}", which this deployment no longer supplies; `
+        + 'composing the default preset for this resume',
+      )
+      return this.composeAgent(undefined)
+    }
+  }
+
   private liveAgent(sessionId: SessionId): ApiSessionAgentResult | undefined {
     const agent = this.ctx.agents.get(sessionId)
     if (agent === undefined) return undefined
@@ -421,7 +450,7 @@ export class ApiSessionAgentController {
     if (hasApiSessionSubagentOwner(this.ctx, { header: observation.header }, undefined)) {
       throw new ApiSessionSubagentOwnership(sessionId)
     }
-    const composition = await this.composeAgent(this.presetForObservation(observation))
+    const composition = await this.composeStoredAgent(this.presetForObservation(observation))
     const published = this.ctx.sessions.get(sessionId)
     const live = this.ctx.agents.get(sessionId)
     if (published !== undefined && hasApiSessionSubagentOwner(this.ctx, published, live)) {
@@ -458,7 +487,7 @@ export class ApiSessionAgentController {
         }
         const storedPreset = this.presetForObservation(observation)
         this.assertPresetUnchanged(sessionId, presetId, storedPreset)
-        const composition = await this.composeAgent(storedPreset)
+        const composition = await this.composeStoredAgent(storedPreset)
         return (await this.ctx.agents.resume({
           resumeSessionId: sessionId,
           agentOptions: this.agentOptions(),
@@ -518,12 +547,16 @@ export class ApiSessionAgentController {
   }
 }
 
-function agentModelSelection(selection: ModelSelection): AgentModelSelection {
-  return {
-    provider: selection.provider,
-    model: selection.model,
-    ...(selection.reasoningEffort === undefined
-      ? {}
-      : { reasoningEffort: ReasoningEffortId(selection.reasoningEffort) }),
-  }
+function agentModelSelection(selection: ModelSelection): AgentModelSelection {  return {
+  provider: selection.provider,
+  model: selection.model,
+  ...(selection.reasoningEffort === undefined
+    ? {}
+    : { reasoningEffort: ReasoningEffortId(selection.reasoningEffort) }),
+}
+}
+
+/** Whether a caught failure is the roster's "this deployment has no such preset". */
+function isAgentPresetNotFound(error: unknown): boolean {
+  return remoteErrorOf(error)?.code === 'agent-preset/not-found'
 }

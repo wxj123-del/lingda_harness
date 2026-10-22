@@ -9,7 +9,7 @@ English | [中文](README.zh.md)
 
 ## Summary
 
-The **Plugins** page lets Web users inspect plugin modules in agent presets and global entries without changing configuration. Category filters and search narrow the inventory; cards show enablement and runtime details. Actual Skills, workflows, tools, and knowledge bases stay in their respective navigation pages and do not contribute duplicate inventory cards or counts. Reading these views makes no model request.
+The **Plugins** page lets Web users inspect preset and global plugin modules without changing configuration. Category filters, search, cards, and a compact capability map expose enablement and runtime details from one read-only snapshot. Skills, workflows, tools, and knowledge bases remain in their own pages, and opening this view makes no model request.
 
 ## Table of Contents
 

@@ -1,6 +1,7 @@
 import { Context } from '@deepseek-ai/cordis'
 import { expect, it, vi } from 'vitest'
 import { logTruncationMarker } from '../src/protocol.ts'
+import { provideDangerPolicy } from './policy.ts'
 
 // Keep the interpreter and pipe lifecycle real; only OS-dependent read sizes
 // change. Each byte reaches the runtime as its own data event.
@@ -29,6 +30,7 @@ const { PythonPtcRuntime } = await import('../src/index.ts')
 
 it('seals stray fragments without recopying the sealed prefix', async () => {
   const ctx = new Context()
+  provideDangerPolicy(ctx)
   const fiber = await ctx.plugin(PythonPtcRuntime, { maxLogBytes: 200_000, maxWallMs: 30_000 })
   const realConcat = Buffer.concat.bind(Buffer)
   let copied = 0
@@ -61,6 +63,7 @@ it.each([
   { name: 'CESU-8 lone surrogates', payload: 'b"\\xed\\xa0\\x80" * 1100' },
 ])('bounds $name by their U+FFFD-decoded cost', async ({ payload }) => {
   const ctx = new Context()
+  provideDangerPolicy(ctx)
   const fiber = await ctx.plugin(PythonPtcRuntime, { maxLogBytes: 3072, maxWallMs: 30_000 })
   const realConcat = Buffer.concat.bind(Buffer)
   let maxConcat = 0

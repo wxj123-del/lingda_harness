@@ -131,10 +131,9 @@ export class PhoneAccessCardController {
   }
 
   private async readCurrent(): Promise<void> {
-    // The namespace is mounted by the remotes assembly, which a deployment
-    // without this plugin does not include. Reading it anyway throws.
-    if (this.ctx.remote.phoneAccess === undefined) return
-    const response = await this.ctx.remote.phoneAccess.current()
+    const phoneAccess = this.ctx.get('remote.phoneAccess') as ClientContext['remote']['phoneAccess'] | undefined
+    if (phoneAccess === undefined) return
+    const response = await phoneAccess.current()
     if (!response.ok || response.value.scanUrl === undefined || response.value.restartCommand === undefined) return
     this.tunnel = { scanUrl: response.value.scanUrl, restartCommand: response.value.restartCommand }
     this.store.set(this.projection())
@@ -151,17 +150,24 @@ export class PhoneAccessCardController {
     this.generating = true
     this.failure = undefined
     this.store.set(this.projection())
-    const response = await this.ctx.remote.phoneAccess.generate()
-    this.generating = false
-    if (!response.ok) {
-      this.failure = response.error.message
-    } else if (response.value.scanUrl !== undefined && response.value.restartCommand !== undefined) {
-      this.tunnel = { scanUrl: response.value.scanUrl, restartCommand: response.value.restartCommand }
-      this.failure = undefined
-    } else {
-      this.tunnel = undefined
-      this.failure = response.value.error
+    try {
+      const phoneAccess = this.ctx.get('remote.phoneAccess') as ClientContext['remote']['phoneAccess'] | undefined
+      if (phoneAccess === undefined) return
+      const response = await phoneAccess.generate()
+      if (!response.ok) {
+        this.failure = response.error.message
+      } else if (response.value.scanUrl !== undefined && response.value.restartCommand !== undefined) {
+        this.tunnel = { scanUrl: response.value.scanUrl, restartCommand: response.value.restartCommand }
+        this.failure = undefined
+      } else {
+        this.tunnel = undefined
+        this.failure = response.value.error
+      }
+    } catch (error) {
+      this.failure = error instanceof Error ? error.message : String(error)
+    } finally {
+      this.generating = false
+      this.store.set(this.projection())
     }
-    this.store.set(this.projection())
   }
 }

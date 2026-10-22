@@ -30,8 +30,8 @@ async function bench(): Promise<{ ctx: Context; fiber: ReturnType<Context['plugi
     },
   } as never, () => null)
   ctx.provide('sessions', {})
-  // The locale plugin binds a settings scope, which reads the connection handle
-  // and the forwarded-event port.
+  // The locale plugin binds a settings scope (settingsScope) and forwards
+  // events through the remote handle.
   ctx.provide('connection', { api: { settings: {} }, isLoopback: false } as never)
   ctx.provide('remote', { $on: () => () => {} } as never)
   ctx.provide('settingsScope', { bind: () => stubSettingsScope().scope } as never)

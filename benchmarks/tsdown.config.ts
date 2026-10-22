@@ -42,6 +42,13 @@ export default defineConfig([
   },
   {
     ...shared,
+    entry: { 'long-task-acceptance.worker': 'long-task-acceptance/long-task-acceptance.worker.ts' },
+    outDir: '.dsh-build/long-task-acceptance',
+    clean: true,
+    tsconfig: 'tsconfig.host.json',
+  },
+  {
+    ...shared,
     entry: { 'session-open.worker': 'session-open/session-open.worker.ts' },
     outDir: '.dsh-build/session-open',
     clean: true,

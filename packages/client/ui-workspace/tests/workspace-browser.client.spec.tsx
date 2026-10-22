@@ -86,6 +86,7 @@ function mount(overrides: Partial<WorkspaceBrowserProps> = {}) {
     actions: store.actions,
     startSession: vi.fn(),
     open: vi.fn(),
+    openFlow: vi.fn(),
     searchSessions: vi.fn(async () => ({ items: [], hasMore: false })),
     searchResultLimit: 20,
     renameSession: vi.fn(async () => {}),
@@ -1486,6 +1487,21 @@ describe('WorkspaceBrowser', () => {
     expect(outsideDrop.defaultPrevented).toBe(true)
     fireEvent.dragEnd(one)
     expect(b.store.getSnapshot().sessionOrderByAccount.alpha).toEqual(['two', 'one'])
+  })
+
+  it('targets the flow page from the folder menu and opens it as a main panel', () => {
+    const openFlow = vi.fn()
+    const b = mount({
+      openFlow,
+      useWorkspaces: hook(workspaceState([workspace('alpha', [], 'Alpha')])),
+    })
+    fireEvent.click(screen.getByRole('button', { name: '工作区“Alpha”的操作' }))
+    fireEvent.click(screen.getByRole('menuitem', { name: '流程总览' }))
+    // The menu records the Workspace in the shared store, then selects the page.
+    expect(b.store.getSnapshot().flowTarget).toBe('alpha')
+    expect(openFlow).toHaveBeenCalledOnce()
+    // The overview is a page, not an in-place dialog.
+    expect(screen.queryByRole('dialog')).toBeNull()
   })
 
   it('renames a workspace through the row menu dialog', async () => {

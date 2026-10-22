@@ -1,8 +1,6 @@
 /**
- * Background-job plugin, browser half: contributes one session-header action
- * that renders this session's `ctx.jobs` records. The data arrives entirely
- * through the `jobsBySession` list mirror, so the plugin issues no RPC and
- * holds no state of its own beyond popover visibility.
+ * Browser half: contributes the background-job list to the session header.
+ * Job rows arrive through the `jobsBySession` mirror.
  */
 import type { Context as ClientContext } from '@deepseek-ai/cordis'
 import { JobListAction } from './JobListAction.tsx'

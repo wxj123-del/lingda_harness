@@ -11,12 +11,16 @@ import css from './ConversationRoot.module.css'
  * @returns the active view area, or null while the Session remains blank.
  */
 export function DefaultConversationViews({
-  useSession, useConversation, useConversationViews, useInput, inputActions, useStore, actions,
+  useSession, useConversation, useConversationViews, useShowViewTabs, useInput, inputActions, useStore, actions,
   renderSlot, bindDraftMirror, openView,
 }: ConversationSessionSlotProps) {
   const tabs = useConversationViews(value => value)
+  const showViewTabs = useShowViewTabs(value => value)
   const selectedId = useStore(s => s.view)
-  const active = resolveActiveView(tabs, selectedId)
+  // Hiding the switcher also means showing Chat. The stored selection outlives
+  // the setting, so resolving it here would park a Session on another View
+  // whose only control for leaving is the switcher that was just turned off.
+  const active = resolveActiveView(tabs, showViewTabs ? selectedId : null)
   const session = useSession(s => s)
   const conversation = useConversation(s => s)
   const inputState = useInput(s => s)

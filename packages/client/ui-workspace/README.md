@@ -9,7 +9,7 @@ English | [中文](README.zh.md)
 
 ## Summary
 
-This package lets users browse grouped or flat Session lists, choose a Workspace for a new Session, and manage Workspaces and Sessions through add, rename, reorder, search, fork, archive, and Workspace deletion. Pending interactions appear as warning dots, active scheduled tasks as alarm markers, and subagent-origin Sessions remain hidden. Canonically distinct folder paths remain separate Workspaces. Adding a Workspace requires a composed directory picker; without one, the add action is unavailable.
+This package lets users browse grouped or flat Session lists, choose a Workspace for a new Session, and manage Workspaces and Sessions through add, rename, reorder, search, fork, archive, and Workspace deletion. A Workspace can also open a **Flow overview** that files its Sessions by lifecycle stage. Pending interactions appear as warning dots, active scheduled tasks as alarm markers, and subagent-origin Sessions remain hidden. Canonically distinct folder paths remain separate Workspaces. Adding a Workspace requires a composed directory picker; without one, the add action is unavailable.
 
 ## Table of Contents
 
@@ -38,6 +38,14 @@ Collapsed search is one header action beside the view and add actions: activatin
 ### Managing sessions
 
 The Session row's Rename action opens a dialog prefilled with the row's display title; confirming an unchanged title is deliberately allowed — it pins the current automatic title against regeneration. Archive commits without a confirmation dialog and the row disappears from every grouping surface when the archive-set echo lands. Fork forks at the source's last completed turn, increments the inherited persisted title on the client, and then opens the child. Workspace Delete opens a confirmation that states the retention boundary; success removes the group while its Sessions remain under Ungrouped.
+
+### Flow overview
+
+The Workspace row's **Flow overview** action opens a full page in the main column, not a dialog: a board with one column per stage — **Waiting for you**, **Working**, **In progress**, **To do**, and **Completed** — each holding that stage's Session cards. A card carries the Session title, whole-log turn and step figures, its last activity, and — when the Session has a `todos` projection — a progress bar with the completed-to-total count.
+
+Choosing a card expands it in place rather than navigating: the detail lists that Session's task entries with their completion markers and every started turn as its prompt and final-response preview, so reading what a conversation finished stays on the board. A separate **Open session** action inside the expanded detail is the only thing that opens the Session and leaves the page. A card with no recorded task list, turns, or figures shows no disclosure control at all. The page header names the Workspace with its session and completion counts, offers **Switch workspace** to retarget the board at another Workspace without leaving the page, and **Back to conversation** to return. A **Flow** entry in the product navigation bar above the conversation reopens the page on the last shown Workspace, so leaving it does not lose the view. Archived Sessions and subagent-origin rows never appear.
+
+Stages read live list facts and re-derive on every snapshot, so activity moves cards between columns while the page is open: a pending interaction wins first, then the Session's own or any descendant's running bit, then the `todos` list (an `in_progress` entry means **In progress**, all entries completed means **Completed**, otherwise **To do**), and without a list the `turnOutline` projection separates a Session that never started a turn (**To do**) from one whose last turn ended (**Completed**).
 
 ### Pending interactions
 
@@ -68,6 +76,12 @@ Each registration declares a **directory-flow child hole** (`single` kind: `conv
 ### View state
 
 Once the Workspace list baseline is ready, browser-persisted expansion and manual Session-order records retain only current Workspace ids plus Ungrouped and the flat-list account. `WorkspaceView.sessionIds` supplies real-Workspace membership, not Session display order. View actions require the current account orders explicitly. Flat-list membership and ordering use Session ids; row rendering adds status indicators once. Entering Manual snapshots every active account from the current display; reconciliation retains saved members that still belong to the account, removes departed members, and appends newly known members by recency. A new membership entry without a Session summary is omitted until that summary arrives, while an already saved slot survives a temporarily missing summary. During Workspace reconnection, Manual records an observed blank Session at the front of its saved flat and known group orders without removing other saved members; full membership reconciliation waits for the Workspace baseline. This reconciliation remains mounted while the sidebar is a rail or search replaces its body. Last updated derives directly from each current list snapshot without reading or writing saved positions; equal timestamps use Session ids as a stable tie-break. The shared sidebar projection hides rows whose durable Session summary has `origin: 'subagent'`, and each visible ordinary row inherits the blue activity indicator while any descendant reached through uninterrupted subagent-origin lineage is running. The same pure derivation reads the Schedule key from list projection values for grouped, flat, and search nodes; the package uses only the type-only `@deepseek-ai/dsh-schedule/client` dependency and does not import the Schedule runtime or `ui-schedule`.
+
+### Flow derivation
+
+`deriveWorkspaceFlow` is a separate pure projection over the same list snapshot: it walks the Workspace's caller-projected member ids, keeps loaded non-archived ordinary rows, and files each one under its stage. It reads the `todos` key from list projection values and the `turnOutline` key as a start-state witness, both through type-only imports, so a list row classifies without opening the Session; a cold row whose projection checkpoint has not landed yet falls through to **Completed** rather than claiming pending work.
+
+The page and the browser share one viewing-store handle, so the folder menu writes `flowTarget` through its own bound actions and the page reads the same instance; the injected `openFlow` callback only selects the main panel. That shared record is also what makes the navigation bar's **Flow** entry reopen the last Workspace instead of an empty board. The page holds no other navigation state, so every snapshot re-derives the board.
 
 ### Hover cards
 

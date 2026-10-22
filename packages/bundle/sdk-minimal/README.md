@@ -9,7 +9,7 @@ English | [中文](README.zh.md)
 
 ## Summary
 
-Use `dsh --profile sdk-minimal` when an SDK client needs a small, explicit coding-agent runtime. By default, the profile advertises only a platform-selected persistent shell, persists sessions as uncompressed JSONL, and selects the model from the SDK initialization request. It supplies a complete Cordis tree and deliberately excludes `dsh-base`, Web, settings, managed credentials, telemetry, compaction, filesystem tools, workspace instructions, skills, jobs, and subagents. Its danger-full-access policy lets the shell modify any path available to the process, so use it only with an isolated workspace.
+Use `dsh --profile sdk-minimal` when an SDK client needs a small, explicit coding-agent runtime. By default, the profile advertises only a platform-selected persistent shell, persists sessions as uncompressed JSONL, and selects the model from the SDK initialization request. It supplies a complete Cordis tree and deliberately excludes `dsh-base`, Web, settings, managed credentials, telemetry, compaction, filesystem tools, workspace instructions, skills, jobs, and subagents. Its default `workspace-write` policy confines shell writes to the session workspace (plus platform temporary areas supported by the sandbox backend). Set `DSH_PERMISSION_MODE=danger-full-access` only as an explicit opt-in for a trusted, isolated deployment; an unavailable sandbox backend fails closed.
 
 ## Table of Contents
 
@@ -32,7 +32,7 @@ export DSH_HOME=/absolute/path/to/example-dsh-home
 dsh --profile sdk-minimal
 ```
 
-`DSH_CONTEXT_WINDOW` sets the fallback capacity for a model absent from the adapter's advisory catalog. `DSH_SYSTEM_PROMPT` replaces the default persona. The SDK initialization request is the sole model selection and overrides environment defaults.
+`DSH_CONTEXT_WINDOW` sets the fallback capacity for a model absent from the adapter's advisory catalog. `DSH_SYSTEM_PROMPT` replaces the default persona. `DSH_PERMISSION_MODE` defaults to `workspace-write`; set it to `danger-full-access` only when the process is trusted and the workspace is isolated. Unsupported values are rejected by the profile schema. The SDK initialization request is the sole model selection and overrides environment defaults.
 
 Use `dsh plugin --profile sdk-minimal` to manage persistent external dependencies. Profile, home, and ordered `--patch` files can replace rows or insert bundles above the complete default tree. The shipped template applies patches only at startup.
 

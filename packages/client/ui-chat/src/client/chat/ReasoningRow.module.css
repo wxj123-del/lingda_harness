@@ -8,9 +8,8 @@
   overflow: hidden;
 }
 
-/* The live row is the only state: a sweep masks the title while the model is
-   still thinking. Reasoning prose never renders here, so there is no expanded
-   body and nothing to disclose. */
+/* The live row sweeps while the model is still thinking; the finished row is
+   compact and discloses the reasoning prose it now holds. */
 .root[data-state='running'] .row::after {
   content: '';
   position: absolute;
@@ -38,6 +37,22 @@
 
 .title {
   font-weight: 400;
+}
+
+/* The finished row's reasoning body. Reasoning is the model's working notes,
+   not the answer: it reads one tier down, in the secondary label colour, and
+   stays inside the message column so expanding never moves the layout. */
+.body {
+  margin: 4px 0 0 calc(22px + var(--dsh-content-font-delta, 0px));
+  padding-left: 10px;
+  border-left: 1.5px solid var(--dsw-alias-border-l2);
+  max-height: 320px;
+  overflow-y: auto;
+  color: var(--dsw-alias-label-secondary);
+  font-size: var(--dsh-content-font-size-secondary, 13px);
+  line-height: calc(20px + var(--dsh-content-font-delta-secondary, 0px));
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
 }
 
 @media (prefers-reduced-motion: reduce) {

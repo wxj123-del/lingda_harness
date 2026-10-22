@@ -88,6 +88,28 @@ describe('git workspace plugin', () => {
     expect(checkpoints[0]?.data.syncState).toEqual(expect.any(String))
   }, 15_000)
 
+  it('records a bounded non-repository checkpoint without running Git diagnostics', async () => {
+    const ctx = new Context()
+    await ctx.plugin(SessionStore)
+    await ctx.plugin(GitWorkspaceService)
+    const root = await mkdtemp(join(tmpdir(), 'dsh-git-workspace-plain-'))
+    const session = ctx.sessions.create(SessionId(`git-plain-${Math.random().toString(36).slice(2)}`), {
+      meta: { cwd: root },
+    })
+
+    session.append('turn/start', { turn: 1 })
+    await ctx.sessions.flush(session)
+
+    const checkpoint = session.snapshotEvents().find(event => event.type === 'agent/git-checkpoint')
+    expect(checkpoint?.type).toBe('agent/git-checkpoint')
+    if (checkpoint?.type !== 'agent/git-checkpoint') return
+    expect(checkpoint.data.syncState).toBe('unknown')
+    expect(checkpoint.data.error).toBe('cwd is not a Git repository')
+    expect(checkpoint.data.error).not.toContain('fatal:')
+    expect(checkpoint.data.status).toBeUndefined()
+    expect(checkpoint.data.diff).toBeUndefined()
+  })
+
   it('can be disabled without changing the session log', async () => {
     const ctx = new Context()
     await ctx.plugin(SessionStore)

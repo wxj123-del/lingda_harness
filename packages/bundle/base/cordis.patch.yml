@@ -349,6 +349,15 @@
 
     - id: compaction-basic
       name: '@deepseek-ai/dsh-compaction-basic'
+      config:
+        # Each summary is also written to a re-readable sidecar and named in the
+        # checkpoint, so a later compaction folding it into a coarser summary
+        # does not destroy the detail.
+        sidecar: true
+        # A model whose adapter declares no context window would otherwise never
+        # compact proactively: a gateway that closes oversized requests without
+        # reporting an overflow would end the session with no recovery.
+        fallbackContextWindow: 100000
 
     # Human `/compact`: one useful reduction below the automatic threshold. Backend
     # independent, so it follows whichever compaction service this leaf mounts.
@@ -440,6 +449,32 @@
       name: '@deepseek-ai/dsh-tool-todo'
       config:
         allowParallelInProgress: true
+
+    # Durable task snapshot for long-running work: a last-write-wins `task`
+    # projection, the `task_update` tool, a per-turn recitation card, automatic
+    # command evidence, and evidence-gated completion.
+    - id: task-state
+      name: '@deepseek-ai/dsh-task-state'
+      config:
+        # Completion re-runs every command that currently backs the task, so a
+        # criterion that passed earlier cannot be marked done after a regression.
+        reverifyEvidence: true
+
+    # Runtime step, token, wall-clock, and turn budgets. Limits are unbounded
+    # unless a deployment sets them; the guard then stops a runaway turn at a
+    # step boundary with a durable `budget/stop` record.
+    - id: budget-guard
+      name: '@deepseek-ai/dsh-budget-guard'
+
+    # Automatic continuation after a budget stop or a crash-interrupted tail.
+    # It resumes only an active task that carries a handoff, never competes with
+    # an armed goal, and stops permanently once the user cancels.
+    - id: auto-resume
+      name: '@deepseek-ai/dsh-auto-resume'
+      config:
+        maxAutoResumes: 10
+        minIntervalMs: 1000
+        requireHandoff: true
 
     # Persisted same-session goals reach the model and the slash menu here; the
     # domain, driver, and `/goal` command are above.

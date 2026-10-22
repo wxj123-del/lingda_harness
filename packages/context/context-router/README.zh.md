@@ -9,8 +9,16 @@ kind: "package-reference"
 
 ## 概述
 
-`dsh-context-router` 保留追加式 Session 日志，同时为每次模型请求选择有界的可见快照。它把最新用户请求分类为 `fresh`、`recent`、`task` 或 `full`，始终保留系统消息和当前用户消息，并且不会发送缺少工具调用的孤立工具结果。每次决策还会记录机器可读的信号，例如 `explicit-full`、`co-reference`、`follow-up`、`lexical-match`、`open-turn` 或 `unrelated`，因此诊断可以区分选择同一大类路由的具体原因。一个 turn 尚未结束时，后续模型 step 会优先保留该 turn 的工具工作集；如果超过 token 预算，会先按原子工具单元裁剪较旧的工作集，再裁剪更早 turn 的历史。关键词路由只用于已结束 turn 之间的历史。
+`dsh-context-router` 保留追加式 Session 日志，同时选择有界的模型快照。它把请求分类为 `fresh`、`recent`、`task` 或 `full`，保留必需消息和工具调用配对，优先处理未结束的 turn，并记录机器可读的路由信号供诊断使用。旧工具结果只在请求快照中压缩，持久历史保持不变。
 
+## 目录
+
+- [使用](#use)
+- [模型体验](#model-experience)
+- [已知限制与延期工作](#known-limitations-and-deferred-work)
+- [开发备注](#dev-note)
+
+<a id="use"></a>
 ## 使用
 
 `dsh-base` 会全局挂载本插件。默认每次请求保留最近 16 条消息，最多补充 32 条任务相关消息，并限制在估算 24,000 token 以内。`fresh` 会删除旧的普通对话历史；`task` 会补充与当前请求共享关键词的旧消息；`full` 会在 token 预算内保留完整历史。持久日志不会被删除或重写。
@@ -26,11 +34,15 @@ kind: "package-reference"
     pluginContextRatio: 0.25
     maxTokens: 24000
     safetyMarginTokens: 256
+    toolResultMaxChars: 6000
+    toolResultRecentMessages: 4
 ```
 
 每次请求都会记录 `context/router` 审计事件，其中包含范围、原因、消息数量、估算输入 token、包含工具 schema 的 `estimatedRequestTokens`、包含输出预留的 `estimatedWindowTokens`、最终消息预算，以及每条选中消息的有限类型、Token 和预览元数据。元数据最多保留 128 条消息，并只保留截断后的预览，不复制完整消息正文；被省略的数量会单独记录。若 Session 已记录提供方的 `contextWindow`、输出 `maxTokens` 与工具 schema，路由器会先从模型总窗口中扣除输出和 schema，再选择消息，避免固定预算把小窗口模型推过上限。若完整请求包（消息、工具 schema 和输出预留）仍超过模型窗口，事件会单独记录 `requestOverflowTokens`。若系统提示词、当前请求或持久检查点等强制消息本身已经超过有效预算，事件会记录 `budgetExceeded` 与 `overflowTokens`，界面会显示警告；路由器不会为了满足数字上限而丢弃这些必要消息。该事件只用于诊断，不会成为模型上下文。当 provider runtime 在 adapter dispatch 前投影文件或图片内容时，路由器会追加有界的 `finalPayload` 审计，记录投影后的消息预览和投影标志，让上下文预览能够区分路由快照与 adapter-ready payload；等待中的 request-ready checkpoint 会在 dispatch 前持久化该审计。
 
-`context/router` 审计还会记录机器可读的路由信号，让界面和诊断能够区分明确请求、指代、追问、关键词命中、开放 turn 与无关联请求，即使它们属于同一个大类范围。
+`context/router` 审计还会记录机器可读的路由信号，让界面和诊断能够区分明确请求、指代、追问、关键词命中、开放 turn 与无关联请求，即使它们属于同一个大类范围。每次路由还会记录 0 到 1 的确定性置信度，以及是否使用了保守回退；显式指令置信度最高，普通请求只有弱关联证据时才会扩大召回。对于关键词路由，审计还会记录候选历史消息数、实际保留的命中消息数和命中词项数，让“路由被触发但没有召回到内容”这类效果问题可见。关键词命中的 `recent` 请求会在有界任务索引中补回匹配历史，不会因为默认近期窗口而丢失已确认相关的旧消息。
+
+旧的纯文本工具结果只在单次请求快照中压缩，持久化 Session 日志不变。最新的 `toolResultRecentMessages` 条结果保持完整；超过 `toolResultMaxChars` 的旧结果保留有界头尾预览，已经由 spill-policy 生成的结果不会重复压缩，重复的旧文本结果会替换为指向首次结果的短提示。审计通过 `toolAudit` 记录数量和字符变化，同时保持工具调用与结果的原子配对。
 
 消息和工具 schema 现在复用 `token-meter` 的公开启发式估算，因此路由裁剪与 Token 轨迹页使用同一套计量规则。进程内会按不可变消息和请求 header 对象的身份缓存估算结果，避免同一条长工具链在选择和审计阶段被重复计量。被动插件或检索上下文默认最多使用消息预算的 25%；当前开放 turn 的工作集不受这层二级上限限制，但仍受总预算约束。可以通过 `pluginContextRatio` 在 0 到 1 之间调整上限。
 
@@ -48,6 +60,12 @@ kind: "package-reference"
 
 任务关键词匹配也复用该增量索引的有界倒排表，普通短问题只扫描有限的近期用户消息；历史任务匹配不会在每个请求中重新对整段 transcript 做分词。每个关键词最多保留最近 256 条消息候选，达到上限的高频词会回退到精确扫描，完整日志仍然保留不变。
 
+<a id="dev-note"></a>
+## 开发备注
+
+路由测试使用确定性的 Session fixture，不调用 embedding 模型或 Provider。
+
+<a id="model-experience"></a>
 ## 模型体验
 
 ### 路由后的请求上下文
@@ -65,5 +83,8 @@ kind: "package-reference"
 所选历史发生变化时，本次请求可复用的前缀可能减少。路由器不会重写旧消息或 compaction 记录。
 
 ## 已知限制与延期工作
+<a id="known-limitations-and-deferred-work"></a>
 
-路由规则是本地确定性的，不使用 embedding，也不会额外调用模型。除显式引用、近期性和共享关键词之外的语义召回，将在后续阶段扩展。
+- 路由规则是本地确定性的，不使用 embedding，也不会额外调用模型。除显式引用、近期性和共享关键词之外的语义召回，将在后续阶段扩展。
+
+不会发布 runtime invariant companion，因为本包拥有请求路由，而不是持久化回放不变量。

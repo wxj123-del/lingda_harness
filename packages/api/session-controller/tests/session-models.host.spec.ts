@@ -506,6 +506,52 @@ describe('Web session model selection', () => {
     await ctx.fiber.dispose()
   })
 
+  it('rewrites a draft with the selected model without appending a Session event', async () => {
+    const { ctx, agent, sessionId } = await harness()
+    const calls: GenerateOptions[] = []
+    ctx.llm.registerAdapter(['prompt-optimizer'], new class extends CatalogAdapter {
+      override resolveModel(provider: string, model: string): Promise<LlmResolvedModelInfo> {
+        return Promise.resolve({ provider, id: model, name: model })
+      }
+
+      override async *stream(options: GenerateOptions): AsyncIterable<StreamChunk> {
+        calls.push(options)
+        yield { type: 'block-start', index: 0, blockType: 'reasoning' }
+        yield { type: 'reasoning-delta', index: 0, text: '先分析草稿。' }
+        yield { type: 'block-start', index: 1, blockType: 'text' }
+        yield { type: 'text-delta', index: 1, text: '请明确目标、约束和验收标准。' }
+        yield { type: 'finish', reason: { kind: 'stop' } }
+      }
+    }('Prompt Optimizer', []))
+    const remote = createSessionTestRemote(ctx, {
+      defaultModelSelection: () => ({ provider: 'deepseek-official', model: 'deepseek-chat' }),
+      cwd: '/tmp',
+    })
+
+    expectValue(await remote.selectModel(request({
+      sessionId, provider: 'prompt-optimizer', model: 'rewrite-model',
+    })))
+    const eventCount = agent.session.snapshotEvents().length
+    const result = await remote.optimizePrompt({
+      sessionId,
+      draft: '帮我改一下这个需求',
+      mode: 'code',
+    })
+
+    expect(result).toEqual({ ok: true, value: { text: '请明确目标、约束和验收标准。' } })
+    expect(calls).toHaveLength(1)
+    expect(calls[0]).toMatchObject({
+      provider: 'prompt-optimizer',
+      model: 'rewrite-model',
+      messages: [{ role: 'user', content: [{ type: 'text', text: '帮我改一下这个需求' }] }],
+      maxTokens: 2048,
+    })
+    expect(calls[0]?.sessionId).toBeUndefined()
+    expect(calls[0]?.system).toContain('engineering task')
+    expect(agent.session.snapshotEvents()).toHaveLength(eventCount)
+    await ctx.fiber.dispose()
+  })
+
   it('reads the Agent default live for a session whose log names no selection', async () => {
     const { ctx, sessionId } = await harness()
     let stored = { provider: 'deepseek-official', model: 'deepseek-chat' }

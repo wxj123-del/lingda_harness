@@ -2,10 +2,12 @@
   "name": "@deepseek-ai/dsh-phone-access",
   "description": "Phone QR access: an ngrok tunnel and a scan URL for the running DSH Web GUI",
   "version": "0.1.6-alpha.1",
-  "publishConfig": { "access": "public" },
+  "publishConfig": {
+    "access": "public"
+  },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/deepseek-ai/deepseek-harness.git",
+    "url": "git+https://gitcode.com/XJ-Cyber/lingda-harness.git",
     "directory": "packages/webhook/phone-access"
   },
   "type": "module",
@@ -56,6 +58,7 @@
   },
   "dependencies": {
     "@deepseek-ai/dsh-typert-protocol": "workspace:^",
-    "@deepseek-ai/schemastery": "workspace:^"
+    "@deepseek-ai/schemastery": "workspace:^",
+    "zod": "^4.4.3"
   }
 }

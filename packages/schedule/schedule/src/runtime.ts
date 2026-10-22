@@ -6,7 +6,7 @@
 import type { Context } from '@deepseek-ai/cordis'
 import type { Agent } from '@deepseek-ai/dsh-agent'
 import { createUserMessage } from '@deepseek-ai/dsh-llm'
-import type { EveryScheduleRecord, OneShotScheduleRecord } from './types.ts'
+import type { EveryScheduleRecord, OneShotScheduleRecord, WorkflowScheduleRecord } from './types.ts'
 import {
   foldScheduleEvents,
   renderEveryReminderBatchFraming,
@@ -29,6 +29,7 @@ interface EveryDue {
 type DueDecision =
   | { readonly kind: 'one-shot'; readonly record: OneShotScheduleRecord }
   | { readonly kind: 'every'; readonly reminders: readonly EveryDue[]; readonly acceptedAt: string }
+  | { readonly kind: 'workflow'; readonly record: WorkflowScheduleRecord; readonly occurrenceAt: string; readonly acceptedAt?: string }
   | { readonly kind: 'wait'; readonly target?: number }
 
 /** Select one due one-shot, one complete fixed-rate batch, or the next wake. */
@@ -44,17 +45,29 @@ function dueDecision(folded: FoldedSchedules, now: number): DueDecision {
     .filter((entry): entry is { record: OneShotScheduleRecord; index: number } =>
       entry.record.kind !== 'every' && Date.parse(entry.record.scheduledAt) <= now)
     .sort(byTargetThenCreate)[0]?.record
-  if (oneShot !== undefined) return { kind: 'one-shot', record: oneShot }
+  if (oneShot !== undefined) return oneShot.target?.kind === 'workflow'
+    ? { kind: 'workflow', record: oneShot as WorkflowScheduleRecord, occurrenceAt: oneShot.scheduledAt }
+    : { kind: 'one-shot', record: oneShot }
 
   const every = indexed
     .filter((entry): entry is { record: EveryScheduleRecord; index: number } =>
       entry.record.kind === 'every' && Date.parse(entry.record.scheduledAt) <= now)
     .sort(byTargetThenCreate)
   if (every.length > 0) {
+    const first = every[0]?.record
+    if (first?.target?.kind === 'workflow') {
+      const acceptedAt = new Date(now).toISOString()
+      return {
+        kind: 'workflow',
+        record: first as WorkflowScheduleRecord,
+        occurrenceAt: resolveEveryOccurrence(first, now).occurrenceAt,
+        acceptedAt,
+      }
+    }
     return {
       kind: 'every',
       acceptedAt: new Date(now).toISOString(),
-      reminders: every.map(({ record }) => ({
+      reminders: every.filter(({ record }) => record.target === undefined).map(({ record }) => ({
         record,
         occurrenceAt: resolveEveryOccurrence(record, now).occurrenceAt,
       })),
@@ -92,6 +105,7 @@ export class ScheduleRuntime {
   constructor(
     private readonly ctx: Context,
     private readonly agent: Agent,
+    private readonly dispatchWorkflow?: (record: WorkflowScheduleRecord, occurrenceAt: string) => Promise<void>,
   ) {}
 
   /** Begin the initial durability preflight and timer derivation. */
@@ -251,7 +265,7 @@ export class ScheduleRuntime {
 
     let maintenance: Promise<boolean>
     try {
-      maintenance = this.agent.runMaintenance(() => {
+      maintenance = this.agent.runMaintenance(async () => {
         if (!this.isRunnable()) return Promise.resolve(false)
         const claimed = this.readFolded()
         if (claimed === undefined) return Promise.resolve(false)
@@ -263,22 +277,34 @@ export class ScheduleRuntime {
           return Promise.resolve(false)
         }
         try {
-          const text = decision.kind === 'one-shot'
-            ? renderReminderFraming(decision.record)
-            : renderEveryReminderBatchFraming(decision.reminders)
-          const message = createUserMessage({
-            content: [{ type: 'text', text }],
-            source: { kind: 'plugin', plugin: 'schedule' },
-          })
-          this.agent.followup(message)
+          if (decision.kind === 'workflow') {
+            if (this.dispatchWorkflow === undefined) throw new Error('workflow Schedule dispatcher is unavailable')
+            await this.dispatchWorkflow(decision.record, decision.occurrenceAt)
+          } else {
+            const text = decision.kind === 'one-shot'
+              ? renderReminderFraming(decision.record)
+              : renderEveryReminderBatchFraming(decision.reminders)
+            const message = createUserMessage({
+              content: [{ type: 'text', text }],
+              source: { kind: 'plugin', plugin: 'schedule' },
+            })
+            this.agent.followup(message)
+          }
         } catch (error: unknown) {
           if (this.isLive()) {
-            this.ctx.logger.warn(`schedule: framing or followup failed for agent "${this.agent.id}": ${renderThrown(error)}`)
+            this.ctx.logger.warn(`schedule: due delivery failed for agent "${this.agent.id}": ${renderThrown(error)}`)
           }
           return Promise.resolve(false)
         }
         try {
-          if (decision.kind === 'one-shot') {
+          if (decision.kind === 'workflow') {
+            this.agent.session.append('schedule/change', {
+              version: 2,
+              operation: 'dispatch',
+              id: decision.record.id,
+              ...(decision.acceptedAt === undefined ? {} : { acceptedAt: decision.acceptedAt }),
+            })
+          } else if (decision.kind === 'one-shot') {
             this.agent.session.append('schedule/change', {
               version: 1,
               operation: 'dispatch',

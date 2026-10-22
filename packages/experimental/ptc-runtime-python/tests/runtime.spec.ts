@@ -5,14 +5,15 @@ import { tmpdir } from 'node:os'
 import { basename, dirname, join, relative, resolve } from 'node:path'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { Context } from '@deepseek-ai/cordis'
-import { PythonPtcRuntime, hostFrameParseCeiling, readProcessStart, resolvePythonBin } from '../src/index.ts'
+import { PythonPtcRuntime, hostFrameParseCeiling, readProcessStart, resolvePythonBin, resolveSupportedPythonBin } from '../src/index.ts'
 import { logTruncationMarker } from '../src/protocol.ts'
 import type { Config } from '../src/index.ts'
 
 // Absolute supported interpreter path for shell wrappers. The runtime gives a
 // child only TMPDIR, so a bare `python3` inside a wrapper would resolve against
 // /bin/sh's default PATH rather than the caller's selected interpreter.
-const PYABS = resolvePythonBin('python3') ?? 'python3'
+const TEST_PYTHON_BIN = resolveSupportedPythonBin('python3') ?? resolvePythonBin('python3') ?? 'python3'
+const PYABS = TEST_PYTHON_BIN
 import type { PtcBindingFunction, PtcJsonValue, PtcRunResult } from '@deepseek-ai/dsh-ptc-runtime'
 
 /**
@@ -66,7 +67,15 @@ vi.mock('node:fs', async (importOriginal) => {
  */
 async function setup(config: Config = {}) {
   const ctx = new Context()
-  const fiber = await ctx.plugin(PythonPtcRuntime, config)
+  const policy = { mode: 'danger-full-access' as const, workspaceRoot: process.cwd() }
+  ctx.provide('sandboxPolicy', { defaultMode: policy.mode, workspaceRoot: policy.workspaceRoot, resolve: () => policy } as never)
+  const fiber = await ctx.plugin(PythonPtcRuntime, {
+    // Keep the integration lane on a supported interpreter even when the
+    // host's first `python3` is an older system binary (for example macOS
+    // Command Line Tools Python 3.9).
+    pythonBin: config.pythonBin ?? TEST_PYTHON_BIN,
+    ...config,
+  })
   const runtime = ctx.ptcRuntime as PythonPtcRuntime
   return { ctx, fiber, runtime }
 }
@@ -108,19 +117,26 @@ describe('PythonPtcRuntime — seam descriptors and misuse', () => {
     const { runtime, fiber } = await setup({ maxWallMs: 30_000 })
     try {
       const request = { program: 'return 1', bindings: [] }
-      expect(runtime.sandboxMode).toBeUndefined()
-      expect(runtime.resolve(request)).toEqual({ ...request, cwd: process.cwd(), timeoutMs: 30_000 })
+      expect(runtime.sandboxMode).toBe('danger-full-access')
+      expect(runtime.resolve(request)).toEqual({
+        ...request,
+        cwd: process.cwd(),
+        timeoutMs: 30_000,
+        sandboxPolicy: { mode: 'danger-full-access', workspaceRoot: process.cwd() },
+      })
       const cwd = await makeTempDir('dsh-py-resolved-cwd-')
       const spec = runtime.resolve({ ...request, cwd })
       expect(spec.cwd).toBe(cwd)
       expect(() => runtime.resolve({ ...request, cwd: 'relative' })).toThrow('cwd must be absolute')
       expect(() => runtime.resolve({ ...request, timeoutMs: 1 })).toThrow('per-call timeout is unsupported')
       expect(() => runtime.resolve({ ...request, timeoutMs: null })).toThrow('per-call timeout is unsupported')
-      const sandboxPolicy = { mode: 'danger-full-access' as const, workspaceRoot: cwd }
-      expect(() => runtime.resolve({ ...request, sandboxPolicy })).toThrow('sandbox policy is unsupported')
-      await expect(runtime.run({ ...spec, sandboxPolicy })).rejects.toThrow('unsupported execution policy or timeout')
-      await expect(runtime.run({ ...spec, timeoutMs: 1 })).rejects.toThrow('unsupported execution policy or timeout')
-      await expect(runtime.run({ ...spec, timeoutMs: null })).rejects.toThrow('unsupported execution policy or timeout')
+      const sandboxPolicy = { mode: 'read-only' as const, workspaceRoot: cwd }
+      const restricted = runtime.resolve({ ...request, cwd, sandboxPolicy })
+      expect(restricted.sandboxPolicy).toEqual(sandboxPolicy)
+      const unavailable = await runtime.run(restricted)
+      expect(unavailable.error?.kind).toBe('sandbox-unavailable')
+      await expect(runtime.run({ ...spec, timeoutMs: 1 })).rejects.toThrow('resolved sandbox policy and provider timeout')
+      await expect(runtime.run({ ...spec, timeoutMs: null })).rejects.toThrow('resolved sandbox policy and provider timeout')
       const result = await runtime.run(runtime.resolve({ ...request, cwd, program: 'import os\nreturn os.getcwd()' }))
       expect(result.error).toBeUndefined()
       expect(result.value).toBe(realpathSync(cwd))
@@ -352,7 +368,7 @@ describe('PythonPtcRuntime — seam descriptors and misuse', () => {
     // The same validation that rejects bad explicit paths must admit a good
     // one: an absolute path to the real interpreter (or a wrapper around it)
     // is the deployment form the validation exists to serve.
-    const pyAbs = resolvePythonBin('python3') ?? 'python3'
+    const pyAbs = resolveSupportedPythonBin('python3') ?? 'python3'
     const { runtime, fiber } = await setup({ pythonBin: pyAbs, maxWallMs: 30_000 })
     const result = await runtime.run(runtime.resolve({ program: 'return 1', bindings: [] }))
     expect(result.error).toBeUndefined()
@@ -455,9 +471,10 @@ describe('PythonPtcRuntime — seam descriptors and misuse', () => {
     // case pins the contract (absolute candidate wins over a relative PATH
     // prefix), not a worker-exit distinction, which would need an executable
     // named python3 in the test CWD.
-    const cp = await import('node:child_process')
     const nodePath = await import('node:path')
-    const pythonDir = nodePath.dirname(cp.execFileSync('which', ['python3'], { encoding: 'utf8' }).trim())
+    const supported = resolveSupportedPythonBin('python3')
+    if (supported === undefined) return
+    const pythonDir = nodePath.dirname(supported)
     vi.stubEnv('PATH', `.:${pythonDir}`)
     try {
       const { runtime, fiber } = await setup({ pythonBin: 'python3', maxWallMs: 30_000 })
@@ -496,10 +513,11 @@ describe('PythonPtcRuntime — seam descriptors and misuse', () => {
     // PATH entry like a `python3` directory would be chosen over a later real
     // interpreter. The stub PATH puts such a directory first and asserts the
     // real interpreter is used.
-    const cp = await import('node:child_process')
     const nodePath = await import('node:path')
     const { mkdirSync } = await import('node:fs')
-    const realPythonDir = nodePath.dirname(cp.execFileSync('which', ['python3'], { encoding: 'utf8' }).trim())
+    const supported = resolveSupportedPythonBin('python3')
+    if (supported === undefined) return
+    const realPythonDir = nodePath.dirname(supported)
     const fakeDir = makeTempDirSync('dsh-fake-bin-')
     mkdirSync(nodePath.join(fakeDir, 'python3')) // A directory named python3, executable by default.
     vi.stubEnv('PATH', `${fakeDir}:${realPythonDir}`)
@@ -623,7 +641,7 @@ describe('PythonPtcRuntime — seam descriptors and misuse', () => {
     const entry = await entryOf()
     expect(entry.endsWith('/bootstrap.py')).toBe(true)
     const dir = dirname(entry)
-    expect(realpathSync(dirname(dir))).toBe(realpathSync(tmpdir()))
+    expect([realpathSync(tmpdir()), realpathSync('/var/tmp')]).toContain(realpathSync(dirname(dir)))
     expect(basename(dir)).toMatch(/^dsh-ptc-runtime-python-/)
     expect(dir).not.toContain('/packages/')
     // Staging is per RUN and removed at settlement, so by the time `run()`

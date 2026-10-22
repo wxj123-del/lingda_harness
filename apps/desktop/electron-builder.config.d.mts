@@ -15,10 +15,17 @@ export interface DesktopElectronBuilderConfig {
   readonly asarUnpack: readonly string[]
   readonly extraResources: readonly [{ readonly from: string, readonly to: 'runtime' }]
   readonly mac: {
+    readonly icon: string
     readonly identity: string | undefined
     readonly forceCodeSigning: boolean
     readonly notarize: boolean
     readonly signIgnore: readonly string[]
+  }
+  readonly win: {
+    readonly icon: string
+  }
+  readonly linux: {
+    readonly icon: string
   }
   readonly dmg: {
     readonly sign: boolean

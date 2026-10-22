@@ -180,7 +180,7 @@ export function renderAliases(aliases: readonly PackageAlias[], handWritten: Rea
   const lines: string[] = []
   for (const alias of aliases) {
     if (!handWritten.has(alias.specifier)) {
-      lines.push(`      ${JSON.stringify(alias.specifier)}: [${JSON.stringify(alias.source)}]`)
+      lines.push(`      ${JSON.stringify(alias.specifier)}: [${JSON.stringify(`${alias.source}/index.ts`)}]`)
     }
     const invariant = `${alias.specifier}/invariant`
     if (alias.hasInvariant && !handWritten.has(invariant)) {
@@ -189,6 +189,33 @@ export function renderAliases(aliases: readonly PackageAlias[], handWritten: Rea
   }
   // The region closes `paths`, so the last member carries no trailing comma.
   return lines.join(',\n')
+}
+
+/**
+ * Find concrete path aliases that still name a directory.
+ *
+ * Vite's default extension order probes JavaScript before TypeScript. A path
+ * alias that ends at `src/` can therefore load an accidental adjacent tsc
+ * artifact instead of the source entry, producing a second copy of module
+ * singleton state. Wildcard aliases are excluded because they are templates,
+ * not concrete filesystem targets.
+ *
+ * @param text - tsconfig text containing the paths map.
+ * @param root - directory against which relative targets resolve.
+ * @returns Stable `specifier -> target` diagnostics for concrete directories.
+ */
+export function directoryAliasTargets(text: string, root: string): string[] {
+  const directories: string[] = []
+  for (const match of text.matchAll(/^\s*"([^"]+)":\s*\["([^"]+)"\],?$/gm)) {
+    const specifier = match[1]
+    const target = match[2]
+    if (specifier === undefined || target === undefined || specifier.includes('*') || target.includes('*')) continue
+    const absolute = resolve(root, target)
+    if (existsSync(absolute) && statSync(absolute).isDirectory()) {
+      directories.push(`${specifier} -> ${target}`)
+    }
+  }
+  return directories.sort()
 }
 
 /**
@@ -229,12 +256,21 @@ if (process.argv[1] && import.meta.filename === resolve(process.argv[1])) {
   const current = readFileSync(CONFIG, 'utf8')
   const next = writeRegion(current, renderAliases(collectPackageAliases(), handWrittenSpecifiers(current)))
   const uncovered = uncoveredPackages(collectPackageNames(), mappedSpecifiers(next))
-  if (uncovered.length > 0) {
-    console.error(
-      'gen-tsconfig-paths: no alias maps '
-      + `${uncovered.join(', ')}; add a hand-written entry, because a package named after `
-      + 'something other than its directory cannot be generated.',
-    )
+  const directoryAliases = directoryAliasTargets(next, ROOT)
+  if (uncovered.length > 0 || directoryAliases.length > 0) {
+    if (uncovered.length > 0) {
+      console.error(
+        'gen-tsconfig-paths: no alias maps '
+        + `${uncovered.join(', ')}; add a hand-written entry, because a package named after `
+        + 'something other than its directory cannot be generated.',
+      )
+    }
+    if (directoryAliases.length > 0) {
+      console.error(
+        'gen-tsconfig-paths: concrete aliases must name explicit source files, not directories:\n'
+        + directoryAliases.map(alias => `  ${alias}`).join('\n'),
+      )
+    }
     process.exitCode = 1
   } else if (current === next) {
     console.log('gen-tsconfig-paths: tsconfig.base.json package aliases are current.')

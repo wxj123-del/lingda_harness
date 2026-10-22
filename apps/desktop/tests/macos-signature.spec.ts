@@ -1,3 +1,4 @@
+import { existsSync } from 'node:fs'
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest'
 import type { NotarizeOptions } from '@electron/notarize'
 import {
@@ -73,6 +74,17 @@ describe('desktop macOS release signature', () => {
       }],
     })
     expect(typeof config.artifactBuildCompleted).toBe('function')
+  })
+
+  it('points every packaged platform at the shipped mascot icon set', async () => {
+    const { createElectronBuilderConfig } = await import('../electron-builder.config.mjs')
+    const config = createElectronBuilderConfig(RELEASE_ENVIRONMENT, 'darwin', 'arm64')
+    expect(config.mac.icon).toBe('build/icon.icns')
+    expect(config.win.icon).toBe('build/icon.ico')
+    expect(config.linux.icon).toBe('build/icon.png')
+    for (const file of ['icon.icns', 'icon.ico', 'icon.png']) {
+      expect(existsSync(new URL(`../build/${file}`, import.meta.url)), file).toBe(true)
+    }
   })
 
   it('seals PAK resources with their enclosing bundle while signing executable code', async () => {

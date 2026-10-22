@@ -1,13 +1,16 @@
 /** Strict per-session header/body content inserted into the resident conversation layout. */
 
 import clsx from 'clsx'
+import { useState } from 'react'
+import { IconEllipsisOutline16, Menu } from '@deepseek-ai/dsh-client-ui-primitives'
 import type { SessionListState, SessionSummary } from '@deepseek-ai/dsh-api-session-controller/client'
 import type { SessionId } from '@deepseek-ai/dsh-session/types'
 import type {
   ConversationSessionHeaderSlotProps, ConversationSessionSlotProps,
 } from '../contract/slots.ts'
+import type { ViewTab } from '../contract/views.ts'
 import { conversationPhase } from '../contract/snapshot.ts'
-import { resolveActiveView } from '../view-selection.ts'
+import { INLINE_VIEW_LIMIT, resolveActiveView, splitViewTabs } from '../view-selection.ts'
 import { DefaultConversationViews } from './DefaultConversationViews.tsx'
 import css from './ConversationRoot.module.css'
 
@@ -52,15 +55,81 @@ function equalBreadcrumbs(left: readonly Breadcrumb[], right: readonly Breadcrum
 }
 
 /**
+ * The Session's View switcher: the first few Views as header tabs plus one
+ * overflow menu for the rest, so a Session with many registered Views keeps a
+ * single-row header. The active View always keeps a visible tab of its own.
+ * @param props.tabs - registered Views in slot order.
+ * @param props.activeId - the resolved active View's id.
+ * @param props.onSelect - select one View by id.
+ * @param props.t - the Conversation locale seat.
+ * @returns the tab list and, when needed, its overflow menu.
+ */
+function ViewTabs({ tabs, activeId, onSelect, t }: {
+  tabs: readonly ViewTab[]
+  activeId: string | undefined
+  onSelect: (id: string) => void
+  t: ConversationSessionHeaderProps['t']
+}) {
+  const [overflowOpen, setOverflowOpen] = useState(false)
+  const { inline, overflow } = splitViewTabs(tabs, activeId, INLINE_VIEW_LIMIT)
+  return (
+    <div className={css.tabs}>
+      <div className={css.tablist} role="tablist">
+        {inline.map(viewTab => (
+          <button
+            key={viewTab.id}
+            type="button"
+            role="tab"
+            aria-selected={viewTab.id === activeId}
+            className={clsx(css.tab, viewTab.id === activeId && css.tabActive)}
+            onClick={() => { onSelect(viewTab.id) }}
+          >
+            {viewTab.label}
+          </button>
+        ))}
+      </div>
+      {overflow.length > 0 && (
+        <Menu
+          open={overflowOpen}
+          onClose={() => { setOverflowOpen(false) }}
+          items={overflow.map(viewTab => ({ id: viewTab.id, label: viewTab.label }))}
+          selectedIds={activeId === undefined ? [] : [activeId]}
+          onSelect={(id) => {
+            setOverflowOpen(false)
+            onSelect(id)
+          }}
+          align="end"
+          dense
+          portal
+          anchor={(
+            <button
+              type="button"
+              className={clsx(css.tab, css.overflowTab)}
+              aria-label={t('view.more')}
+              aria-haspopup="menu"
+              aria-expanded={overflowOpen}
+              onClick={() => { setOverflowOpen(open => !open) }}
+            >
+              <IconEllipsisOutline16 size={14} />
+            </button>
+          )}
+        />
+      )}
+    </div>
+  )
+}
+
+/**
  * Renders Session header chrome above the resident conversation scrollport.
  * @param props - Strict Session store, view ledger, navigation, render, and locale shares.
  * @returns the hidden blank-session header or visible title and tabs.
  */
 export function ConversationSessionHeader({
-  sessionId, useSession, useSessions, useConversation, useConversationViews, useStore,
+  sessionId, useSession, useSessions, useConversation, useConversationViews, useShowViewTabs, useStore,
   renderSlot, open, selectView, t,
 }: ConversationSessionHeaderProps) {
   const tabs = useConversationViews(value => value)
+  const showViewTabs = useShowViewTabs(value => value)
   const selectedId = useStore(s => s.view)
   const active = resolveActiveView(tabs, selectedId)
   const ancestry = useSessions(s => deriveAncestry(s, sessionId), equalBreadcrumbs)
@@ -137,21 +206,13 @@ export function ConversationSessionHeader({
               {renderSlot('conversation.session.header.corner', {})}
             </div>
           </div>
-          {tabs.length > 1 && (
-            <div className={css.tabs} role="tablist">
-              {tabs.map(viewTab => (
-                <button
-                  key={viewTab.id}
-                  type="button"
-                  role="tab"
-                  aria-selected={viewTab.id === active?.id}
-                  className={clsx(css.tab, viewTab.id === active?.id && css.tabActive)}
-                  onClick={() => { selectView(viewTab.id) }}
-                >
-                  {viewTab.label}
-                </button>
-              ))}
-            </div>
+          {showViewTabs && tabs.length > 1 && (
+            <ViewTabs
+              tabs={tabs}
+              activeId={active?.id}
+              onSelect={selectView}
+              t={t}
+            />
           )}
         </>
       )}

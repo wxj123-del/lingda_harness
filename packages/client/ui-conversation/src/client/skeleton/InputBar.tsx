@@ -37,6 +37,7 @@ import {
 import { resolveSubmitMode } from '../input/submission-policy.ts'
 import { attachmentErrorText, imageSizeText } from '../image-labels.ts'
 import { ContextMeter } from './ContextMeter.tsx'
+import { PromptOptimizer } from './PromptOptimizer.tsx'
 import css from './InputBar.module.css'
 
 export type InputBarProps = ComposerBarProps
@@ -45,6 +46,7 @@ export const InputBar = memo(function InputBar({
   useSession, useInput, inputActions, keyboard, addFiles, removeAttachment, resolveDraftAttachments,
   retryFileUpload,
   toggleCommandMenu, stop, t,
+  optimizePrompt,
   renderSlot, useBusyEnter, useFileUploads, useNotices, useLexicon, useMenuLauncher,
   useProjection, sessionId, variant, disabled: inert = false, blocked,
   workspacePickerOpen = false, onRequestWorkspace,
@@ -257,6 +259,12 @@ export const InputBar = memo(function InputBar({
     keepDraftFocus(e, editor)
   }
 
+  const applyPromptOptimization = useCallback((text: string): void => {
+    if (inputActions === undefined) return
+    inputActions.setDraft(text)
+    if (editor !== null) focusDraftEditor(editor, revealSelection)
+  }, [editor, inputActions])
+
   const onToggleCommandMenu = (): void => {
     if (keyboard !== undefined) toggleCommandMenu?.(keyboard.caretSpan())
   }
@@ -411,6 +419,15 @@ export const InputBar = memo(function InputBar({
                 <IconPlusOutline16 size={14} />
               </button>
             </Tooltip>
+            <PromptOptimizer
+              draft={draft}
+              disabled={locked || machineBusy || commandMenuOpen || draft.trim() === ''
+                || draft.trimStart().startsWith('/') || !live || optimizePrompt === undefined}
+              optimizePrompt={optimizePrompt}
+              onApply={applyPromptOptimization}
+              onTriggerMouseDown={keepFocus}
+              t={t}
+            />
             <input
               ref={fileInputRef}
               type="file"

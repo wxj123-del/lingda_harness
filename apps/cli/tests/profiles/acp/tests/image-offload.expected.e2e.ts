@@ -170,9 +170,9 @@ it.each(['chat-completions', 'messages'] as const)('pins %s Files offload and in
     const imageHandle = `Image ${attachmentId}; request preview 1x1px.${normalizedAccess}`
     const normalizedToolImageHandle = `Image "red.png" (${attachmentId}); request preview 1x1px.${normalizedAccess}`
       .replaceAll(result.cwd, '{{cwd}}')
-    const runtimeContext = 'Current runtime context. This snapshot supersedes earlier runtime-context snapshots.\n\n'
-      + 'Current DSH file policy: danger-full-access. The DSH file sandbox does not restrict file modifications by available operations.\n\n'
-      + 'Approval prompts are disabled in this session: actions that require approval are rejected automatically — do not request sandbox escalation (do not set `sandbox_permissions`).'
+    const runtimeContext = (cwd: string): string => 'Current runtime context. This snapshot supersedes earlier runtime-context snapshots.\n\n'
+      + `Current DSH file policy: workspace-write. Any available operation enforced by the DSH file sandbox may modify files under the session workspace: ${JSON.stringify(cwd)}. Some platform temporary areas may also be writable.\n\n`
+      + 'Approval policy: ask. Operations that require approval may ask through the configured answerers; without an available answerer, the request fails closed.'
     const messages = requests[0]?.messages as { content?: unknown }[] | undefined
     const offloaded = messages?.find(message => JSON.stringify(message.content).includes('[image omitted'))
     expect(offloaded?.content).toEqual([
@@ -182,7 +182,7 @@ it.each(['chat-completions', 'messages'] as const)('pins %s Files offload and in
       { type: 'text', text: `${imagePrefix}${imageHandle}` },
       fileImage,
       { type: 'text', text: ', then use read_image on red.png and reply with DONE.' },
-      ...protocol === 'messages' ? [{ type: 'text', text: runtimeContext }] : [],
+      ...protocol === 'messages' ? [{ type: 'text', text: runtimeContext(result.cwd) }] : [],
     ])
 
     if (protocol === 'messages') {
@@ -227,7 +227,7 @@ it.each(['chat-completions', 'messages'] as const)('pins %s Files offload and in
         },
         {
           role: 'user',
-          content: runtimeContext,
+          content: runtimeContext(result.cwd),
         },
         {
           role: 'assistant',
@@ -285,7 +285,7 @@ it.each(['chat-completions', 'messages'] as const)('pins %s Files offload and in
         ? { type: 'image', source: { type: 'base64', media_type: 'image/png', data: image } }
         : { type: 'image_url', image_url: { url: `data:image/png;base64,${image}` } },
       { type: 'text', text: ', then use read_image on red.png and reply with DONE.' },
-      ...protocol === 'messages' ? [{ type: 'text', text: runtimeContext }] : [],
+      ...protocol === 'messages' ? [{ type: 'text', text: runtimeContext(fallback.cwd) }] : [],
     ])
   } finally {
     await new Promise<void>(resolve => server.close(() => { resolve() }))

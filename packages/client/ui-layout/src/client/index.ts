@@ -27,6 +27,7 @@ import { registerAuthoringSurface } from './authoring/register.tsx'
 // OwnerShare contracts below are the render-side halves registrants compose
 // against; the frame components and the store factory are package-internal.
 export { LayoutController } from './service.ts'
+import type { MainPanelId } from './service.ts'
 export type { ILayout, MainPanelId, PanelInfo } from './service.ts'
 export { AUTHORING_SETTINGS_NAMESPACE } from '../authoring-settings.ts'
 export { isWorkflowPublished, latestWorkflowVersion, releasedWorkflow } from '../authoring-settings.ts'
@@ -94,8 +95,19 @@ declare module '@deepseek-ai/dsh-client-ui-slots' {
      * `id` is added beside the shipped entries instead of replacing them.
      */
     'shell.overlay': { kind: 'list'; scope: 'root' }
-    /** Narrow product navigation rail rendered inside the sidebar column. */
-    'sidebar.navigation': { kind: 'single'; scope: 'root' }
+    /**
+     * Product navigation inside the sidebar column, above the workspace
+     * section. Declared here because `ui-sidebar` depends on this package for
+     * `MainPanelId`; `ui-sidebar` renders it and a deployment may replace it.
+     */
+    'sidebar.navigation': { kind: 'single'; scope: 'root'; owner: NavigationOwnerProps }
+    /**
+     * Extra panel entries inside `sidebar.navigation`: one per main-slot key.
+     * The navigation row renders each beside its built-in entries.
+     */
+    'sidebar.navigation.panels': { kind: 'list'; scope: 'root'; owner: NavigationPanelOwnerProps }
+    /** Composer tool-row seat used by the knowledge-base toggle. */
+    'conversation.input.left': { kind: 'list'; scope: 'session'; owner: { draft: string } }
   }
 }
 
@@ -113,6 +125,32 @@ export interface SidebarOwnerProps {
   width: number
 }
 
+/** Owner share of the sidebar's product navigation row. */
+export interface NavigationOwnerProps {
+  /** True in the collapsed rail: icons only, laid out as a vertical column. */
+  compact: boolean
+}
+
+/** Owner share of one contributed panel entry inside the navigation row. */
+export interface NavigationPanelOwnerProps {
+  /** Square icon edge in px. */
+  size: number
+  /** True while the entry's main panel is the selected one. */
+  active: boolean
+  /** True in the collapsed rail, where the entry renders its icon alone. */
+  compact: boolean
+}
+
+/** One panel entry rendered in the sidebar's product navigation row. */
+export interface NavigationPanelMetadata {
+  /** Main-slot key the entry selects. */
+  readonly id: MainPanelId
+  /** Sort order among contributed entries. */
+  readonly order: number
+  /** Resolved label from the registering entry. */
+  readonly label: string
+}
+
 /** Right column owner share: resolved normal geometry and opening eligibility. */
 export interface RightbarOwnerProps {
   /** Resolved normal panel width in px, not the saved preference; zero if it cannot fit. */
@@ -127,7 +165,7 @@ export interface RightbarOwnerProps {
 }
 
 /** Required services (cordis fiber inject — the loader passes all module exports as an object plugin). */
-export const inject = ['slots', 'theme', 'locale', 'settingsScope']
+export const inject = ['slots', 'theme', 'locale', 'settingsScope', 'remote', 'remote.credentials']
 
 /**
  * Client plugin body: provide ctx.layout, then one register() call — AppFrame

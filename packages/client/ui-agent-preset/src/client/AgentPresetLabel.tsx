@@ -48,6 +48,7 @@ export function AgentPresetLabel({
     return typeof value === 'string' ? value : undefined
   })
   const options = useAgentPresets(state => state.options)
+  const resolved = useAgentPresets(state => state.status !== 'idle' && state.status !== 'loading')
 
   useEffect(() => {
     // Deployments that compose no presets never label anything, so the roster
@@ -58,6 +59,11 @@ export function AgentPresetLabel({
   if (preset === undefined) return null
 
   const option = options.find(entry => entry.id === preset)
+  // A preset this deployment no longer offers has nothing to name. The raw id
+  // is an internal identifier, not a label, and leaving it beside the title
+  // reports a mode the user cannot act on; while the roster is still in flight
+  // the id remains the only honest thing to show.
+  if (option === undefined && resolved) return null
   const text = option === undefined ? undefined : presetDisplayText(option, t)
   return (
     <span className={css.label} title={text?.description ?? t('headerHint')}>

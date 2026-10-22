@@ -580,6 +580,8 @@ declare class Session {
    *   rejected by the compiler for non-surface types like `turn/start` or
    *   `assistant/attempt`. Assistant messages embed their exact provider
    *   stream and cannot cite top-level source events.
+   * For non-surface plugin events, `opts.ignorable` may mark a purely
+   * informational record safe for older readers to skip.
    * @returns the logged event — its assigned `seq`/`time` plus the SNAPSHOT of
    *   `data` that entered the log, so reading `event.data` back sees the logged
    *   value, never the caller's still-mutable input.
@@ -601,7 +603,7 @@ declare class Session {
   append<T extends SessionEventType>(
     type: T,
     data: SessionEventMap[T],
-    ...opts: T extends SurfaceEventType ? [opts: SurfaceIntent<T>] : []
+    ...opts: T extends SurfaceEventType ? [opts: SurfaceIntent<T>] : [opts?: { ignorable?: true }]
     ): SessionEvent<T>;
   /**
    * The {@link EpochHeader} in force after the log's last header event — the
@@ -751,6 +753,56 @@ interface TurnEndReasonMap {
 
 Generated from source by `scripts/gen-cordis-catalog.ts` (verified fresh by `pnpm run verify-cordis-catalog` in doc-sync; regenerate with `pnpm run gen-cordis-catalog`) — the language sides differ only in locale-specific paired document paths. Signature blocks use a `ts cordis-catalog` fence and keep the original source JSDoc; dispatch modes are defined in the [primer](../cordis-primer.zh.md#dispatch-modes), and the framework-inherited `ctx` API lives in [cordis-api/inherited.md](../cordis-api/inherited.md).
 
+<a id="ctxgitworkspace--gitworkspaceservice"></a>
+
+### `ctx.gitWorkspace` — `GitWorkspaceService`
+
+Captures Git metadata independently from Agent modes so the evidence is available to presets, CLI sessions, and the Web trajectory alike. Checkout operations are explicit, path-checked, and fast-forward only for existing repositories.
+
+```ts cordis-catalog
+/**
+ * Check the canonical GitCode source without changing tracked files.
+ * @returns The current remote and checkout status.
+ */
+@Remote('check') async check(): Promise<RepositoryUpdateStatus>
+
+/**
+ * Clone a remote into a new folder, or fast-forward the matching checkout.
+ * @param request - Remote URL and destination checkout options.
+ * @returns The resulting checkout status and path.
+ */
+@Remote('clone') async clone(request: RepositoryCloneRequest): Promise<RepositoryCloneResult>
+
+/**
+ * Read branch names advertised by a remote without changing local files.
+ * @param url - Remote Git URL to query.
+ * @returns The advertised branch names.
+ */
+@Remote('branches') async branches(url: string): Promise<RepositoryBranchesResult>
+
+/**
+ * Read the current checkout, worktree status, and bounded unified diff.
+ * @param repositoryRoot - Repository directory to inspect.
+ * @returns A bounded checkout and change snapshot.
+ */
+@Remote('inspect') async inspect(repositoryRoot: string): Promise<RepositoryChangeSnapshot>
+
+/**
+ * Commit explicit local changes and push the current branch to origin.
+ * @param request - Commit message, path selection, and push options.
+ * @returns The pushed commit and remote result.
+ */
+@Remote('push') async push(request: RepositoryPushRequest): Promise<RepositoryPushResult>
+
+/**
+ * Fast-forward the checkout, install locked dependencies, build, and restart the Host.
+ * @returns The update result and whether a restart was scheduled.
+ */
+@Remote('update') async update(): Promise<RepositoryUpdateResult>
+```
+
+Source: [`packages/interaction/git-workspace/src/index.ts`](../../packages/interaction/git-workspace/src/index.ts)
+
 <a id="ctxsessioncontroller--sessioncontroller"></a>
 
 ### `ctx.sessionController` — `SessionController`
@@ -758,6 +810,35 @@ Generated from source by `scripts/gen-cordis-catalog.ts` (verified fresh by `pnp
 Host service backing the generated `ctx.remote.session` namespace.
 
 ```ts cordis-catalog
+/**
+ * Start one editor-owned workflow without routing through a model prompt.
+ * @param request - Validated workflow script, metadata, and session target.
+ * @returns The newly allocated run id and start timestamp.
+ */
+@Remote('workflowStart') async workflowStart(request: WorkflowRemoteStartRequest): Promise<WorkflowRemoteStartValue>
+
+/**
+ * Request cancellation of one editor-owned workflow run.
+ * @param request - Session and run identity to cancel.
+ * @returns The run identity and its cancelling status.
+ */
+@Remote('workflowCancel') async workflowCancel(request: WorkflowRemoteRunRequest): Promise<{ runId: WorkflowRunId; status: 'cancelling' }>
+
+/**
+ * Read one redacted workflow execution state.
+ * @param request - Session and run identity to inspect.
+ * @returns The live or persisted run view.
+ */
+@Remote('workflowStatus') async workflowStatus(request: WorkflowRemoteRunRequest): Promise<WorkflowRemoteRunView>
+
+/**
+ * List recent workflow runs for the current editor/session.
+ * @param sessionId - Session whose runs are listed.
+ * @param request - Optional workflow filter and result limit.
+ * @returns Recent live and persisted run views.
+ */
+@Remote('workflowList') async workflowList(sessionId: SessionId, request: WorkflowRemoteRunsRequest): Promise<WorkflowRemoteRunListValue>
+
 /**
  * Resolve or resume one ordinary Session for another Host API domain.
  * @param sessionId - Session identity whose Agent owns the operation.
@@ -802,6 +883,14 @@ inspect( sessionId: SessionId, signal?: AbortSignal, ): Promise<SessionInspectio
  * @returns the normalized selection installed for the Session.
  */
 @Remote('selectModel') selectModel(request: SessionSelectModelRequest): Promise<SessionSelectModelValue>
+
+/**
+ * Rewrite a composer draft with the Session's selected model.
+ * @param request - Session identity, draft text, and optimization posture.
+ * @param signal - cancellation for the auxiliary model call.
+ * @returns the optimized prompt without changing Session history.
+ */
+@Remote('optimizePrompt') optimizePrompt( request: SessionOptimizePromptRequest, signal: AbortSignal, ): Promise<SessionOptimizePromptValue>
 
 /**
  * Describe every currently routable model for Host-generation selectors.
@@ -898,7 +987,7 @@ workspaceDesktop(): { name: string; available: boolean; fileManager: 'finder' | 
 @Remote({ mode: 'stream' }) control(signal: AbortSignal): AsyncIterable<SessionControlFrame>
 ```
 
-Types: [SessionId](core.zh.md) · [SessionInspection](persistence.zh.md) · [SessionSearchRequest](session-query.zh.md)
+Types: [SessionId](core.zh.md) · [SessionInspection](persistence.zh.md) · [SessionSearchRequest](session-query.zh.md) · [WorkflowRunId](workflow.zh.md)
 
 Source: [`packages/api/session-controller/src/index.ts`](../../packages/api/session-controller/src/index.ts)
 

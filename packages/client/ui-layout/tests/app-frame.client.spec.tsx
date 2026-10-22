@@ -101,7 +101,7 @@ function mountFrame(windowWidth = frameWidth) {
       useSessionPendingInteraction={useSessionPendingInteraction}
       useResource={useResource}
       useWorkspaces={sel => sel(workspaceState)}
-      t={key => key === 'brand.localBuild' ? 'DSH Local Build' : key}
+      t={key => key === 'brand.localBuild' ? 'Lingda Harness' : key}
     />
   )
   const utils = render(element())
@@ -181,7 +181,7 @@ afterEach(() => {
 describe('AppFrame', () => {
   it('localizes the product title without a configured build title', () => {
     mountFrame()
-    expect(document.title).toBe('DSH Local Build')
+    expect(document.title).toBe('Lingda Harness')
   })
 
   it('follows the selected durable Session title', () => {
@@ -230,7 +230,7 @@ describe('AppFrame', () => {
     expect(frame.querySelector('[data-side="sidebar"]')).toBeNull()
   })
 
-  it('switches main panels and hides conversation browsing without changing its saved width or session', () => {
+  it('switches main panels without touching the sidebar, its saved width, or the session', () => {
     selectedSessionTitle = 'Session title'
     const { instance, frame, slotCalls, getByTestId } = mountFrame()
     const sessionId = selectedSession
@@ -242,9 +242,11 @@ describe('AppFrame', () => {
       expect(getByTestId('main-content').getAttribute('data-entry-key')).toBe(panelId ?? 'conversation')
       expect(instance.getSnapshot().panelInfo).toEqual({ activePanelId: panelId })
       expect(instance.getSnapshot().layoutInfo).toBe(layoutInfo)
-      expect(tracks(frame)).toEqual([panelId === null ? 280 : 56, 0])
+      // The sidebar is the column the user navigates from; opening a panel
+      // switches the center column and leaves that column alone.
+      expect(tracks(frame)).toEqual([280, 0])
       expect(selectedSession).toBe(sessionId)
-      expect(document.title).toBe(panelId === null ? 'Session title — DSH Local Build' : 'DSH Local Build')
+      expect(document.title).toBe(panelId === null ? 'Session title — Lingda Harness' : 'Lingda Harness')
     }
   })
 })

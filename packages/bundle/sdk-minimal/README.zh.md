@@ -9,7 +9,7 @@ kind: "package-bundle"
 
 ## 概述
 
-当 SDK 客户端需要小型、显式的 coding agent 运行时时，请使用 `dsh --profile sdk-minimal`。该 profile 默认只公布按平台选择的持久 shell，把会话持久化为未压缩 JSONL，并从 SDK 初始化请求选择模型。它提供完整 Cordis 配置树，并刻意排除 `dsh-base`、Web、settings、托管凭据、遥测、压缩（compaction）、文件系统工具、workspace 指令、skill（技能）、jobs 与 subagent。其 danger-full-access 策略允许 shell 修改进程可访问的任何路径，因此只能配合隔离 workspace 使用。
+当 SDK 客户端需要小型、显式的 coding agent 运行时时，请使用 `dsh --profile sdk-minimal`。该 profile 默认只公布按平台选择的持久 shell，把会话持久化为未压缩 JSONL，并从 SDK 初始化请求选择模型。它提供完整 Cordis 配置树，并刻意排除 `dsh-base`、Web、settings、托管凭据、遥测、压缩（compaction）、文件系统工具、workspace 指令、skill（技能）、jobs 与 subagent。其默认 `workspace-write` 策略会把 shell 写入限制在会话 workspace（以及沙箱后端支持的平台临时目录）内。只有在受信任且使用隔离 workspace 的部署中，才应显式设置 `DSH_PERMISSION_MODE=danger-full-access`；沙箱后端不可用时会 fail closed。
 
 ## 目录
 
@@ -32,7 +32,7 @@ export DSH_HOME=/absolute/path/to/example-dsh-home
 dsh --profile sdk-minimal
 ```
 
-`DSH_CONTEXT_WINDOW` 为不在适配器建议目录中的模型设置后备容量。`DSH_SYSTEM_PROMPT` 替换默认 persona。SDK 初始化请求是唯一的模型选择依据，并覆盖环境默认值。
+`DSH_CONTEXT_WINDOW` 为不在适配器建议目录中的模型设置后备容量。`DSH_SYSTEM_PROMPT` 替换默认 persona。`DSH_PERMISSION_MODE` 默认值为 `workspace-write`；只有在进程受信任且 workspace 已隔离时才设置为 `danger-full-access`。不支持的值会被 profile schema 拒绝。SDK 初始化请求是唯一的模型选择依据，并覆盖环境默认值。
 
 使用 `dsh plugin --profile sdk-minimal` 管理持久外部依赖。Profile、home 与有序 `--patch` 文件可以替换完整默认配置树中的配置项，或在该配置树上方插入 bundle。随附模板只在启动时应用 patch。
 

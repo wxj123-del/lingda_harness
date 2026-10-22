@@ -42,11 +42,23 @@ const COMPACTION_INSTRUCTION = [
   '## Files and Code',
   '- [exact path: why it matters, key changes or snippets]',
   '',
+  '## Files Touched',
+  '- [exact path: one line per file created, modified, or deleted, with its current state]',
+  '',
   '## Errors and Fixes',
   '- [error: how it was resolved, plus any related user feedback]',
   '',
   '## Pending Jobs',
   '- [explicitly requested work not yet completed]',
+  '',
+  '## Acceptance Criteria and Evidence',
+  '- [each verifiable acceptance condition, and the exact command, test, or observation that demonstrated it; mark one that has no evidence]',
+  '',
+  '## Verification Evidence',
+  '- [exact command and its exit status, test name and result, or output excerpt that proves a claim]',
+  '',
+  '## Failed Attempts',
+  '- [approach that was tried and failed, and why; do not repeat it without new evidence]',
   '',
   '## Current Work',
   '- [precisely what was in progress at this checkpoint]',
@@ -181,13 +193,23 @@ export async function summarizeWithLlm(
 /**
  * Wrap raw summary blocks in the durable checkpoint framing.
  * @param summary - safe text-only model output.
+ * @param sidecarPath - absolute path of the full summary sidecar, when one was written.
  * @returns content for the synthesized replacement user message.
  */
-export function frameSummary(summary: readonly ContentBlock[]): ContentBlock[] {
+export function frameSummary(
+  summary: readonly ContentBlock[],
+  sidecarPath?: string,
+): ContentBlock[] {
   return [
     { type: 'text', text: `${CHECKPOINT_PREAMBLE}\n\n${SUMMARY_OPEN_TAG}` },
     ...summary,
     { type: 'text', text: SUMMARY_CLOSE_TAG },
+    ...sidecarPath === undefined ? [] : [{
+      type: 'text' as const,
+      text: `\n<compaction-detail path="${sidecarPath}">This checkpoint condenses an earlier span. `
+        + 'The complete summary of that span is saved at the path above; read it when a later '
+        + 'checkpoint has folded detail you need.</compaction-detail>',
+    }],
   ]
 }
 

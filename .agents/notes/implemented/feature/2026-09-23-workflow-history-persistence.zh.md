@@ -14,6 +14,10 @@ Host 在可视化工作流启动时追加一条 `visual-workflow/run` 检查点�
 
 该事件已注册到 Session 持久化目录，存储的就是 Remote API 已经暴露的脱敏运行视图。输入只记录字节数，不保存输入内容。
 
+## Alternatives considered
+
+只在 Session Controller 内保存历史会在 Host 重启后丢失；持久化原始输入或完整运行负载会保留秘密并造成无界数据，因此均未采用。
+
 ## Consequences
 
 Host 重启后仍能查看运行历史，并且无需激活 Session Agent。运行期间以内存实时状态为准，持久化检查点提供可恢复的最终状态。恢复辅助函数会忽略旧格式或格式错误的事件，避免将无效 Remote 数据暴露给客户端。

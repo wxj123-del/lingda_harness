@@ -88,6 +88,26 @@ With `dsh-command-compact` mounted, type `/compact` in a chat UI to condense imm
 
 Mount `dsh-compaction-tool-result-pruner` before this package to trim oversized tool results as part of condensation. Trimming makes no model call and can remove the need to summarize at all: when the trimmed conversation fits within the threshold, condensation skips the summary. Trimming only runs after a condensation trigger qualifies — a below-pressure conversation is never touched.
 
+### Keeping each summary re-readable
+
+A checkpoint is a summary of a summary of a summary: each later condensation folds the previous checkpoint into a coarser one, so detail that mattered once can disappear without a trace. Setting `sidecar: true` writes every summary to its own file and names that path inside the checkpoint, so a model that needs a folded-away detail can read it back.
+
+```yaml
+- name: '@deepseek-ai/dsh-compaction-basic'
+  config:
+    sidecar: true
+    sidecarRoot: /var/lib/dsh/compaction
+    sidecarRetentionDays: 30
+```
+
+### Models that declare no context window
+
+Pressure compaction needs a capacity to compute its threshold. When the routed adapter declares none, `fallbackContextWindow` supplies one (default `100000`, `0` restores the strict requirement). The fallback logs one warning per routed target and then compacts normally, so a gateway that closes an oversized request without reporting an overflow error still triggers condensation before the request reaches that size.
+
+Set it below the real limit: the threshold is `fallbackContextWindow × thresholdRatio`, so a value above the true capacity keeps compaction from ever firing.
+
+`sidecarRoot` defaults to a private per-process directory under the system temp directory. Each file is `<root>/session-<hash>/<compactionId>.md`, written `0600` inside a `0700` directory. `sidecarRetentionDays` defaults to `30`; `0` disables the sweep. The sweep runs once at load and then every `sidecarSweepIntervalMs` (default one hour; `0` for the startup pass only), only when both `sidecar` and an explicit `sidecarRoot` are set, removes only `.md` files inside directories matching this package's own `session-<16 hex>` shape, and prunes a session directory only once it is empty. A failed write never turns a successful condensation into a failed turn: the warning is logged and the checkpoint keeps its pre-sidecar form.
+
 -----
 
 <a id="understand-the-implementation"></a>
@@ -134,6 +154,8 @@ The transaction validates the surface span and the durable lock, appends `compac
 | [`src/index.ts`](src/index.ts) | Plugin entry: `BasicCompactionEngine`, automatic listeners, entry-point dispatch |
 | [`src/region.ts`](src/region.ts) | Retention selection and the shared bracket-first compaction transaction |
 | [`src/summarizer.ts`](src/summarizer.ts) | Default `ctx.llm.stream()` summarization, checkpoint framing, safe-summary projection |
+| [`src/sidecar.ts`](src/sidecar.ts) | Private summary file writer and its path layout |
+| [`src/sidecar-cleanup.ts`](src/sidecar-cleanup.ts) | One startup retention sweep over the sidecar root |
 | [`src/config.ts`](src/config.ts) | Load-time validation and routed-model policy resolution |
 | [`src/types.ts`](src/types.ts) | `BasicCompactionConfig` and resolved policy vocabulary |
 | — | No runtime invariant companion is published; this package exposes no independent event sequence or mutable data relation beyond contracts enforced at its owning seam. The durable bracket remains observable in the session log. |

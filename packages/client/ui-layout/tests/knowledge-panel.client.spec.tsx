@@ -56,7 +56,10 @@ function fixture(): KnowledgePanelProps {
       value: { status: 'pending', chunks: 0, completed: 0, total: 0, error: null },
     }),
     preview: async () => ({ ok: true, value: [] }),
-    search: async () => ({ ok: true, value: { hits: [], skippedBases: [] } }),
+    search: async () => ({
+      ok: true,
+      value: { hits: [], skippedBases: [], deduplicatedHits: 0, estimatedTokens: 0 },
+    }),
     importLegacy: async () => ({ ok: true, value: 0 }),
     legacy: [],
     writable: true,

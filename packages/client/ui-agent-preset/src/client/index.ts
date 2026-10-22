@@ -96,17 +96,11 @@ export function apply(ctx: ClientContext): void {
     return () => { for (const dispose of disposers) dispose() }
   }, 'ui-agent-preset: settings refresh')
 
-  // The settings section's conversational authoring entry: stage the
-  // self-referential preset and land a new session on it. Bound inside the
-  // conversation scope below (the seat and the session flow live there) and
-  // unbound with it, so the section's face reads the current binding per
-  // render and simply hides the button while no flow exists.
-  let creatorDraft: (() => void) | undefined
   let activeSeat: AgentPresetSeatController | undefined
 
   // The new-session chip and the header label: one controller, because the
   // staged choice belongs to the flow rather than to any one session.
-  ctx.inject(['slots', 'conversation', 'sessions', 'uiWorkspace'], (scope: ClientContext) => {
+  ctx.inject(['slots', 'conversation', 'sessions'], (scope: ClientContext) => {
     const seat = new AgentPresetSeatController(scope, () => {
       const state = scope.sessions.list.getSnapshot()
       return state.current === undefined ? undefined : state.byId[state.current]
@@ -144,17 +138,6 @@ export function apply(ctx: ClientContext): void {
       // a preset authored to be used is missing from the one place it is used.
       const readRoster = (): void => { void seat.load() }
       rosterReaders.add(readRoster)
-      // Stage WITHOUT applying — the still-current running session would
-      // refuse the swap and drop the stage — then start the session it lands
-      // on: the chip's list-change applier composes the blank session the
-      // workspace connect produces or reuses.
-      creatorDraft = () => {
-        if (!section.store.getSnapshot().showPicker) return
-        // The introduce cue makes the chip announce the pick the user never
-        // made on this screen — the stage happened back in settings.
-        seat.stage('cordis', true)
-        scope.uiWorkspace.startSession()
-      }
       const chip = scope.slots.register({
         name: 'conversation.hero.agentPreset',
         locale: 'settings.agentPreset',
@@ -172,7 +155,6 @@ export function apply(ctx: ClientContext): void {
         stop()
         settingsMoved()
         rosterReaders.delete(readRoster)
-        creatorDraft = undefined
         activeSeat = undefined
         chip()
         label()
@@ -201,7 +183,6 @@ export function apply(ctx: ClientContext): void {
     setCopyName: (name: string) => { section.setCopyName(name) },
     confirmCopy: () => section.confirmCopy(),
     openLocation: (id: string) => section.openLocation(id),
-    ...creatorDraft === undefined ? {} : { startCreatorDraft: creatorDraft },
     confirmDelete: (id: string | null) => { section.confirmDelete(id) },
     remove: () => section.remove(),
     makeDefault: (id: string) => section.makeDefault(id, captureBlankSessionSync()),

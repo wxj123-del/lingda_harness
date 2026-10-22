@@ -911,6 +911,14 @@ roots(): Agent[]
 
 Source: [`packages/core/agent/src/index.ts`](../../packages/core/agent/src/index.ts)
 
+<a id="ctxcontextrouter--contextrouterservice"></a>
+
+### `ctx.contextRouter` — `ContextRouterService`
+
+Runtime marker consumed by policy layers that must avoid a second history trim.
+
+Source: [`packages/context/context-router/src/index.ts`](../../packages/context/context-router/src/index.ts)
+
 <a id="ctxpersonalagent--personalagentservice"></a>
 
 ### `ctx.personalAgent` — `PersonalAgentService`
@@ -953,6 +961,13 @@ current(agent: Agent): AgentMode
  * @returns The effective policy.
  */
 policy(session: Session): ModePolicy
+
+/**
+ * Return the mode context ceiling without applying it to legacy preset sessions.
+ * @param session - Session whose active mode supplies the ceiling.
+ * @returns The token ceiling, or undefined for unmanaged sessions.
+ */
+contextBudget(session: Session): number | undefined
 
 /**
  * Answer the capability question used by late tool-discovery adapters.
@@ -1215,6 +1230,7 @@ Bound the model-visible message context immediately before a request is construc
  * @param payload.step - the step whose request is being built.
  * @param payload.messages - the durable message snapshot before bounding.
  * @param payload.signal - the current turn's cancellation signal.
+ * Scope-filtered dispatch (`@deepseek-ai/dsh-scope`): agent-scoped listeners receive only that agent.
  * @mode waterfall
  */
 'agent/request-context'(this: Scoped<Agent>, payload: { agent: Agent; turn: number; step: number; messages: Message[]; signal: AbortSignal }, next: () => Promise<Message[]>): Promise<Message[]>

@@ -23,14 +23,17 @@ export function message(seq: number, step: number, counters?: TokenUsage): Sessi
   }, 'append')
 }
 
-export function fixture(): SessionEventLikeEntry[] {
+export function fixture(includeUnusedTool = false): SessionEventLikeEntry[] {
   return [
     entry(0, 'turn/start', { turn: 1 }),
     entry(1, 'step/start', { turn: 1, step: 1 }),
     entry(2, 'system/message', { turn: 1, step: 1, message: createSystemMessage('You audit requests.', 'fixture') }, 'append'),
     entry(3, 'user/message', createUserMessage({ content: [{ type: 'text', text: 'Inspect the source' }], source: { kind: 'user' } }), 'append'),
     entry(4, 'request/header', { reason: 'initial', header: { config: { provider: 'fixture', model: 'audit-model' },
-      tools: [{ name: 'read', description: 'Read source', parameters: { type: 'object' } }] } }),
+      tools: [
+        { name: 'read', description: 'Read source', parameters: { type: 'object' } },
+        ...(includeUnusedTool ? [{ name: 'write', description: 'Write source', parameters: { type: 'object' } }] : []),
+      ] } }),
     message(5, 1, usage),
     entry(6, 'tool/call', { turn: 1, step: 1, callId: 'read-1' as ToolCallId, name: 'read', arguments: '{"path":"source.ts"}' }),
     entry(7, 'tool/result', { turn: 1, step: 1,

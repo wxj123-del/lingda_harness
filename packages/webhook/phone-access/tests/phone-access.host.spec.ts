@@ -114,8 +114,13 @@ describe('phone access', () => {
   afterEach(() => { vi.useRealTimers() })
 
   it('reads only the https tunnel out of an inspector body', () => {
-    expect(httpsTunnel({ tunnels: [{ proto: 'http', public_url: 'http://x' }, { proto: 'https', public_url: 'https://x.ngrok.io' }] })).toBe('https://x.ngrok.io')
+    expect(httpsTunnel({ tunnels: [{ proto: 'http', public_url: 'http://x' }, { proto: 'https', public_url: 'https://x.ngrok.io' }] })).toBe('https://x.ngrok.io/')
     expect(httpsTunnel({ tunnels: [{ proto: 'http', public_url: 'http://x' }] })).toBeUndefined()
+    expect(httpsTunnel({ tunnels: [{ proto: 'https', public_url: 'https://evil.example/?token=leak' }] })).toBeUndefined()
+    expect(httpsTunnel({ tunnels: [{ proto: 'https', public_url: 'https://evil.ngrok-free.app/path' }] })).toBeUndefined()
+    expect(httpsTunnel({ tunnels: [{ proto: 'https', public_url: 'https://user:pass@evil.ngrok-free.app' }] })).toBeUndefined()
+    expect(httpsTunnel({ tunnels: [{ proto: 'https', public_url: 'https://evil.ngrok-free.app:444' }] })).toBeUndefined()
+    expect(httpsTunnel({ tunnels: [{ proto: 'https', public_url: 'https://evil.ngrok-free.app.attacker.test' }] })).toBeUndefined()
     expect(httpsTunnel({})).toBeUndefined()
     expect(httpsTunnel(null)).toBeUndefined()
   })
@@ -131,7 +136,7 @@ describe('phone access', () => {
     const view = await service(ctx).generate()
 
     expect(view).toEqual({
-      publicUrl: 'https://abc.ngrok-free.app',
+      publicUrl: 'https://abc.ngrok-free.app/',
       host: 'abc.ngrok-free.app',
       scanUrl: 'https://abc.ngrok-free.app/?token=launch-token',
       restartCommand: 'dsh web --trusted-host abc.ngrok-free.app',

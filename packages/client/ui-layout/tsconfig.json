@@ -50,6 +50,9 @@
     },
     {
       "path": "../../workflow/workflow"
+    },
+    {
+      "path": "../../schedule/schedule"
     }
   ]
 }

@@ -31,9 +31,13 @@ export type AppFrameProps =
   & PropsStore<ReturnType<typeof createLayoutStore>>
   & PropsLocale<'common'>
 
-/** Center column grid item (session-body building block). */
+/** Center column grid item (the selected main panel). */
 function CenterColumn(props: { children?: ReactNode }) {
-  return <div className={css.centerCol}>{props.children}</div>
+  return (
+    <div className={css.centerCol}>
+      <div className={css.centerBody}>{props.children}</div>
+    </div>
+  )
 }
 
 /** Subscribe to the main key without subscribing the column frame to each panel id. */
@@ -127,7 +131,6 @@ export function AppFrame({
   t,
 }: AppFrameProps) {
   const layoutInfo = useStore(state => state.layoutInfo)
-  const conversation = usePanelInfo(info => info.activePanelId === null)
   const frameRef = useRef<HTMLDivElement | null>(null)
   const viewport = layoutInfo.viewportWidth
 
@@ -159,7 +162,10 @@ export function AppFrame({
   }, [actions])
 
   const narrow = viewport < SIDEBAR_AUTO_COLLAPSE
-  const sidebarCollapsed = !conversation || (narrow ? !layoutInfo.narrowExpanded : layoutInfo.sidebar === 0)
+  // The sidebar is a browsing column, not a property of the selected panel:
+  // opening Knowledge or Workflow changes the center column only, so the list
+  // the user navigates from stays exactly where it was.
+  const sidebarCollapsed = narrow ? !layoutInfo.narrowExpanded : layoutInfo.sidebar === 0
   const sidebarPreference = sidebarCollapsed
     ? 0
     : layoutInfo.sidebar === 0 ? SIDEBAR_DEFAULT : layoutInfo.sidebar

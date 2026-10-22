@@ -3,6 +3,7 @@ import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { execa } from 'execa'
 import { describe, expect, it } from 'vitest'
+import { SESSION_FORMAT_VERSION } from '@deepseek-ai/dsh-session'
 
 const packageRoot = fileURLToPath(new URL('..', import.meta.url))
 const built = ['lib/index.js', 'lib/worker.cjs']
@@ -31,7 +32,7 @@ describe.skipIf(!built)('built migration verifier (plain node)', () => {
         const handle = await ctx.sessionPersistence.open(id, 'write')
         await handle.close()
         await ctx.sessionPersistence.flush()
-        const currentPath = join(directory, 'session.v3.jsonl')
+        const currentPath = join(directory, 'session.v${SESSION_FORMAT_VERSION}.jsonl')
         const header = JSON.parse((await readFile(currentPath, 'utf8')).trim())
         await mkdir(join(root, 'lib'))
         await copyFile('package.json', join(root, 'package.json'))
@@ -71,7 +72,7 @@ describe.skipIf(!built)('built migration verifier (plain node)', () => {
 
     expect(exitCode, `stderr:\n${stderr}`).toBe(0)
     expect(JSON.parse(stdout.trim())).toEqual({
-      id: 'built-migration-worker', version: 3, verified: true, refused: false,
+      id: 'built-migration-worker', version: SESSION_FORMAT_VERSION, verified: true, refused: false,
       refusal: 'current session generation contains 0 events, expected 1',
     })
   })

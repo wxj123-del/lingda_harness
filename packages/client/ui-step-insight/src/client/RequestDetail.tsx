@@ -7,7 +7,6 @@ import { inspectInput } from './input-parts.ts'
 import { contentText, estimateText, hasMedia } from './usage.ts'
 import { accounted, number, rowLabel } from './format.ts'
 import { ToolSimilarityList } from './ToolSimilarityList.tsx'
-import { GitWorkspaceView } from './GitWorkspaceView.tsx'
 import css from './ledger.module.css'
 
 interface DetailProps {
@@ -29,6 +28,13 @@ export function RequestDetail({ row, window, t, initialTab = 'inputTab' }: Detai
   } else previous.window = window
   cached.current = previous
   const input = previous.input
+  const calledToolNames = new Set(row.tools.map(tool => tool.name))
+  const referencedTools = input.parts.reduce<typeof input.parts>((parts, part) => {
+    if (part.kind !== 'schema' || part.schema === undefined || calledToolNames.has(part.schema.name)
+      || parts.some(item => item.schema?.name === part.schema?.name)) return parts
+    parts.push(part)
+    return parts
+  }, [])
   const usage = row.usage
   const duration = row.startTime === null || row.endTime === null ? null : row.endTime - row.startTime
   const ttft = row.startTime === null || row.firstTokenTime === null ? null : row.firstTokenTime - row.startTime
@@ -42,6 +48,7 @@ export function RequestDetail({ row, window, t, initialTab = 'inputTab' }: Detai
   ] as const
   return <aside className={css.detail} aria-label={t('select')} data-token-detail="">
     <header className={css.detailHeader}>
+      <span className={css.detailKicker}>{t('select')}</span>
       <h3>{rowLabel(row, t)}</h3>
       <span className={css.muted}>{row.provider ?? t('unreported')} / {row.model ?? t('unreported')}</span>
       <span className={css.muted}>{t('event')} #{row.seq}{row.endSeq === undefined ? '' : ` → #${row.endSeq}`}</span>
@@ -66,6 +73,9 @@ export function RequestDetail({ row, window, t, initialTab = 'inputTab' }: Detai
     {row.contextRoute !== undefined && <p className={css.requestAudit}>
       <b>{t('contextRoute')}</b> {t(row.contextRoute.scope === 'fresh' ? 'contextRouteFresh' : row.contextRoute.scope === 'recent' ? 'contextRouteRecent' : row.contextRoute.scope === 'task' ? 'contextRouteTask' : 'contextRouteFull')}
       {row.contextRoute.signal !== undefined && <> {' · '}<code>{row.contextRoute.signal}</code></>}
+      {row.contextRoute.confidence !== undefined && <> {' · '}{t('contextMetricConfidence')} {Math.round(row.contextRoute.confidence * 100)}%</>}
+      {row.contextRoute.fallback === true && <> {' · '}{t('contextMetricFallback')}</>}
+      {row.contextRoute.routeEvidence !== undefined && <> {' · '}{t('contextMetricLexicalRecall')} {row.contextRoute.routeEvidence.selectedHistoryMessages}/{row.contextRoute.routeEvidence.candidateHistoryMessages}</>}
       {' · '}{row.contextRoute.reason}{' · '}{t('contextMessages')} {row.contextRoute.outputMessages}/{row.contextRoute.inputMessages}
       {row.contextRoute.maxInputTokens !== undefined && <> {' · '}{t('contextBudget')} ~{number(row.contextRoute.maxInputTokens)}</>}
       {row.contextRoute.estimatedRequestTokens !== undefined && <> {' · '}{t('contextEstimatedInput')} ~{number(row.contextRoute.estimatedRequestTokens)}</>}
@@ -75,6 +85,8 @@ export function RequestDetail({ row, window, t, initialTab = 'inputTab' }: Detai
       {row.contextRoute.providerReportedInputTokens !== undefined && <> {' · '}{t('contextProviderReported')} ~{number(row.contextRoute.providerReportedInputTokens)}</>}
       {row.contextRoute.calibrationSampleCount !== undefined && <> {' · '}{t('contextCalibration')} {number(row.contextRoute.calibrationSampleCount)}</>}
       {row.contextRoute.taskId !== undefined && <> {' · '}{t('contextTaskRecall')} {number(row.contextRoute.taskRecallMessages ?? 0)}</>}
+      {row.contextRoute.toolAudit !== undefined && row.contextRoute.toolAudit.compactedToolResults > 0 && <> {' · '}{t('contextToolCompaction')} {number(row.contextRoute.toolAudit.compactedToolResults)} ({number(row.contextRoute.toolAudit.toolResultCharsBefore)} → {number(row.contextRoute.toolAudit.toolResultCharsAfter)} {t('contextToolChars')})</>}
+      {row.contextRoute.toolAudit !== undefined && row.contextRoute.toolAudit.deduplicatedToolResults > 0 && <> {' · '}{t('contextToolDedup')} {number(row.contextRoute.toolAudit.deduplicatedToolResults)}</>}
       {row.contextRoute.contextWindow !== undefined && <> {' · '}{t('contextWindow')} ~{number(row.contextRoute.contextWindow)}</>}
       {row.contextRoute.budgetExceeded && <span className={css.contextBudgetWarning} role="alert">{' · '}{t('contextBudgetExceeded')} {row.contextRoute.requestOverflowTokens !== undefined ? t('contextRequestOverflow') : t('contextBudgetOverflow')} ~{number(routeOverflow)} {t('token')}</span>}
     </p>}
@@ -119,7 +131,6 @@ export function RequestDetail({ row, window, t, initialTab = 'inputTab' }: Detai
       <b>{t('blockedTools')}</b>
       <ul>{row.blockedTools.map((item, index) => <li key={`${item.name}-${index}`}><code>{item.name}</code> · {item.reason}</li>)}</ul>
     </section>}
-    {row.gitCheckpoints !== undefined && row.gitCheckpoints.length > 0 && <GitWorkspaceView checkpoints={row.gitCheckpoints} t={t} />}
     <div className={css.tabs} role="tablist" aria-label={t('select')}>
       {(['inputTab', 'outputTab', 'toolsTab', 'rawTab'] as const).map(key => <button key={key} type="button" role="tab"
         aria-selected={tab === key} onClick={() =>{  setTab(key) }}>{t(key)}{key === 'toolsTab' ? ` (${row.tools.length})` : ''}</button>)}
@@ -150,7 +161,18 @@ export function RequestDetail({ row, window, t, initialTab = 'inputTab' }: Detai
       </>}
       {tab === 'toolsTab' && <>
         <p className={css.note}>{t('toolAccounting')}</p>
-        {row.tools.length === 0 && <p className={css.empty}>{t('noTools')}</p>}
+        {referencedTools.length > 0 && <section className={css.unusedTools} aria-label={t('referencedTools')}>
+          <header className={css.unusedToolsHeader}>
+            <h4>{t('referencedTools')} <span>({referencedTools.length})</span></h4>
+            <p>{t('referencedToolsNote')}</p>
+          </header>
+          {referencedTools.map(part => <details key={part.id} className={css.source}>
+            <summary><code>{part.schema?.name ?? part.source}</code><b>{t('referencedTool')}</b></summary>
+            {part.schema?.description && <div className={css.sourceMeta}>{part.schema.description}</div>}
+            <pre>{part.text}</pre>
+          </details>)}
+        </section>}
+        {row.tools.length === 0 && referencedTools.length === 0 && <p className={css.empty}>{t('noTools')}</p>}
         {row.tools.map(tool => <details key={tool.id} className={css.source} open>
           <summary><span>{tool.name} <small>#{tool.seq}</small></span><b>{tool.isError ? t('error') : tool.result === null ? t('waiting') : t('complete')}</b></summary>
           {tool.parentId && <p className={css.note}>{t('subtool')}</p>}

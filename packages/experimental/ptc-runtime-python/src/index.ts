@@ -1,9 +1,10 @@
 /**
  * CPython subprocess PTC runtime: a fresh `python3` process runs each model program under an
  * asyncio event loop with top-level ``await``. Binding calls travel on fd 3 as JSON-lines,
- * leaving stdout/stderr free for the program's own output. This is containment, not a security
- * boundary: model code has bash-equivalent trust, contained by a tempdir-only environment,
- * RLIMIT_CPU + RLIMIT_AS, wall-clock timeout, and SIGTERM→grace→SIGKILL on the process group.
+ * leaving stdout/stderr free for the program's own output. Direct filesystem effects are
+ * wrapped by the shared process sandbox when a restricted policy is selected; the runtime
+ * also applies a tempdir-only environment, RLIMIT_CPU + RLIMIT_AS, wall-clock timeout, and
+ * SIGTERM→grace→SIGKILL on the process group.
  *
  * The package also owns the versionless fd-3 wire protocol itself; its host-side codec and
  * hostile-frame validators are re-exported so every consumer of the wire shares one vocabulary.
@@ -20,7 +21,10 @@ import type { Duplex } from 'node:stream'
 import { Context } from '@deepseek-ai/cordis'
 import z from '@deepseek-ai/schemastery'
 import { PtcRuntime, DUNDER_MEMBER, PORTABLE_RESERVED_WORDS, RESERVED_BINDING_GLOBALS, RESERVED_ERROR_MEMBERS } from '@deepseek-ai/dsh-ptc-runtime'
-import type { PtcBindingErrorClass, PtcBindingFunction, PtcJsonValue, PtcRunFailure, PtcRunRequest, PtcRunResult, PtcRunSpec } from '@deepseek-ai/dsh-ptc-runtime'
+import type { PtcBindingErrorClass, PtcBindingFunction, PtcJsonValue, PtcRunFailure, PtcRunRequest, PtcRunResult, PtcRunSandbox, PtcRunSpec } from '@deepseek-ai/dsh-ptc-runtime'
+import { SandboxUnavailableError, classifyRunnerFailure, isRunnerSpawnFailure } from '@deepseek-ai/dsh-sandbox'
+import type { ConfinedArgv, SandboxMode, SandboxPolicy } from '@deepseek-ai/dsh-sandbox'
+import type {} from '@deepseek-ai/dsh-sandbox-policy'
 import { snapshotJsonValue } from '@deepseek-ai/dsh-util-values'
 import { MAX_TIMER_DELAY_MS } from '@deepseek-ai/dsh-timeout'
 import type { BootMessage, ChildToHost, ReplyMessage } from './protocol.ts'
@@ -161,7 +165,11 @@ const PY_SCRIPTS = ['bootstrap.py', 'protocol.py']
  * rewrite the very files it was started from. Hence one copy per RUN, discarded
  * at settlement — a rewrite then damages only the run that performed it, which
  * is what fresh-subprocess-per-run already promises. Sharing one copy across
- * runs made an overwritten `bootstrap.py` break the next run.
+ * runs made an overwritten `bootstrap.py` break the next run. On Linux, the
+ * workspace-write profile masks `/tmp`, so staging uses `/var/tmp` when the
+ * host temp root is under `/tmp`; that path remains readable through the
+ * profile's read-only root mount while model temp files stay in the masked
+ * `/tmp`.
  *
  * Deliberately SYNCHRONOUS. An `await` here would open an async boundary in
  * `execute` before the run is registered in `live` and before the abort
@@ -179,7 +187,13 @@ const PY_SCRIPTS = ['bootstrap.py', 'protocol.py']
  * @returns the absolute path of the materialized entry script.
  */
 function materializePyScripts(): string {
-  const dir = mkdtempSync(join(tmpdir(), 'dsh-ptc-runtime-python-'))
+  // The Linux workspace-write profile replaces `/tmp` with a fresh tmpfs.
+  // Keep the host-side bootstrap outside that mount so the confined child can
+  // still read the entry script while its model-visible temporary directory
+  // remains isolated. `/var/tmp` is the conventional sibling mount and is
+  // created with the same private mode by mkdtempSync.
+  const stagingRoot = process.platform === 'linux' && resolve(tmpdir()).startsWith('/tmp') ? '/var/tmp' : tmpdir()
+  const dir = mkdtempSync(join(stagingRoot, 'dsh-ptc-runtime-python-'))
   const source = fileURLToPath(new URL('../py/', import.meta.url))
   try {
     for (const name of PY_SCRIPTS) copyFileSync(join(source, name), join(dir, name))
@@ -495,12 +509,33 @@ export function resolvePythonBin(bin: string): string | undefined {
 /** Lowest CPython version supported by the bootstrap and its traceback behavior. */
 const MIN_CPYTHON = { major: 3, minor: 10 } as const
 
+// macOS and Linux images commonly expose an older system `python3` before a
+// supported interpreter on PATH. The unqualified default may therefore be
+// 3.9 even though `python3.11`/`python3.12` is available. Only the default
+// basename gets this compatibility search; an explicit path remains strict.
+const VERSIONED_CPYTHON_BINS = ['python3.14', 'python3.13', 'python3.12', 'python3.11', 'python3.10'] as const
+
 /** Fixed load-time probe bound; a configured executable must not hang plugin activation. */
 const PYTHON_PROBE_TIMEOUT_MS = 5_000
 
 /** The only host environment fact exposed to the child. */
 function pythonEnvironment(): NodeJS.ProcessEnv {
   return { TMPDIR: tmpdir() }
+}
+
+/** Replace a pyenv shim with the selected version's real executable. */
+function unwrapPythonShim(candidate: string): string {
+  if (!/(?:^|\/)\.pyenv\/shims\//u.test(candidate)) return candidate
+  try {
+    const executable = execFileSync(candidate, ['-I', '-c', 'import sys; print(sys.executable)'], {
+      encoding: 'utf8',
+      maxBuffer: 4_096,
+    }).trim()
+    if (isAbsolute(executable) && executable !== candidate && statSync(executable).isFile()) return executable
+  } catch {
+    // Keep the shim so the normal probe can provide the actionable error.
+  }
+  return candidate
 }
 
 /** Fail load unless `bin` is a responsive CPython 3.10+ interpreter. */
@@ -536,6 +571,34 @@ function validatePythonBin(bin: string): void {
   if (major < MIN_CPYTHON.major || (major === MIN_CPYTHON.major && minor < MIN_CPYTHON.minor)) {
     throw new Error(`dsh-ptc-runtime-python: config.pythonBin ${JSON.stringify(bin)} must be CPython ${MIN_CPYTHON.major}.${MIN_CPYTHON.minor} or newer, got ${implementation} ${majorText}.${minorText}.${patchText}`)
   }
+}
+
+/**
+ * Resolve a supported interpreter for test/bootstrap callers.
+ *
+ * @param bin - Configured interpreter name or path.
+ * @returns An absolute CPython 3.10+ path, or undefined when none is usable.
+ */
+export function resolveSupportedPythonBin(bin = 'python3'): string | undefined {
+  const candidates: string[] = []
+  const primary = resolvePythonBin(bin)
+  if (primary !== undefined) candidates.push(primary)
+  if (bin === 'python3') {
+    for (const versioned of VERSIONED_CPYTHON_BINS) {
+      const candidate = resolvePythonBin(versioned)
+      if (candidate !== undefined && !candidates.includes(candidate)) candidates.push(candidate)
+    }
+  }
+  for (const candidate of candidates) {
+    const executable = unwrapPythonShim(candidate)
+    try {
+      validatePythonBin(executable)
+      return executable
+    } catch {
+      // Try the next supported version when the default system interpreter is old.
+    }
+  }
+  return undefined
 }
 
 /** The marker appended when a diagnostic message is byte-capped host-side. */
@@ -815,6 +878,14 @@ export class PythonPtcRuntime extends PtcRuntime {
   readonly language = 'python'
   readonly isolation = 'process'
 
+  override get executionInstructions(): string {
+    return 'Each call runs in a fresh CPython process. Direct Python filesystem effects follow the resolved sandbox policy; host bindings remain available through awaitable calls.'
+  }
+
+  override get sandboxMode(): SandboxMode | undefined {
+    return this.ctx.get('sandboxPolicy')?.defaultMode
+  }
+
   private readonly config: ResolvedConfig
   private readonly pythonBin: string
   // The frame cap this instance enforces: the protocol cap, or the host's
@@ -998,12 +1069,18 @@ export class PythonPtcRuntime extends PtcRuntime {
     // self-contained misconfiguration into a late worker-exit. A missing or
     // unsupported interpreter is a load failure. Later filesystem mutation is
     // outside config validation; a missing executable settles as worker-exit.
-    const pythonBin = resolvePythonBin(this.config.pythonBin)
+    const pythonBin = resolveSupportedPythonBin(this.config.pythonBin)
     if (pythonBin === undefined) {
-      const explicit = isAbsolute(this.config.pythonBin) || this.config.pythonBin.includes('/')
-      throw new Error(`dsh-ptc-runtime-python: config.pythonBin ${JSON.stringify(this.config.pythonBin)} ${explicit ? 'is not an executable regular file' : 'does not resolve on PATH'}`)
+      const resolved = resolvePythonBin(this.config.pythonBin)
+      if (resolved === undefined) {
+        const explicit = isAbsolute(this.config.pythonBin) || this.config.pythonBin.includes('/')
+        throw new Error(`dsh-ptc-runtime-python: config.pythonBin ${JSON.stringify(this.config.pythonBin)} ${explicit ? 'is not an executable regular file' : 'does not resolve on PATH'}`)
+      }
+      // Preserve the detailed probe/version diagnostic when no fallback
+      // interpreter was available (or when an explicit path was rejected).
+      validatePythonBin(resolved)
+      throw new Error(`dsh-ptc-runtime-python: config.pythonBin ${JSON.stringify(this.config.pythonBin)} did not resolve to a supported interpreter`)
     }
-    validatePythonBin(pythonBin)
     this.pythonBin = pythonBin
     ctx.effect(() => () => this.teardown(), 'python ptc-runtime teardown')
   }
@@ -1029,30 +1106,32 @@ export class PythonPtcRuntime extends PtcRuntime {
   }
 
   /**
-   * Resolve directory and the experimental provider's configured wall deadline.
-   * @param request - Program inputs; explicit sandbox or timeout overrides are unsupported.
+   * Resolve directory, deadline, and the per-call file policy.
+   * @param request - Program inputs and an optional explicit sandbox policy.
    * @returns Complete inputs for the provider's run method.
-   * @throws When a requested override is unsupported or cwd is relative.
+   * @throws When a requested override is unsupported, policy is unavailable, or cwd is relative.
    */
   resolve(request: PtcRunRequest): PtcRunSpec {
-    if (request.sandboxPolicy !== undefined) throw new Error('dsh-ptc-runtime-python: sandbox policy is unsupported')
     if (request.timeoutMs !== undefined) throw new Error('dsh-ptc-runtime-python: per-call timeout is unsupported')
-    const cwd = request.cwd ?? process.cwd()
+    const sandboxPolicy = request.sandboxPolicy ?? this.ctx.get('sandboxPolicy')?.resolve()
+    if (sandboxPolicy === undefined) throw new Error('dsh-ptc-runtime-python: resolve requires sandboxPolicy')
+    const cwd = request.cwd ?? sandboxPolicy.workspaceRoot
     if (!isAbsolute(cwd)) throw new Error('dsh-ptc-runtime-python: cwd must be absolute')
-    return { ...request, cwd, timeoutMs: this.config.maxWallMs }
+    return { ...request, cwd, timeoutMs: this.config.maxWallMs, sandboxPolicy }
   }
 
   /**
-   * Execute a resolved Python program; this experimental provider has no file confinement.
+   * Execute a resolved Python program under its per-call file policy.
    * @param request - Resolved cwd, provider deadline, program and bindings.
    * @returns Captured output and the program outcome.
    */
   async run(request: PtcRunSpec): Promise<PtcRunResult> {
-    if (request.sandboxPolicy !== undefined || request.timeoutMs !== this.config.maxWallMs) throw new Error('dsh-ptc-runtime-python: unsupported execution policy or timeout')
+    if (request.sandboxPolicy === undefined || request.timeoutMs !== this.config.maxWallMs) throw new Error('dsh-ptc-runtime-python: run requires a resolved sandbox policy and provider timeout')
     if (this.disposed) throw new Error('dsh-ptc-runtime-python: run() after disposal')
     const bindings = this.validateBindings(request)
+    const sandbox: PtcRunSandbox = { mode: request.sandboxPolicy.mode, denied: false }
     if (request.signal?.aborted) {
-      return { logs: [], error: { kind: 'abort', message: messageOf(request.signal.reason) } }
+      return { logs: [], sandbox, error: { kind: 'abort', message: messageOf(request.signal.reason) } }
     }
     let bootstrapPath: string
     try {
@@ -1066,9 +1145,31 @@ export class PythonPtcRuntime extends PtcRuntime {
       // failed to ship, is a SUBSTRATE failure — the same class as a child that
       // cannot start. The seam permits rejection only for misuse, so this
       // resolves as `worker-exit` rather than throwing out of `run()`.
-      return { logs: [], error: { kind: 'worker-exit', message: `failed to stage the python bootstrap: ${messageOf(error)}` } }
+      return { logs: [], sandbox, error: { kind: 'worker-exit', message: `failed to stage the python bootstrap: ${messageOf(error)}` } }
     }
-    return await this.execute(request, bindings, bootstrapPath)
+    const argv = [this.pythonBin, '-u', '-I', bootstrapPath]
+    let confined: ConfinedArgv | undefined
+    try {
+      const mode = request.sandboxPolicy.mode
+      if (mode !== 'danger-full-access') {
+        const provider = this.ctx.get('sandbox')
+        if (provider === undefined) throw new SandboxUnavailableError(mode)
+        confined = await provider.confine(argv, request.sandboxPolicy as SandboxPolicy, request.signal)
+        sandbox.enforcement = confined.enforcement
+      }
+    } catch (error: unknown) {
+      try {
+        rmSync(dirname(bootstrapPath), { recursive: true, force: true })
+      } catch {
+        // The child has not started; preserve the confinement failure if staging cleanup also fails.
+      }
+      if (request.signal?.aborted) return { logs: [], sandbox, error: { kind: 'abort', message: messageOf(request.signal.reason) } }
+      const unavailable = error instanceof SandboxUnavailableError
+        ? error
+        : new SandboxUnavailableError(request.sandboxPolicy.mode === 'danger-full-access' ? 'read-only' : request.sandboxPolicy.mode, messageOf(error))
+      return { logs: [], sandbox, error: { kind: 'sandbox-unavailable', message: unavailable.message } }
+    }
+    return await this.execute(request, bindings, bootstrapPath, confined, sandbox)
   }
   /* jscpd:ignore-end */
 
@@ -1170,6 +1271,8 @@ export class PythonPtcRuntime extends PtcRuntime {
     request: PtcRunSpec,
     bindings: Map<string, ValidatedNamespace>,
     bootstrapPath: string,
+    confined: ConfinedArgv | undefined,
+    sandbox: PtcRunSandbox,
   ): Promise<PtcRunResult> {
     // This run's own staging directory, removed at settlement.
     const bootstrapDir = dirname(bootstrapPath)
@@ -1193,7 +1296,10 @@ export class PythonPtcRuntime extends PtcRuntime {
       // right after the done frame, before any finalization-time flush could
       // run. The `_LogStream` replacement of `sys.stdout`/`sys.stderr` is
       // unaffected (it is a Python object, not the C-level stdio buffer).
-      child = spawn(this.pythonBin, ['-u', '-I', bootstrapPath], {
+      const command = confined?.argv ?? [this.pythonBin, '-u', '-I', bootstrapPath]
+      const executable = command[0]
+      if (executable === undefined) throw new Error('dsh-ptc-runtime-python: sandbox returned an empty argv')
+      child = spawn(executable, command.slice(1), {
         cwd: request.cwd,
         // Preserve only the platform temp directory. macOS system Python emits a
         // startup warning when TMPDIR is absent; ambient credentials, PATH, HOME,
@@ -1227,12 +1333,14 @@ export class PythonPtcRuntime extends PtcRuntime {
         // directory, so only a filesystem-level refusal reaches here, and the
         // staging copy holds nothing but two checked-in scripts.
       }
-      return Promise.resolve({ logs: [], error: { kind: 'worker-exit' as const, message: `python spawn error: ${messageOf(error)}` } })
+      const sandboxFailure = confined !== undefined && isRunnerSpawnFailure(error, confined.argv[0], request.cwd)
+      return Promise.resolve({ logs: [], sandbox, error: { kind: sandboxFailure ? 'sandbox-unavailable' as const : 'worker-exit' as const, message: `python spawn error: ${messageOf(error)}` } })
     }
 
     return new Promise<PtcRunResult>((resolve) => {
       let settled = false
       const logs: string[] = []
+      let runnerStderr = ''
       // An unterminated line flushed with the `open` flag: the next log frame
       // appends to it (no fake newline between entries), and finish() pushes
       // the residual if the run ends with it still open. Held as a fragment
@@ -1506,7 +1614,13 @@ export class PythonPtcRuntime extends PtcRuntime {
         }
       }
       child.stdout.on('data', (chunk: Buffer) => { captureStray(strayOut, chunk) })
-      child.stderr.on('data', (chunk: Buffer) => { captureStray(strayErr, chunk) })
+      child.stderr.on('data', (chunk: Buffer) => {
+        // Runner diagnostics are needed after an early non-zero exit. Keep a
+        // bounded tail so a model-written stderr flood cannot turn
+        // classification into an unbounded host allocation.
+        runnerStderr = (runnerStderr + chunk.toString('utf8')).slice(-this.config.maxValueBytes)
+        captureStray(strayErr, chunk)
+      })
       child.stdout.on('end', () => { flushStray(strayOut) })
       child.stderr.on('end', () => { flushStray(strayErr) })
 
@@ -1846,6 +1960,10 @@ export class PythonPtcRuntime extends PtcRuntime {
               return
             }
             if (message.error) {
+              if (confined !== undefined) {
+                sandbox.denied = confined.denialSignatures.some(signature =>
+                  message.error?.message.toLowerCase().includes(signature.toLowerCase()))
+              }
               finish({ error: { kind: message.error.kind, message: capMessage(message.error.message, this.config.maxValueBytes) } })
               return
             }
@@ -2213,7 +2331,7 @@ export class PythonPtcRuntime extends PtcRuntime {
           // a removal failure here is the one case the "gone by settlement"
           // contract degrades on.
         }
-        resolve({ ...result, logs })
+        resolve({ ...result, logs, sandbox: { ...sandbox } })
         // Mark the fiber quiescent for THIS run: drop it from `live` and resolve
         // `finished` (what teardown awaits). Deferred until the process group is
         // actually empty — dropping from `live` before then would let a
@@ -2348,7 +2466,7 @@ export class PythonPtcRuntime extends PtcRuntime {
       }
 
       child.on('error', (error: Error) => {
-        finish({ error: { kind: 'worker-exit', message: `python spawn error: ${error.message}` } })
+        finish({ error: { kind: confined !== undefined && isRunnerSpawnFailure(error, confined.argv[0], request.cwd) ? 'sandbox-unavailable' : 'worker-exit', message: `python spawn error: ${error.message}` } })
       })
       // `close` (not `exit`) is the settlement trigger: it fires only after the
       // process exits AND every stdio stream — including the fd-3 protocol pipe —
@@ -2375,9 +2493,12 @@ export class PythonPtcRuntime extends PtcRuntime {
         // cap SIGXCPU arrives before `cpuSeconds` — the host cannot see the
         // effective value, so it states the ceiling it set rather than a second
         // count it cannot guarantee.
-        finish(signal === 'SIGXCPU'
-          ? { error: { kind: 'timeout', message: `CPU time exhausted (limit at most the configured ${this.config.cpuSeconds}s; a stricter inherited RLIMIT_CPU can fire sooner)` } }
-          : { error: { kind: 'worker-exit', message: `python exited (code=${String(code)}, signal=${String(signal)}) before completing` } })
+        const runnerFailure = confined === undefined ? undefined : classifyRunnerFailure(code, runnerStderr, confined.runnerFailureRules)
+        finish(runnerFailure !== undefined
+          ? { error: { kind: 'sandbox-unavailable', message: runnerFailure.detail } }
+          : signal === 'SIGXCPU'
+            ? { error: { kind: 'timeout', message: `CPU time exhausted (limit at most the configured ${this.config.cpuSeconds}s; a stricter inherited RLIMIT_CPU can fire sooner)` } }
+            : { error: { kind: 'worker-exit', message: `python exited (code=${String(code)}, signal=${String(signal)}) before completing` } })
         settle(decided)
       })
 

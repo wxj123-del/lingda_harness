@@ -2,6 +2,8 @@
 
 Status: implemented
 
+English | [中文](2026-09-21-global-context-router.zh.md)
+
 ## Problem
 
 The durable Session surface can grow through long tasks, while a simple new question does not need every prior user, assistant, and tool message in its next model request.

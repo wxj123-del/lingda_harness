@@ -54,8 +54,10 @@ function mountShell({ collapsed = false, width = 300 }: { collapsed?: boolean; w
         owner: SidebarFooterActionOwnerProps | SidebarSectionOwnerProps | SidebarSettingsOwnerProps,
       ) => {
         if (key === 'sidebar.brand.mark') return brandMark
-        if (key === 'sidebar.navigation') return null
         if (key === 'sidebar.brand.name') return brandName
+        // The navigation seat is exercised by the panel-list suite and the
+        // snapshots; this bench only cares about the shell chrome around it.
+        if (key === 'sidebar.navigation') return null
         if (key === 'sidebar.settings') {
           settingsOwner = owner
           return <div data-testid="settings-seat" data-wide={owner.wide} />
@@ -120,9 +122,11 @@ describe('SidebarRoot shell', () => {
         options?.fallback ?? null) as SidebarRootComponentProps['renderSlot']}
     />)
 
-    expect(screen.getByText('DSH Local Build')).toBeTruthy()
+    expect(screen.getByText('Lingda Harness')).toBeTruthy()
     expect(screen.getByText('1.2.3-rc.4-0123456-dirty')).toBeTruthy()
-    expect(container.querySelector('svg')).not.toBeNull()
+    const mark = container.querySelector('img')
+    expect(mark?.getAttribute('src')).toMatch(/^data:image\/webp;base64,/)
+    expect(mark?.getAttribute('width')).toBe('24')
   })
 
   it.each([
@@ -140,7 +144,7 @@ describe('SidebarRoot shell', () => {
         options?.fallback ?? null) as SidebarRootComponentProps['renderSlot']}
     />)
 
-    expect(screen.getByText('DSH Local Build')).toBeTruthy()
+    expect(screen.getByText('Lingda Harness')).toBeTruthy()
     expect(screen.getByText(expected)).toBeTruthy()
   })
 
@@ -155,7 +159,7 @@ describe('SidebarRoot shell', () => {
         options?.fallback ?? null) as SidebarRootComponentProps['renderSlot']}
     />)
 
-    expect(screen.getByText('DSH Local Build')).toBeTruthy()
+    expect(screen.getByText('Lingda Harness')).toBeTruthy()
   })
 
   it('hands the region its wide flag and clamps expandSidebar to the collapsed state', () => {

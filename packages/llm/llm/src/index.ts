@@ -75,6 +75,9 @@ declare module '@deepseek-ai/cordis' {
      * before the adapter receives the request. Observers may audit the exact
      * harness payload but must not mutate it. Awaiting this boundary lets
      * durability policies persist a final request audit before dispatch.
+     * @param options - The projected provider-neutral generation request.
+     * @param projection - Whether file and image blocks were projected.
+     * @mode parallel
      */
     'llm/request-ready'(this: LlmRuntime, options: GenerateOptions, projection: {
       files: boolean

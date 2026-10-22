@@ -54,8 +54,8 @@ export function createElectronBuilderConfig(
   const buildPaths = desktopTargetBuildPaths(resolveDesktopBuildTarget(env, hostPlatform, hostArch))
   return {
     appId,
-    productName: 'DeepSeek Harness',
-    artifactName: 'deepseek-harness-${version}-${os}-${arch}.${ext}',
+    productName: 'Lingda Harness',
+    artifactName: 'lingda-harness-${version}-${os}-${arch}.${ext}',
     directories: { output: unsigned ? join(buildPaths.root, 'unsigned-artifacts') : buildPaths.artifacts },
     asar: true,
     files: [
@@ -78,6 +78,8 @@ export function createElectronBuilderConfig(
     ],
     mac: {
       category: 'public.app-category.developer-tools',
+      // buildResources (apps/desktop/build) holds the mascot icon per platform.
+      icon: 'build/icon.icns',
       identity: macOSSigning?.signingIdentity,
       forceCodeSigning: true,
       hardenedRuntime: true,
@@ -103,6 +105,7 @@ export function createElectronBuilderConfig(
       )
     },
     win: {
+      icon: 'build/icon.ico',
       forceCodeSigning: !unsigned,
       signtoolOptions: {
         sign: windowsSigner,
@@ -111,6 +114,7 @@ export function createElectronBuilderConfig(
       target: ['nsis'],
     },
     linux: {
+      icon: 'build/icon.png',
       category: 'Development',
       target: ['AppImage'],
     },

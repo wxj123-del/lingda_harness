@@ -8,6 +8,9 @@ export const CONVERSATION_SETTINGS_NAMESPACE = 'ui-conversation'
 /** Field carrying the delivery mode for plain Enter while an agent is busy. */
 export const BUSY_ENTER_FIELD = 'busyEnter'
 
+/** Field carrying whether the Session View switcher renders. */
+export const SHOW_VIEW_TABS_FIELD = 'showViewTabs'
+
 /** Busy-Enter behaviors accepted at settings and input boundaries. */
 export const BUSY_ENTER_BEHAVIORS = ['queue', 'steer'] as const
 
@@ -21,9 +24,16 @@ export const DEFAULT_BUSY_ENTER_BEHAVIOR: BusyEnterBehavior = 'queue'
 export interface ConversationSettings {
   /** Delivery mode for plain Enter while the addressed agent is busy. */
   busyEnter: BusyEnterBehavior
+  /**
+   * Whether the Session view switcher (Token trace / Chat / Workflow / …)
+   * renders above the conversation. Hidden by default so an ordinary chat
+   * keeps the full reading column; the switcher remains one setting away.
+   */
+  showViewTabs: boolean
 }
 
 /** Durable conversation schema; also the wire envelope the browser scope validates against. */
 export const ConversationSettingsSchema: z<ConversationSettings> = z.object({
   [BUSY_ENTER_FIELD]: z.union([...BUSY_ENTER_BEHAVIORS]).default(DEFAULT_BUSY_ENTER_BEHAVIOR),
+  showViewTabs: z.boolean().default(false),
 })

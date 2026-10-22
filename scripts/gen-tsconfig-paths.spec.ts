@@ -4,6 +4,7 @@ import { describe, expect, it } from 'vitest'
 import {
   collectPackageAliases,
   collectPackageNames,
+  directoryAliasTargets,
   mappedSpecifiers,
   renderAliases,
   uncoveredPackages,
@@ -13,7 +14,7 @@ import {
 const root = resolve(import.meta.dirname, '..')
 
 describe('generated tsconfig package aliases', () => {
-  it('maps each package to its own source directory', () => {
+  it('maps each package to its own source entry', () => {
     const aliases = collectPackageAliases()
     expect(aliases.length).toBeGreaterThan(100)
     const session = aliases.find(alias => alias.specifier === '@deepseek-ai/dsh-session')
@@ -39,7 +40,7 @@ describe('generated tsconfig package aliases', () => {
     // The hand-written bare alias is skipped; its /invariant sibling is not.
     expect(body).toBe([
       '      "@deepseek-ai/dsh-a/invariant": ["./packages/g/a/src/invariant.ts"]',
-      '      "@deepseek-ai/dsh-b": ["./packages/g/b/src"]',
+      '      "@deepseek-ai/dsh-b": ["./packages/g/b/src/index.ts"]',
     ].join(',\n'))
     expect(body.endsWith(',')).toBe(false)
   })
@@ -85,6 +86,12 @@ describe('generated tsconfig package aliases', () => {
     const names = collectPackageNames()
     expect(names).toContain('@deepseek-ai/dsh-typert-protocol')
     expect(uncoveredPackages(names, mappedSpecifiers(config))).toEqual([])
+  })
+
+  it('keeps concrete aliases on explicit source files', () => {
+    const config = readFileSync(resolve(root, 'tsconfig.base.json'), 'utf8')
+
+    expect(directoryAliasTargets(config, root)).toEqual([])
   })
 
   it('leaves no wildcard that probes every package group', () => {

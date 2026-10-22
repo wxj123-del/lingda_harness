@@ -1,7 +1,7 @@
 /** Real JSONL publication and provider-neutral message preservation across the V2 PTC rename. */
 
 import { Context } from '@deepseek-ai/cordis'
-import { Session, SessionId } from '@deepseek-ai/dsh-session'
+import { SESSION_FORMAT_VERSION, Session, SessionId } from '@deepseek-ai/dsh-session'
 import type { SessionFormatEvent } from '@deepseek-ai/dsh-session-format'
 import JsonlSessionPersistence from '@deepseek-ai/dsh-session-persistence-jsonl'
 import { createHash } from 'node:crypto'
@@ -117,21 +117,21 @@ describe('JSONL V2 PTC publication and restore', () => {
     }
   })
 
-  it('publishes V3 without changing V2 bytes and preserves restored IDs, roles, content, and replay state', async () => {
+  it('publishes the current format without changing V2 bytes and preserves restored IDs, roles, content, and replay state', async () => {
     if (root === undefined || ctx === undefined) throw new Error('persistence fixture is not initialized')
     const id = SessionId('tools-code-mode:session')
     const header = { type: 'session', version: 2, id, createdAt: 1000, isSeeded: false, delegationDepth: 0 }
     const events = releasedV2Events()
     const source = Buffer.from([header, ...events].map(row => JSON.stringify(row)).join('\n') + '\n')
     const predecessor = generationLogPath(root, undefined, id, 2, 'none')
-    const successor = join(dirname(predecessor), 'session.v3.jsonl')
+    const successor = join(dirname(predecessor), `session.v${SESSION_FORMAT_VERSION}.jsonl`)
     await mkdir(dirname(predecessor), { recursive: true })
     await writeFile(predecessor, source)
     const sourceStat = await stat(predecessor)
 
     const reader = await ctx.sessionPersistence.open(id, 'read')
     try {
-      expect(reader.header).toEqual({ version: 3, id, createdAt: 1000, isSeeded: false, delegationDepth: 0 })
+      expect(reader.header).toEqual({ version: SESSION_FORMAT_VERSION, id, createdAt: 1000, isSeeded: false, delegationDepth: 0 })
       expect((await reader.read()).events.map(event => event.type)).toEqual([
         'turn/start', 'step/start', 'system/message', 'user/message', 'assistant/message', 'tool/call',
         'tool/ptc-dispatch-start', 'tool/ptc-dispatch', 'tool/result', 'agent/inbox/spliced',
@@ -153,7 +153,7 @@ describe('JSONL V2 PTC publication and restore', () => {
     const published = await readFile(successor)
     const [publishedHeader, ...publishedEvents] = published.toString('utf8').trimEnd().split('\n')
       .map((row): unknown => JSON.parse(row))
-    expect(publishedHeader).toEqual({ ...header, version: 3 })
+    expect(publishedHeader).toEqual({ ...header, version: SESSION_FORMAT_VERSION })
     const expectedEvents: SessionFormatEvent[] = events.map(event => ({ ...event, seq: event.seq < 2 ? event.seq : event.seq + 1 }))
     expectedEvents[5] = { ...expectedEvents[5], type: 'tool/ptc-dispatch-start' } as SessionFormatEvent
     expectedEvents[6] = { ...expectedEvents[6], type: 'tool/ptc-dispatch' } as SessionFormatEvent
@@ -201,6 +201,6 @@ describe('JSONL V2 PTC publication and restore', () => {
     expect(await stat(predecessor)).toMatchObject({ dev: sourceStat.dev, ino: sourceStat.ino })
     expect(await readFile(successor)).toEqual(published)
     expect((await readdir(dirname(predecessor))).filter(name => name.endsWith('.jsonl')).sort())
-      .toEqual(['session.v2.jsonl', 'session.v3.jsonl'])
+      .toEqual(['session.v2.jsonl', `session.v${SESSION_FORMAT_VERSION}.jsonl`])
   })
 })

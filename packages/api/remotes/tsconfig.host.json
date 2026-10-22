@@ -36,6 +36,9 @@
       "path": "../../goal/goal"
     },
     {
+      "path": "../../schedule/schedule"
+    },
+    {
       "path": "../../preset/agent-presets"
     },
     {

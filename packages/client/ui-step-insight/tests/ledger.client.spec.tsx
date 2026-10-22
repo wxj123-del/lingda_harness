@@ -20,18 +20,31 @@ function props(entries: readonly SessionEventLikeEntry[], hasMore = false): Toke
 
 describe('Token trajectory interactions', () => {
   it('selects requests, exposes source content and filters by tool', () => {
-    render(<TokenLedger {...props(fixture())} />)
+    render(<TokenLedger {...props(fixture(true))} />)
     fireEvent.click(screen.getByRole('button', { name: /轮 1 \/ 步骤 1/ }))
     const inspector = screen.getByRole('complementary')
     expect(within(inspector).getByText('系统提示词', { exact: false })).toBeTruthy()
     fireEvent.click(screen.getByRole('tab', { name: '工具调用 (1)' }))
     expect(within(inspector).getByText('export const source = 1', { exact: true })).toBeTruthy()
+    const referenced = within(inspector).getByRole('region', { name: zh.referencedTools })
+    expect(referenced.textContent).toContain('write')
+    expect(referenced.textContent).toContain('Write source')
     fireEvent.click(screen.getByRole('tab', { name: '原始记录' }))
     expect(within(inspector).getByText('tool/result #7', { exact: true })).toBeTruthy()
     fireEvent.change(screen.getByRole('searchbox'), { target: { value: 'read' } })
     expect(screen.getAllByRole('row')).toHaveLength(2)
     fireEvent.change(screen.getByRole('searchbox'), { target: { value: 'absent' } })
     expect(screen.getByText(zh.noMatches)).toBeTruthy()
+  })
+
+  it('shows referenced tool schemas even when this request made no calls', () => {
+    render(<TokenLedger {...props(fixture(true))} />)
+    fireEvent.click(screen.getByRole('button', { name: /轮 1 \/ 步骤 2/ }))
+    fireEvent.click(screen.getByRole('tab', { name: '工具调用 (0)' }))
+    const referenced = within(screen.getByRole('complementary')).getByRole('region', { name: zh.referencedTools })
+    expect(referenced.textContent).toContain('read')
+    expect(referenced.textContent).toContain('write')
+    expect(within(screen.getByRole('complementary')).queryByText(zh.noTools)).toBeNull()
   })
 
   it('updates streaming estimates into provider usage without duplicating a request', () => {
@@ -93,6 +106,7 @@ describe('Token trajectory interactions', () => {
           taskId: 'task-1', taskRecallMessages: 1,
           budgetExceeded: true, overflowTokens: 4,
           selectedMessageIds: [String(system.id), String(user.id)],
+          routeEvidence: { queryTerms: 2, candidateHistoryMessages: 3, selectedHistoryMessages: 1, matchedHistoryTerms: 1 },
         },
       },
     } as never)
@@ -105,8 +119,10 @@ describe('Token trajectory interactions', () => {
     expect(within(screen.getByRole('complementary')).getByText(zh.contextBudgetExceeded, { exact: false })).toBeTruthy()
     expect(within(screen.getByRole('complementary')).getByText(zh.contextRequestOverflow, { exact: false })).toBeTruthy()
     expect(within(screen.getByRole('complementary')).getByText(zh.contextTaskRecall, { exact: false })).toBeTruthy()
-    expect(screen.getByRole('region', { name: zh.contextMetrics })).toBeTruthy()
-    expect(screen.getByRole('region', { name: zh.contextMetrics }).textContent).toContain(zh.contextSignalLexicalMatch)
+    const metrics = screen.getByRole('region', { name: zh.contextMetrics })
+    expect(metrics).toBeTruthy()
+    expect(metrics.textContent).toContain(zh.contextSignalLexicalMatch)
+    expect(metrics.textContent).toContain(`${zh.contextMetricLexicalRecall} 1/3`)
   })
 
   it('labels policy preprocessing and warns when preview content was transformed', () => {

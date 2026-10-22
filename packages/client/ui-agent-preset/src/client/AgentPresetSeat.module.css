@@ -41,7 +41,7 @@
 
 .seat:disabled {
   cursor: default;
-  color: var(--dsw-alias-label-quaternary);
+  color: var(--dsw-alias-label-dimmed);
 }
 
 .seatIcon {

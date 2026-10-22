@@ -51,7 +51,8 @@ describe('WebWorker preview VFS example', () => {
   it('matches its deterministic source byte for byte', () => {
     const expected = buildVfsExampleFiles()
     const predecessors = Object.values(VFS_EXAMPLE_SESSION_IDS)
-      .map(id => `home/sessions/--dsh-workspace--/${id}/session.v2.jsonl`)
+      .flatMap(id => [2, 3].map(version =>
+        `home/sessions/--dsh-workspace--/${id}/session.v${version}.jsonl`))
     expect(filesUnder(VFS_EXAMPLE_ROOT)).toEqual([...expected.keys(), ...predecessors].sort())
     for (const [path, content] of expected) {
       expect(readFileSync(join(VFS_EXAMPLE_ROOT, path), 'utf8'), path).toBe(content)

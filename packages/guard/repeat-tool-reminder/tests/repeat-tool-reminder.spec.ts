@@ -22,6 +22,9 @@ const testToolSignal = new AbortController().signal
 
 /** Boot the core spine + the guard; the caller registers adapters and extra listeners. */
 async function harness(config: Config = {}): Promise<Context> {
+  // These cases describe the consecutive chain alone; the in-turn tally has its
+  // own suite below.
+  config = { repeatInTurnThresholds: [], ...config }
   const ctx = new Context()
   await mountAgentLoopTestDependencies(ctx)
   await ctx.plugin(AgentLoop, { agents: [] })
@@ -399,5 +402,89 @@ describe('config validation fails loud', () => {
     await expect(ctx.plugin(RepeatToolGuard, { argumentsPreviewChars: 0 })).rejects.toThrow(/argumentsPreviewChars/)
     const ctx2 = await spine()
     await expect(ctx2.plugin(RepeatToolGuard, { argumentsPreviewChars: 12.5 })).rejects.toThrow(/argumentsPreviewChars/)
+  })
+})
+
+describe('repeats within one turn', () => {
+  it('reminds when an identical call returns after unrelated work', async () => {
+    // The shape the consecutive chain cannot see: read A, read B, read A. The
+    // run never reaches 2 back to back, but the second read of A re-fetches
+    // content the conversation already holds.
+    const ctx = await harness({ repeatInTurnThresholds: [2] })
+    const adapter = new MockAdapter([
+      toolCallResponse('c1', 'probe', { path: 'a' }),
+      toolCallResponse('c2', 'other', {}),
+      toolCallResponse('c3', 'probe', { path: 'a' }),
+      textResponse('done'),
+    ])
+    ctx.llm.registerAdapter(['mock'], adapter)
+    const agent = await ctx.agentLoop.create(SessionId('turn-1'), { provider: 'mock', model: 'mock' })
+    agent.followup(createUserMessage({ content: [{ type: 'text', text: 'go' }], source: { kind: 'user' } }))
+    await waitForIdle(ctx, agent)
+
+    const found = reminders(agent)
+    expect(found).toHaveLength(1)
+    expect(found[0]!.text).toContain('already ran earlier in this turn')
+    expect(found[0]!.text).toContain('Reuse that result')
+    expect(found[0]!.source).toEqual(guardSource('probe', 2))
+  })
+
+  it('does not count a different argument set as the same call', async () => {
+    const ctx = await harness({ repeatInTurnThresholds: [2] })
+    const adapter = new MockAdapter([
+      toolCallResponse('c1', 'probe', { path: 'a' }),
+      toolCallResponse('c2', 'probe', { path: 'b' }),
+      textResponse('done'),
+    ])
+    ctx.llm.registerAdapter(['mock'], adapter)
+    const agent = await ctx.agentLoop.create(SessionId('turn-2'), { provider: 'mock', model: 'mock' })
+    agent.followup(createUserMessage({ content: [{ type: 'text', text: 'go' }], source: { kind: 'user' } }))
+    await waitForIdle(ctx, agent)
+
+    expect(reminders(agent)).toHaveLength(0)
+  })
+
+  it('escalates to the detailed text at the later in-turn threshold', async () => {
+    const ctx = await harness({ repeatInTurnThresholds: [2, 4] })
+    const adapter = new MockAdapter([
+      ...Array.from({ length: 4 }, (_, i) => toolCallResponse(`c${i}`, 'probe', { path: 'a' })),
+      textResponse('done'),
+    ])
+    ctx.llm.registerAdapter(['mock'], adapter)
+    const agent = await ctx.agentLoop.create(SessionId('turn-3'), { provider: 'mock', model: 'mock' })
+    agent.followup(createUserMessage({ content: [{ type: 'text', text: 'go' }], source: { kind: 'user' } }))
+    await waitForIdle(ctx, agent)
+
+    const found = reminders(agent).filter(entry => String(entry.text).includes('already ran earlier in this turn')
+      || String(entry.text).includes('calls_this_turn'))
+    expect(found).toHaveLength(2)
+    expect(found[0]!.text).toContain('already ran earlier in this turn')
+    expect(found[1]!.text).toContain('calls_this_turn: 4')
+    expect(found[1]!.text).toContain('- tool: probe')
+  })
+
+  it('clears the tally when a new user message starts a fresh turn', async () => {
+    const ctx = await harness({ repeatInTurnThresholds: [2] })
+    const adapter = new MockAdapter([
+      toolCallResponse('c1', 'probe', { path: 'a' }),
+      textResponse('done-1'),
+      toolCallResponse('c2', 'probe', { path: 'a' }),
+      textResponse('done-2'),
+    ])
+    ctx.llm.registerAdapter(['mock'], adapter)
+    const agent = await ctx.agentLoop.create(SessionId('turn-4'), { provider: 'mock', model: 'mock' })
+    agent.followup(createUserMessage({ content: [{ type: 'text', text: 'first' }], source: { kind: 'user' } }))
+    await waitForIdle(ctx, agent)
+    agent.followup(createUserMessage({ content: [{ type: 'text', text: 'second' }], source: { kind: 'user' } }))
+    await waitForIdle(ctx, agent)
+
+    expect(reminders(agent)).toHaveLength(0)
+  })
+
+  it('rejects duplicate or sub-2 in-turn thresholds', async () => {
+    // Load-time validation, so these go through the plugin's own apply(); the
+    // harness mounts it, which is what makes the rejection observable.
+    await expect(harness({ repeatInTurnThresholds: [2, 2] })).rejects.toThrow(/duplicates/)
+    await expect(harness({ repeatInTurnThresholds: [1] })).rejects.toThrow(/>= 2/)
   })
 })

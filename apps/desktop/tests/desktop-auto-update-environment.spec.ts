@@ -30,16 +30,21 @@ describe('desktop auto-update environment', () => {
     })
   })
 
-  it('selects the production URL for packages and bucket for uploads', () => {
+  it('requires a configured production origin instead of inheriting one', () => {
+    expect(() => resolveDesktopAutoUpdateConfig({
+      DSH_DESKTOP_AUTO_UPDATE_ENV: 'production',
+    }, 'win32', 'x64')).toThrow(/DOWNLOAD_PROD_ORIGIN/u)
     expect(resolveDesktopAutoUpdateConfig({
       DSH_DESKTOP_AUTO_UPDATE_ENV: 'production',
+      DOWNLOAD_PROD_ORIGIN: 'https://download.example.com',
     }, 'win32', 'x64')).toMatchObject({
       environment: 'production',
       target: 'win-x64',
-      publicUrl: 'https://download.deepseek.com/_/harness/desktop/stable/win-x64/',
+      publicUrl: 'https://download.example.com/_/harness/desktop/stable/win-x64/',
     })
     expect(resolveDesktopUploadConfig({
       DSH_DESKTOP_AUTO_UPDATE_ENV: 'production',
+      DOWNLOAD_PROD_ORIGIN: 'https://download.example.com',
       DOWNLOAD_PROD_COS_BUCKET: 'production-download-bucket',
     }, 'win32', 'x64')).toMatchObject({
       bucket: 'production-download-bucket',
@@ -59,6 +64,7 @@ describe('desktop auto-update environment', () => {
     }, 'darwin', 'arm64')).toThrow(/DOWNLOAD_TEST_COS_BUCKET/u)
     expect(() => resolveDesktopUploadConfig({
       DSH_DESKTOP_AUTO_UPDATE_ENV: 'production',
+      DOWNLOAD_PROD_ORIGIN: 'https://download.example.com',
     }, 'win32', 'x64')).toThrow(/DOWNLOAD_PROD_COS_BUCKET/u)
   })
 

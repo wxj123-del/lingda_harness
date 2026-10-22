@@ -463,7 +463,13 @@ function clientConfig(id: string, entry: string): UserConfig {
     // node conditions; the node file picks its flavor with a top-level await
     // a CJS bundle cannot carry) resolve their static flavor matching the
     // NODE_ENV the defines below bake in.
+    // `platform` is restated because tsdown forces `platform: 'node'` for every
+    // CJS output (build: `format === "cjs" ? "node" : platform`) and user
+    // inputOptions override that default. Without it a dependency's `browser`
+    // export condition is ignored and its Node entry inlines `require("fs")`
+    // into the browser bundle, which throws when the bundle's factory runs.
     inputOptions: {
+      platform: 'browser',
       resolve: {
         conditionNames: [
           (process.env.NODE_ENV ?? 'production') === 'development' ? 'development' : 'production',

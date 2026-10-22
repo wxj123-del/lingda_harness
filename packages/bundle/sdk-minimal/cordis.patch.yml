@@ -41,7 +41,9 @@
     - id: sandbox-policy
       name: '@deepseek-ai/dsh-sandbox-policy'
       config:
-        mode: danger-full-access
+        # Keep the standalone SDK confined by default. Full access is an
+        # explicit deployment opt-in through DSH_PERMISSION_MODE.
+        mode: !!js process.env.DSH_PERMISSION_MODE ?? 'workspace-write'
         workspaceRoot: !!js process.cwd()
 
     - id: subprocess

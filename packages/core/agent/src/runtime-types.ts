@@ -344,6 +344,7 @@ declare module '@deepseek-ai/cordis' {
      * @param payload.step - the step whose request is being built.
      * @param payload.messages - the durable message snapshot before bounding.
      * @param payload.signal - the current turn's cancellation signal.
+     * Scope-filtered dispatch (`@deepseek-ai/dsh-scope`): agent-scoped listeners receive only that agent.
      * @mode waterfall
      */
     'agent/request-context'(this: Scoped<Agent>, payload: { agent: Agent; turn: number; step: number; messages: Message[]; signal: AbortSignal }, next: () => Promise<Message[]>): Promise<Message[]>

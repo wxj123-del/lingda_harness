@@ -39,6 +39,11 @@ const BASIC_COMPACT_CONFIG_KEYS: ReadonlySet<string> = new Set([
   ...POLICY_CONFIG_KEYS,
   'modelPolicies',
   'auto',
+  'sidecar',
+  'sidecarRoot',
+  'sidecarRetentionDays',
+  'fallbackContextWindow',
+  'sidecarSweepIntervalMs',
 ])
 
 /** Complete exact-target override key set. */
@@ -70,6 +75,25 @@ export function resolveConfig(config: BasicCompactionConfig = {}): ResolvedConfi
   if (config.auto !== undefined && typeof config.auto !== 'boolean') {
     throw new Error('BasicCompactionConfig: auto must be a boolean')
   }
+  if (config.sidecar !== undefined && typeof config.sidecar !== 'boolean') {
+    throw new Error('BasicCompactionConfig: sidecar must be a boolean')
+  }
+  if (config.sidecarRoot !== undefined
+    && (typeof config.sidecarRoot !== 'string' || config.sidecarRoot.trim().length === 0)) {
+    throw new Error('BasicCompactionConfig: sidecarRoot must be a non-empty string')
+  }
+  if (config.sidecarRetentionDays !== undefined
+    && (!Number.isSafeInteger(config.sidecarRetentionDays) || config.sidecarRetentionDays < 0)) {
+    throw new Error('BasicCompactionConfig: sidecarRetentionDays must be a non-negative safe integer')
+  }
+  if (config.sidecarSweepIntervalMs !== undefined
+    && (!Number.isSafeInteger(config.sidecarSweepIntervalMs) || config.sidecarSweepIntervalMs < 0)) {
+    throw new Error('BasicCompactionConfig: sidecarSweepIntervalMs must be a non-negative safe integer')
+  }
+  if (config.fallbackContextWindow !== undefined
+    && (!Number.isSafeInteger(config.fallbackContextWindow) || config.fallbackContextWindow < 0)) {
+    throw new Error('BasicCompactionConfig: fallbackContextWindow must be a non-negative safe integer')
+  }
 
   const thresholdRatio = config.thresholdRatio ?? DEFAULT_THRESHOLD_RATIO
   const retention = resolveRetention(config, { retainRatio: DEFAULT_RETAIN_RATIO })
@@ -93,6 +117,11 @@ export function resolveConfig(config: BasicCompactionConfig = {}): ResolvedConfi
     maxOverflowRetries: config.maxOverflowRetries ?? 1,
     modelPolicies,
     auto: config.auto ?? true,
+    sidecar: config.sidecar ?? false,
+    ...config.sidecarRoot === undefined ? {} : { sidecarRoot: config.sidecarRoot },
+    sidecarRetentionDays: config.sidecarRetentionDays ?? 30,
+    sidecarSweepIntervalMs: config.sidecarSweepIntervalMs ?? 3_600_000,
+    fallbackContextWindow: config.fallbackContextWindow ?? 100_000,
   })
 }
 

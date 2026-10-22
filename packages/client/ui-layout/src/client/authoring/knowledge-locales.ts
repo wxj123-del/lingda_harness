@@ -1,5 +1,10 @@
 export const knowledgeZh = {
   'kb.new': '新建知识库',
+  'kb.aiGenerate': '对话生成知识库',
+  'kb.aiTitle': '用对话搭建知识库',
+  'kb.aiIntro': '说明你想要的知识库范围。可以在下方填入来源网址，我会抓取正文并整理成文档；也可以直接描述主题。',
+  'kb.aiPlaceholder': '例如：整理一份前端代码规范知识库，覆盖命名、目录结构和组件约定',
+  'kb.aiSources': '来源网址（可选，最多 8 个，用逗号分隔）',
   'kb.back': '返回知识库',
   'kb.empty': '暂无知识库',
   'kb.loading': '正在加载知识库',
@@ -69,6 +74,11 @@ export const knowledgeZh = {
 } as const
 export const knowledgeEn: Record<keyof typeof knowledgeZh, string> = {
   'kb.new': 'New library',
+  'kb.aiGenerate': 'Generate from chat',
+  'kb.aiTitle': 'Build a knowledge base by chat',
+  'kb.aiIntro': 'Describe the library you want. Add source URLs below and I will fetch the pages into documents, or just describe the topic.',
+  'kb.aiPlaceholder': 'For example: a frontend code-standard library covering naming, directory layout and component conventions',
+  'kb.aiSources': 'Source URLs (optional, up to 8, comma separated)',
   'kb.back': 'Back to libraries',
   'kb.empty': 'No knowledge libraries',
   'kb.loading': 'Loading libraries',

@@ -40,6 +40,36 @@ export interface BasicCompactionConfig extends CompactionPolicyConfig {
   modelPolicies?: ModelCompactPolicyConfig[]
   /** Enable automatic step-boundary pressure and overflow-recovery listeners. Defaults to `true`. */
   auto?: boolean
+  /**
+   * Write every summary to a re-readable sidecar file and name its path inside
+   * the checkpoint. Defaults to `false`. A sidecar keeps the full summary
+   * recoverable after a later compaction folds it into a coarser one.
+   */
+  sidecar?: boolean
+  /**
+   * Root directory for sidecar files. Omitted uses a private (0700)
+   * per-process directory under the OS temp dir, mirroring the spill backend.
+   */
+  sidecarRoot?: string
+  /**
+   * Capacity assumed for a routed model whose adapter declares no context
+   * window. Without a value, pressure compaction cannot run at all for that
+   * model: the only remaining recovery is a provider-reported overflow, which
+   * some gateways never send before closing the connection. Defaults to
+   * `100000`; `0` disables the fallback and restores the strict requirement.
+   */
+  fallbackContextWindow?: number
+  /**
+   * Age in days past which a sidecar file is removed by the one startup sweep.
+   * Defaults to `30`; `0` disables sweeping. Only applies when `sidecar` is on
+   * and `sidecarRoot` is configured.
+   */
+  sidecarRetentionDays?: number
+  /**
+   * Interval for the periodic sidecar sweep, in milliseconds. Defaults to one
+   * hour; `0` runs only the single startup pass.
+   */
+  sidecarSweepIntervalMs?: number
 }
 
 /** Exactly one validated retention form. */
@@ -61,6 +91,11 @@ interface ResolvedPolicyFields {
 export type ResolvedConfig = ResolvedPolicyFields & ResolvedRetention & {
   readonly modelPolicies: readonly Readonly<ModelCompactPolicyConfig>[]
   readonly auto: boolean
+  readonly sidecar: boolean
+  readonly sidecarRoot?: string
+  readonly sidecarRetentionDays: number
+  readonly sidecarSweepIntervalMs: number
+  readonly fallbackContextWindow: number
 }
 
 /** Fully merged policy for one routed conversation target, before capacity scaling. */

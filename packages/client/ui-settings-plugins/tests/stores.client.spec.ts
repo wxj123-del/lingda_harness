@@ -3,9 +3,12 @@
  * call a save reaches, and what happens to drafts the Host did not accept.
  */
 
+import { Context } from '@deepseek-ai/cordis'
 import { describe, expect, it, vi } from 'vitest'
 import type { SettingsPathOpView } from '@deepseek-ai/dsh-api-remotes/client'
-import { RemoteError, stubSettingsScope, type StubSettingsScope } from '@deepseek-ai/dsh-client-test-runtime'
+import {
+  RemoteError, TestRemote, stubSettingsScope, type StubSettingsScope,
+} from '@deepseek-ai/dsh-client-test-runtime'
 import { CardForm, booleanField, numberField, textField } from '../src/client/card-form.ts'
 import { AgentLoopCardController, type AgentLoopSettings } from '../src/client/agent-loop-card-controller.ts'
 import { BashCardController, type BashSettings } from '../src/client/bash-card-controller.ts'
@@ -19,6 +22,9 @@ import {
   type SubagentModelSelectionSettings,
 } from '../src/client/subagent-model-selection-card-controller.ts'
 import { WebSearchCardController, type WebSearchSettings } from '../src/client/web-search-card-controller.ts'
+import {
+  PHONE_ACCESS_TOKEN_REF, PhoneAccessCardController,
+} from '../src/client/phone-access-card-controller.ts'
 
 /** Make the stub behave like a Host that accepts every write. */
 function acceptWrites<T>(host: StubSettingsScope<T>): void {
@@ -86,6 +92,75 @@ function deferred<T>() {
   })
   return { promise, resolve, reject }
 }
+
+describe('PhoneAccessCardController', () => {
+  it('settles startup when the optional Phone Access Remote is absent', async () => {
+    const ctx = new Context()
+    const describeCredentials = vi.fn(() => Promise.resolve({
+      ok: true as const,
+      value: { [PHONE_ACCESS_TOKEN_REF]: { configured: false, writable: true } },
+    }))
+    new TestRemote(ctx, {
+      credentials: { describe: describeCredentials, set: vi.fn() },
+    })
+    const host = stubSettingsScope<Record<string, never>>()
+    const subject = new PhoneAccessCardController(host.scope, ctx)
+
+    await vi.waitFor(() => {
+      expect(describeCredentials).toHaveBeenCalledWith([PHONE_ACCESS_TOKEN_REF])
+      expect(subject.inject().hooks.phoneAccessCard.getSnapshot()).toMatchObject({
+        tokenConfigured: false,
+        generating: false,
+        tunnel: undefined,
+      })
+    })
+  })
+
+  it('clears generating after a rejected request and allows a retry', async () => {
+    const ctx = new Context()
+    const describeCredentials = vi.fn(() => Promise.resolve({
+      ok: true as const,
+      value: { [PHONE_ACCESS_TOKEN_REF]: { configured: true, writable: true } },
+    }))
+    let attempts = 0
+    const generate = vi.fn(() => {
+      attempts += 1
+      return attempts === 1
+        ? Promise.reject(new Error('tunnel unavailable'))
+        : Promise.resolve({
+          ok: true as const,
+          value: { scanUrl: 'https://tunnel.test/?token=one', restartCommand: 'dsh web --trusted-host tunnel.test' },
+        })
+    })
+    new TestRemote(ctx, {
+      credentials: { describe: describeCredentials, set: vi.fn() },
+      phoneAccess: {
+        current: vi.fn(() => Promise.resolve({ ok: false as const, error: new RemoteError('gateway/internal', 'none', {}) })),
+        generate,
+      },
+    })
+    const host = stubSettingsScope<Record<string, never>>()
+    const subject = new PhoneAccessCardController(host.scope, ctx)
+    const state = () => subject.inject().hooks.phoneAccessCard.getSnapshot()
+
+    await vi.waitFor(() => { expect(state().tokenConfigured).toBe(true) })
+    subject.inject().generate()
+    await vi.waitFor(() => {
+      expect(generate).toHaveBeenCalledTimes(1)
+      expect(state()).toMatchObject({ generating: false, failure: 'tunnel unavailable' })
+    })
+
+    subject.inject().generate()
+    await vi.waitFor(() => {
+      expect(generate).toHaveBeenCalledTimes(2)
+      expect(state()).toMatchObject({
+        generating: false,
+        failure: undefined,
+        tunnel: { scanUrl: 'https://tunnel.test/?token=one' },
+      })
+    })
+  })
+})
 
 describe('CardForm', () => {
   it('accepts and formats boolean settings', () => {

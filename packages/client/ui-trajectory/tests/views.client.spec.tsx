@@ -397,6 +397,7 @@ function mount(fixture: Awaited<ReturnType<typeof bench>>) {
         {...standardProps}
         SessionProvider={({ children }) => children}
         useStore={bindSnapshotSelector(conversation)}
+        useShowViewTabs={selector => selector(true)}
         actions={conversation.actions}
         renderSlot={() => null}
         open={vi.fn()}
@@ -407,6 +408,7 @@ function mount(fixture: Awaited<ReturnType<typeof bench>>) {
         {...standardProps}
         SessionProvider={({ children }) => children}
         useStore={bindSnapshotSelector(conversation)}
+        useShowViewTabs={selector => selector(true)}
         actions={conversation.actions}
         renderSlot={renderSlot}
         bindDraftMirror={() => () => {}}

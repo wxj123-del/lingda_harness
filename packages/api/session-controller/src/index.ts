@@ -11,7 +11,7 @@ import type { SessionInspection } from '@deepseek-ai/dsh-session-persistence'
 import type { SessionObservation } from '@deepseek-ai/dsh-session-query'
 import { snapshotJsonValue, type JsonValue } from '@deepseek-ai/dsh-util-values'
 import type {
-  WorkflowEngine, WorkflowNodeEndInfo, WorkflowNodeStartInfo, WorkflowResult, WorkflowRun, WorkflowRunId,
+  WorkflowNodeEndInfo, WorkflowNodeStartInfo, WorkflowResult, WorkflowRun, WorkflowRunId,
 } from '@deepseek-ai/dsh-workflow'
 import { Remote, RemoteError, TypertRemoteService } from '@deepseek-ai/dsh-typert-protocol'
 import {
@@ -31,6 +31,8 @@ import { SessionSkillCatalog } from './skill-catalog.ts'
 import { SessionMediaReferences } from './media-references.ts'
 import type {
   ModelCatalog,
+  SessionOptimizePromptRequest,
+  SessionOptimizePromptValue,
   SessionAttachmentRequest,
   SessionAttachmentValue,
   SessionCancelRequest,
@@ -209,7 +211,7 @@ function workflowViewsFromEvents(events: readonly { readonly type: string; reado
       const view = latest.get(runId)
       if (view === undefined) {
         const pending = pendingAudit.get(runId) ?? []
-        pendingAudit.set(runId, applyWorkflowAudit(pending, audit).slice() as WorkflowNodeAudit[])
+        pendingAudit.set(runId, applyWorkflowAudit(pending, audit).slice())
       } else {
         latest.set(runId, { ...view, audit: applyWorkflowAudit(view.audit ?? [], audit) })
       }
@@ -219,7 +221,7 @@ function workflowViewsFromEvents(events: readonly { readonly type: string; reado
     const view = event.data as Partial<WorkflowRemoteRunView>
     const agentsStarted = view.agentsStarted
     if (typeof view.runId !== 'string' || typeof view.workflowId !== 'string' || typeof view.name !== 'string'
-      || view.source !== 'visual-editor' || !Number.isFinite(view.startedAt)
+      || (view.source !== 'visual-editor' && view.source !== 'schedule') || !Number.isFinite(view.startedAt)
       || typeof agentsStarted !== 'number' || !Number.isSafeInteger(agentsStarted) || agentsStarted < 0
       || (view.workflowVersion !== undefined && (!Number.isSafeInteger(view.workflowVersion) || view.workflowVersion < 1 || view.workflowVersion > 1_000_000_000))
       || !['running', 'completed', 'cancelled', 'error'].includes(view.status as string)
@@ -351,7 +353,11 @@ export class SessionController extends TypertRemoteService {
     }, 'session-controller.workflow-runs')
   }
 
-  /** Start one editor-owned workflow without routing through a model prompt. */
+  /**
+   * Start one editor-owned workflow without routing through a model prompt.
+   * @param request - Validated workflow script, metadata, and session target.
+   * @returns The newly allocated run id and start timestamp.
+   */
   @Remote('workflowStart')
   async workflowStart(request: WorkflowRemoteStartRequest): Promise<WorkflowRemoteStartValue> {
     if (request.workflowId.trim() === '' || request.workflowId.length > WORKFLOW_MAX_NAME_LENGTH || !/^[A-Za-z0-9_.:-]+$/.test(request.workflowId)) {
@@ -398,7 +404,7 @@ export class SessionController extends TypertRemoteService {
     }
     const found = await this.agents.resolveAgent(request.sessionId)
     if ('error' in found) throw found.error
-    const engine = found.agent.ctx.get('workflowEngine') as WorkflowEngine | undefined
+    const engine = found.agent.ctx.get('workflowEngine')
     if (engine === undefined) throw new RemoteError('gateway/internal', 'workflow engine is unavailable', {})
     const run = engine.start({
       script: request.script,
@@ -421,7 +427,7 @@ export class SessionController extends TypertRemoteService {
         status: 'running',
         startedAt: Date.now(),
         agentsStarted: 0,
-        source: 'visual-editor',
+        source: request.source ?? 'visual-editor',
         audit: [],
         ...(argsBytes === 0 ? {} : { inputBytes: argsBytes }),
         ...(request.timeoutMs === undefined ? {} : { timeoutMs: request.timeoutMs }),
@@ -440,7 +446,11 @@ export class SessionController extends TypertRemoteService {
     return { runId: run.id, status: 'running', startedAt: record.view.startedAt }
   }
 
-  /** Request cancellation of one editor-owned workflow run. */
+  /**
+   * Request cancellation of one editor-owned workflow run.
+   * @param request - Session and run identity to cancel.
+   * @returns The run identity and its cancelling status.
+   */
   @Remote('workflowCancel')
   async workflowCancel(request: WorkflowRemoteRunRequest): Promise<{ runId: WorkflowRunId; status: 'cancelling' }> {
     const record = this.workflowRuns.get(String(request.runId))
@@ -458,7 +468,11 @@ export class SessionController extends TypertRemoteService {
     return { runId: record.run.id, status: 'cancelling' }
   }
 
-  /** Read one redacted workflow execution state. */
+  /**
+   * Read one redacted workflow execution state.
+   * @param request - Session and run identity to inspect.
+   * @returns The live or persisted run view.
+   */
   @Remote('workflowStatus')
   async workflowStatus(request: WorkflowRemoteRunRequest): Promise<WorkflowRemoteRunView> {
     const record = this.workflowRuns.get(String(request.runId))
@@ -469,7 +483,12 @@ export class SessionController extends TypertRemoteService {
     throw new RemoteError('gateway/bad-request', `workflow run "${String(request.runId)}" was not found`, {})
   }
 
-  /** List recent workflow runs for the current editor/session. */
+  /**
+   * List recent workflow runs for the current editor/session.
+   * @param sessionId - Session whose runs are listed.
+   * @param request - Optional workflow filter and result limit.
+   * @returns Recent live and persisted run views.
+   */
   @Remote('workflowList')
   async workflowList(sessionId: SessionId, request: WorkflowRemoteRunsRequest): Promise<WorkflowRemoteRunListValue> {
     const limit = request.limit === undefined ? 20 : Math.max(1, Math.min(100, Math.floor(request.limit)))
@@ -660,6 +679,20 @@ export class SessionController extends TypertRemoteService {
   @Remote('selectModel')
   selectModel(request: SessionSelectModelRequest): Promise<SessionSelectModelValue> {
     return this.commands.selectModel(request)
+  }
+
+  /**
+   * Rewrite a composer draft with the Session's selected model.
+   * @param request - Session identity, draft text, and optimization posture.
+   * @param signal - cancellation for the auxiliary model call.
+   * @returns the optimized prompt without changing Session history.
+   */
+  @Remote('optimizePrompt')
+  optimizePrompt(
+    request: SessionOptimizePromptRequest,
+    signal: AbortSignal,
+  ): Promise<SessionOptimizePromptValue> {
+    return this.commands.optimizePrompt(request, signal)
   }
 
   /**

@@ -157,14 +157,35 @@
 }
 
 /* figma Tab_Group 34:11441: 35px strip, gap 36, pad-left 8, tabs bottom-aligned.
-   Positioned above the header's own paint, so the active bar covers the rule. */
+   Positioned above the header's own paint, so the active bar covers the rule.
+   The strip holds the inline tab list plus the overflow trigger at its end. */
 .tabs {
   position: relative;
   z-index: 1;
   display: flex;
-  gap: 36px;
+  align-items: flex-end;
+  gap: 12px;
   margin-top: 10px;
   padding-left: 8px;
+}
+
+/* The inline tabs keep the figma gap between them; the overflow trigger is a
+   separate cluster so its tighter spacing does not change the tab rhythm. */
+.tablist {
+  display: flex;
+  gap: 36px;
+  min-width: 0;
+}
+
+.overflowTab {
+  display: inline-flex;
+  align-items: center;
+  padding-bottom: 11px;
+  color: var(--dsw-alias-label-tertiary);
+}
+
+.overflowTab:hover {
+  color: var(--dsw-alias-label-primary);
 }
 
 /* figma .Tab 34:11442: 13/16 text (figma wt510, rendered 500). The 2px bar

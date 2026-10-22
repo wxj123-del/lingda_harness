@@ -18,7 +18,9 @@
   backdrop-filter: var(--dsw-mask-blur);
 }
 
-/* Dialog card: r24, elevation-prominent, layer-2 fill, pb 24. */
+/* Dialog card: r24, elevation-prominent, dialog fill, pb 24. The fill is the
+   skin-independent dialog surface (not layer-2), so a translucent page skin
+   cannot bleed through the card's own copy. */
 .dialog {
   position: relative;
   z-index: 1;
@@ -30,7 +32,7 @@
   overflow: hidden;
   border: 0;
   border-radius: 24px;
-  background: var(--dsw-alias-bg-layer-2);
+  background: var(--dsw-alias-bg-dialog);
   box-shadow: var(--dsw-elevation-prominent);
 }
 

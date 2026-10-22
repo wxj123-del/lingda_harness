@@ -53,7 +53,7 @@ export interface Config {
   includeDefaultRoots?: boolean
   /** Whether the shared `<agentsHome>/skills` root is included. */
   includeAgentsHome?: boolean
-  /** DeepSeek Harness config root. Defaults to `$DSH_HOME` or `~/.dsh`. */
+  /** Lingda Harness config root. Defaults to `$DSH_HOME` or `~/.dsh`. */
   dshHome?: string
   /** Shared agent config root. Defaults to `$DSH_AGENTS_HOME` or `~/.agents`. */
   agentsHome?: string

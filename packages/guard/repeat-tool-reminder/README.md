@@ -39,6 +39,7 @@ When you want to change when reminders fire or which tools they cover, mount the
 - name: '@deepseek-ai/dsh-repeat-tool-reminder'
   config:
     thresholds: [3, 5, 8]        # remind at 3, 5, and 8 consecutive repeats
+    repeatInTurnThresholds: [2, 4] # remind when one call repeats across the turn
     include: []                  # track every tool; list patterns to track only some
     exclude: [todo_write]        # never track these tools
     argumentsPreviewChars: 500   # cap on arguments shown in the detailed reminder
@@ -47,11 +48,14 @@ When you want to change when reminders fire or which tools they cover, mount the
 | Field | Default | Meaning |
 |---|---|---|
 | `thresholds` | `[3, 5, 8]` | Repeat counts that trigger a reminder |
+| `repeatInTurnThresholds` | `[2, 4]` | Repeat counts for the SAME call anywhere in one turn, not necessarily back to back; empty disables |
 | `include` | `[]` | Only these tools are tracked; empty means every tool |
 | `exclude` | `[]` | These tools are never tracked; calls to them neither count nor reset |
 | `argumentsPreviewChars` | `500` | How many characters of the repeated arguments the detailed reminder shows |
 
 Invalid configuration fails at startup with a clear error — an empty `thresholds` list, a repeat count below 2, or a duplicate — never a silent change of behavior. The generated [configuration catalog](../../../docs/config-catalog.md#deepseek-aidsh-repeat-tool-reminder) documents every accepted value.
+
+A long task rarely repeats one call back to back; it re-reads the same path ten steps later, after unrelated work. `repeatInTurnThresholds` covers that shape: it counts every tracked identity within the turn and reminds at 2 and 4 by default, because a call seen twice already means the first result was fetched again. The tally clears on each new user message, so repetition across turns is not treated as a loop.
 
 ### What you get
 

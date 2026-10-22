@@ -1360,6 +1360,7 @@ describe('ChatView', () => {
     })
     const view = render(<h.ChatView {...h.props} />)
     const toggle = view.getByRole('button', { name: '1 次工具调用 · 1 条消息 · 1 个 subagent' })
+    expect(toggle.textContent).toContain('用时 4秒')
     expect(toggle.getAttribute('aria-expanded')).toBe('false')
     expect(toggle.getAttribute('data-turn-process-tool-calls')).toBe('1')
     expect(toggle.getAttribute('data-turn-process-messages')).toBe('1')
@@ -1544,8 +1545,12 @@ describe('ChatView', () => {
       running: true,
     })
     const view = render(<h.ChatView {...h.props} />)
-    expect(turnProcessControl(view.container)).toBeNull()
     const processRow = view.getByText('inspect').closest('[data-chat-flow-kind="assistant-step"]') as HTMLElement
+    const liveToggle = turnProcessControl(view.container)!
+    expect(liveToggle.getAttribute('aria-expanded')).toBe('true')
+    fireEvent.click(liveToggle)
+    expect(liveToggle.getAttribute('aria-expanded')).toBe('false')
+    expect(processRow.getAttribute('hidden')).toBe('until-found')
 
     act(() => {
       h.set({
@@ -1573,7 +1578,7 @@ describe('ChatView', () => {
     expect(processRow.getAttribute('hidden')).toBe('until-found')
 
     act(() => { h.setTranscriptView('normal') })
-    expect(turnProcessControl(view.container)).toBeNull()
+    expect(turnProcessControl(view.container)?.getAttribute('aria-expanded')).toBe('true')
     expect(processRow.getAttribute('hidden')).toBeNull()
 
     act(() => { h.setTranscriptView('compact') })
@@ -1679,7 +1684,7 @@ describe('ChatView', () => {
     expect(contextRow?.getAttribute('hidden')).toBe('until-found')
   })
 
-  it('keeps a foldable closed Turn fully visible while history is partial', () => {
+  it('folds a visible Turn even while history is partial', () => {
     const h = makeHarness({
       nodes: [
         user(1, 'question'),
@@ -1693,9 +1698,9 @@ describe('ChatView', () => {
     const view = render(<h.ChatView {...h.props} />)
     const contextRow = view.container.querySelector<HTMLElement>('[data-chat-flow-kind="context"]')
 
-    expect(turnProcessControl(view.container)).toBeNull()
-    expect(contextRow?.getAttribute('hidden')).toBeNull()
-    expect(contextRow?.hasAttribute('data-turn-process-member')).toBe(false)
+    expect(turnProcessControl(view.container)?.getAttribute('aria-expanded')).toBe('false')
+    expect(contextRow?.getAttribute('hidden')).toBe('until-found')
+    expect(contextRow?.hasAttribute('data-turn-process-member')).toBe(true)
 
     act(() => { h.set({ hasMore: false }) })
     const toggle = turnProcessControl(view.container)!

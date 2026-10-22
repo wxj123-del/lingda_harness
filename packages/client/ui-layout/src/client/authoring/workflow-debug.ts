@@ -21,7 +21,7 @@ export interface WorkflowRunView {
   error?: string
   value?: unknown
   timedOut?: boolean
-  source?: 'visual-editor'
+  source?: 'visual-editor' | 'schedule'
   inputBytes?: number
   timeoutMs?: number
   audit?: readonly WorkflowNodeAuditView[]
@@ -64,6 +64,45 @@ export interface WorkflowRunControls {
   readonly cancel?: (runId: string) => Promise<void>
   readonly status?: (runId: string) => Promise<WorkflowRunView | undefined>
   readonly list?: (workflowId: string) => Promise<readonly WorkflowRunView[]>
+}
+
+/** Timing and input selected when creating one published workflow trigger. */
+export interface WorkflowScheduleInput {
+  readonly kind: 'at' | 'every'
+  readonly at?: string
+  readonly everySeconds?: number
+  readonly input: WorkflowRunInput
+}
+
+/** Active workflow trigger projected from the owning Session's durable log. */
+export interface WorkflowScheduleView {
+  readonly id: string
+  readonly kind: 'at' | 'every'
+  readonly scheduledAt: string
+  readonly everySeconds?: number
+  readonly workflowVersion: number
+}
+
+/** Direct Host controls for published workflow triggers. */
+export interface WorkflowScheduleControls {
+  readonly create: (item: import('../../authoring-settings.ts').AuthoringItem, input: WorkflowScheduleInput) => Promise<WorkflowScheduleView>
+  readonly list: (workflowId: string) => Promise<readonly WorkflowScheduleView[]>
+  readonly delete: (id: string) => Promise<void>
+}
+
+/** Redacted Host credential metadata exposed to the workflow editor. */
+export interface WorkflowCredentialInfo {
+  readonly configured: boolean
+  readonly source?: string
+  readonly writable: boolean
+}
+
+/** Write-only credential operations used by tool and HTTP workflow nodes. */
+export interface WorkflowCredentialControls {
+  readonly describe: (ref: string) => Promise<WorkflowCredentialInfo>
+  readonly set: (ref: string, value: string) => Promise<void>
+  readonly unset: (ref: string) => Promise<void>
+  readonly subscribe?: (listener: (ref: string) => void) => () => void
 }
 
 export type WorkflowDebugListener = (event: WorkflowDebugEvent) => void

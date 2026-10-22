@@ -157,18 +157,18 @@ describe('web-app runtime glue', () => {
       lanAddresses: ['192.168.1.5'],
       trustedHosts: ['192.168.1.5', 'lab.internal'],
     })
-    expect(log).toHaveBeenCalledWith('dsh web: http://127.0.0.1:4567/?token=test-token (LAN: http://192.168.1.5:4567/?token=test-token)')
-    expect(log).toHaveBeenCalledWith('dsh web: phone/LAN access is enabled; share the LAN URL only on a trusted network')
-    expect(log).toHaveBeenCalledWith('dsh web: opening the default browser; pass --no-open to disable')
+    expect(log).toHaveBeenCalledWith('lingda web: http://127.0.0.1:4567/?token=test-token (LAN: http://192.168.1.5:4567/?token=test-token)')
+    expect(log).toHaveBeenCalledWith('lingda web: phone/LAN access is enabled; share the LAN URL only on a trusted network')
+    expect(log).toHaveBeenCalledWith('lingda web: opening the default browser; pass --no-open to disable')
     expect(openBrowser).toHaveBeenCalledWith('http://127.0.0.1:4567/?token=test-token')
     expect(lifecycle).toEqual([
-      'dsh web: http://127.0.0.1:4567/?token=test-token (LAN: http://192.168.1.5:4567/?token=test-token)',
-      'dsh web: phone/LAN access is enabled; share the LAN URL only on a trusted network',
-      'dsh web: opening the default browser; pass --no-open to disable',
+      'lingda web: http://127.0.0.1:4567/?token=test-token (LAN: http://192.168.1.5:4567/?token=test-token)',
+      'lingda web: phone/LAN access is enabled; share the LAN URL only on a trusted network',
+      'lingda web: opening the default browser; pass --no-open to disable',
       'open:http://127.0.0.1:4567/?token=test-token',
     ])
     const assembly = await ctx.systemPrompt.assemble()
-    expect(assembly.sections.find(entry => entry.name === 'harness:source')?.text).toContain('DeepSeek Harness implementation checkout')
+    expect(assembly.sections.find(entry => entry.name === 'harness:source')?.text).toContain('Lingda Harness implementation checkout')
     const section = assembly.sections.find(entry => entry.name === 'app:web-surface')
     expect(section?.text).toContain('http://127.0.0.1:4567')
     // The single update contract: the receiver is always on; no-refresh
@@ -209,8 +209,8 @@ describe('web-app runtime glue', () => {
     const log = vi.spyOn(console, 'log').mockImplementation(() => {})
     apply(ctx, new Config({ openBrowser: false, printUrl: true, surfaceContext: false, trustedHosts: [] }))
     await new Promise(resolve => setTimeout(resolve, 0))
-    expect(log).toHaveBeenCalledWith('dsh web: http://127.0.0.1:4567/?token=test-token')
-    expect(log).toHaveBeenCalledWith('dsh web: phone/LAN access is enabled, but no active LAN IPv4 address was found')
+    expect(log).toHaveBeenCalledWith('lingda web: http://127.0.0.1:4567/?token=test-token')
+    expect(log).toHaveBeenCalledWith('lingda web: phone/LAN access is enabled, but no active LAN IPv4 address was found')
     await ctx.fiber.dispose()
   })
 
@@ -222,7 +222,7 @@ describe('web-app runtime glue', () => {
     const log = vi.spyOn(console, 'log').mockImplementation(() => {})
     apply(ctx, new Config({ openBrowser: false, printUrl: true, surfaceContext: false, trustedHosts: [] }))
     await new Promise(resolve => setTimeout(resolve, 0))
-    expect(log).toHaveBeenCalledWith('dsh web: phone/LAN access is enabled; share the LAN URL only on a trusted network')
+    expect(log).toHaveBeenCalledWith('lingda web: phone/LAN access is enabled; share the LAN URL only on a trusted network')
     await ctx.fiber.dispose()
   })
 
@@ -256,7 +256,7 @@ describe('web-app runtime glue', () => {
     const log = vi.spyOn(console, 'log').mockImplementation(() => {})
     apply(ctx, new Config({ openBrowser: false, printUrl: true, surfaceContext: true, trustedHosts: [] }))
     await new Promise(resolve => setTimeout(resolve, 0))
-    expect(log).toHaveBeenCalledWith('dsh web: http://127.0.0.1:4567/?token=test-token')
+    expect(log).toHaveBeenCalledWith('lingda web: http://127.0.0.1:4567/?token=test-token')
     await ctx.fiber.dispose()
   })
 
@@ -292,7 +292,7 @@ describe('web-app runtime glue', () => {
     internals.openBrowser = openBrowser
     apply(ctx, new Config({ openBrowser: true, printUrl: true, surfaceContext: false, trustedHosts: [] }))
     await new Promise(resolve => setTimeout(resolve, 0))
-    expect(log).toHaveBeenCalledWith('dsh web: http://127.0.0.1:4567/?token=test-token')
+    expect(log).toHaveBeenCalledWith('lingda web: http://127.0.0.1:4567/?token=test-token')
     expect(openBrowser).not.toHaveBeenCalled()
     await ctx.fiber.dispose()
   })
@@ -316,7 +316,7 @@ describe('web-app runtime glue', () => {
     expect(openBrowser).not.toHaveBeenCalled()
     release!()
     await new Promise(resolve => setTimeout(resolve, 0))
-    expect(log).toHaveBeenCalledWith('dsh web: http://127.0.0.1:4567/?token=test-token')
+    expect(log).toHaveBeenCalledWith('lingda web: http://127.0.0.1:4567/?token=test-token')
     expect(openBrowser).toHaveBeenCalledWith('http://127.0.0.1:4567/?token=test-token')
     await settled.fiber.dispose()
 
@@ -382,7 +382,7 @@ describe('web-app runtime glue', () => {
     await vi.waitFor(() => { expect(audit).toHaveBeenCalledOnce() })
     await Promise.allSettled(audit.mock.results.map(result => result.value as Promise<void>))
     if (announces) {
-      expect(log).toHaveBeenCalledWith('dsh web: http://127.0.0.1:4567/?token=test-token')
+      expect(log).toHaveBeenCalledWith('lingda web: http://127.0.0.1:4567/?token=test-token')
       expect(openBrowser).toHaveBeenCalledWith('http://127.0.0.1:4567/?token=test-token')
     } else {
       expect(log).not.toHaveBeenCalled()
@@ -427,7 +427,7 @@ describe('web-app runtime glue', () => {
     const diagnostic = vi.spyOn(console, 'error').mockImplementation(() => {})
     apply(ctx, new Config({ openBrowser: true, printUrl: false, surfaceContext: false, trustedHosts: [] }))
     await new Promise(resolve => setTimeout(resolve, 0))
-    expect(log).toHaveBeenCalledWith('dsh web: opening the default browser; pass --no-open to disable')
+    expect(log).toHaveBeenCalledWith('lingda web: opening the default browser; pass --no-open to disable')
     expect(diagnostic).toHaveBeenCalledWith(
       `web-app: could not open the default browser because ${reason}; use the dsh web URL printed at startup`,
     )

@@ -69,6 +69,10 @@ describe('dsh-sdk-minimal bundle', () => {
       defaultContextWindow: { __jsExpr: 'Number(process.env.DSH_CONTEXT_WINDOW ?? 1000000)' },
       streamIdleTimeoutMs: 172800000,
     })
+    expect(rows.find(row => row.id === 'sandbox-policy')?.config).toEqual({
+      mode: { __jsExpr: "process.env.DSH_PERMISSION_MODE ?? 'workspace-write'" },
+      workspaceRoot: { __jsExpr: 'process.cwd()' },
+    })
     expect(rows.find(row => row.id === 'system-prompt')?.config).toEqual({
       includeHarnessIdentity: false,
       includeRuntimeContext: false,

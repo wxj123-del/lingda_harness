@@ -2,11 +2,11 @@
 
 [English](README.md) | 中文
 
-Lingda Harness（灵搭）是由 [XJ-Cyber](https://atomgit.com/XJ-Cyber) 维护的开源个人 AI 工作台，将对话、可复用的 Skill、工作流和可扩展工具整合到一个 Web 界面中。
+Lingda Harness（灵搭）是由 [XJ-Cyber](https://gitcode.com/XJ-Cyber) 维护的开源个人 AI 工作台，将对话、可复用的 Skill、工作流和可扩展工具整合到一个 Web 界面中。
 
 项目基于 [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness) 及其 [Cordis](https://github.com/cordiverse/cordis) 插件架构，扩展了内容编写页面、插件分类，以及可选的媒体生成和 Token 分析工具。
 
-[项目仓库](https://atomgit.com/XJ-Cyber/lingda-harness) | [使用文档](docs/user/index.zh.md) | [反馈问题](https://atomgit.com/XJ-Cyber/lingda-harness/issues)
+[项目仓库](https://gitcode.com/XJ-Cyber/lingda-harness) | [使用文档](docs/user/index.zh.md) | [反馈问题](https://gitcode.com/XJ-Cyber/lingda-harness/issues)
 
 ## 功能
 
@@ -46,7 +46,7 @@ npx --registry=https://registry.npmjs.org/ lingda-harness@latest web
 如需基于仓库源码开发，还需按照 [package.json](package.json) 的要求安装 pnpm 11.7.0：
 
 ```sh
-git clone https://atomgit.com/XJ-Cyber/lingda-harness.git
+git clone https://gitcode.com/XJ-Cyber/lingda-harness.git
 cd lingda-harness
 pnpm install
 pnpm run build
@@ -57,7 +57,7 @@ pnpm run dsh web
 
 ### 更新
 
-对于源码 checkout，可以在**设置 → 通用设置 → 软件更新**中检查 `https://atomgit.com/XJ-Cyber/lingda-harness`，并从它的默认分支执行干净的快进更新。不需要手动配置 Git 远程。更新器会安装锁定依赖、重新构建生成产物并重启 Host。命令行流程仍然可用：
+对于源码 checkout，可以在**设置 → 通用设置 → 软件更新**中检查 `https://gitcode.com/XJ-Cyber/lingda-harness`，并从它的默认分支执行干净的快进更新。不需要手动配置 Git 远程。更新器会安装锁定依赖、重新构建生成产物并重启 Host。命令行流程仍然可用：
 
 ```sh
 git pull --ff-only
@@ -81,7 +81,7 @@ pnpm run build
 
 ## 反馈与贡献
 
-请通过[本仓库的 Issues](https://atomgit.com/XJ-Cyber/lingda-harness/issues)反馈问题和建议。欢迎提交 [Pull request](https://atomgit.com/XJ-Cyber/lingda-harness/pulls)，并说明问题、改动内容及相关验证结果。
+请通过[本仓库的 Issues](https://gitcode.com/XJ-Cyber/lingda-harness/issues)反馈问题和建议。欢迎提交 [Pull request](https://gitcode.com/XJ-Cyber/lingda-harness/pulls)，并说明问题、改动内容及相关验证结果。
 
 面向 agent：请遵循 [AGENTS.md](AGENTS.md)。
 

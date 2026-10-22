@@ -35,6 +35,7 @@ function derivePresentation(
   const spec = control.data
   const location = control.location
   if (location.kind !== 'turn' && location.kind !== 'step') return undefined
+  const turnClosed = location.turn.status === 'closed'
   let openingHumanAnchor: number | undefined
   for (const key of keys) {
     const node = nodes.get(key) as ChatNode | undefined
@@ -56,7 +57,7 @@ function derivePresentation(
     }
     if (TURN_PROCESS_INDEPENDENT_KINDS.has(node.kind)
       || node.anchorSeq < spec.processStartSeq
-      || (spec.answerAnchorSeq !== null && node.anchorSeq >= spec.answerAnchorSeq)) continue
+      || (turnClosed && spec.answerAnchorSeq !== null && node.anchorSeq >= spec.answerAnchorSeq)) continue
     if (node.kind !== 'assistant-step' || spec.answerStep === null || node.data.step !== spec.answerStep) {
       hasExternalProcess = true
     }
@@ -64,7 +65,7 @@ function derivePresentation(
   return {
     turn,
     spec,
-    turnClosed: location.turn.status === 'closed',
+    turnClosed,
     hasExternalProcess,
     compactAnswer,
   }

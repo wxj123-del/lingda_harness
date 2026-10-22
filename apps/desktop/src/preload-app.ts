@@ -20,8 +20,20 @@ const startup: DshDesktopStartupApi = {
   resetConfiguration: () => ipcRenderer.invoke(DESKTOP_IPC.configurationReset) as Promise<void>,
 }
 
+const pet: DshDesktopApplicationApi['pet'] = {
+  state: () => ipcRenderer.invoke(DESKTOP_IPC.petState) as Promise<Awaited<ReturnType<DshDesktopApplicationApi['pet']['state']>>>,
+  subscribe(listener) {
+    const handle = (_event: Electron.IpcRendererEvent, state: Parameters<Parameters<DshDesktopApplicationApi['pet']['subscribe']>[0]>[0]): void => { listener(state) }
+    ipcRenderer.on(DESKTOP_IPC.petStatePush, handle)
+    return () => { ipcRenderer.off(DESKTOP_IPC.petStatePush, handle) }
+  },
+  drag: (delta) => { void ipcRenderer.invoke(DESKTOP_IPC.petDrag, delta) },
+  dragEnd: () => { void ipcRenderer.invoke(DESKTOP_IPC.petDragEnd) },
+}
+
 const application: DshDesktopApplicationApi = {
   protocolVersion: 1,
+  pet,
   updates: {
     check: () => ipcRenderer.invoke(DESKTOP_IPC.updatesCheck) as Promise<DesktopUpdateState>,
     install: () => ipcRenderer.invoke(DESKTOP_IPC.updatesInstall) as Promise<void>,

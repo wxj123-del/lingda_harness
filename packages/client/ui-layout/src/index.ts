@@ -4,6 +4,9 @@ import type { Context } from '@deepseek-ai/cordis'
 import type {} from '@deepseek-ai/dsh-settings'
 import type {} from '@deepseek-ai/dsh-skill'
 import type {} from '@deepseek-ai/dsh-tools'
+import type { Agent } from '@deepseek-ai/dsh-agent/types'
+import type { WorkflowRemoteStartRequest } from '@deepseek-ai/dsh-api-session-controller/types'
+import type { WorkflowScheduleTarget } from '@deepseek-ai/dsh-schedule/client'
 import type { ToolDefinition, ToolRunContext } from '@deepseek-ai/dsh-tools'
 import type { WorkflowEngine, WorkflowResult } from '@deepseek-ai/dsh-workflow'
 import { AUTHORING_SETTINGS_NAMESPACE, AuthoringSettingsSchema } from './authoring-settings.ts'
@@ -20,6 +23,14 @@ import { compileWorkflow } from './workflow-compile.ts'
 export { AUTHORING_SETTINGS_NAMESPACE, AuthoringSettingsSchema }
 export { isWorkflowPublished, latestWorkflowVersion, releasedWorkflow } from './authoring-settings.ts'
 export type { AuthoringItem, AuthoringSettings, WorkflowVersion } from './authoring-settings.ts'
+
+interface WorkflowScheduleHost {
+  registerDispatcher(dispatcher: (agent: Agent, target: WorkflowScheduleTarget, occurrenceAt: string) => Promise<void>): () => void
+}
+
+interface SessionControllerWorkflowHost {
+  workflowStart(request: Omit<WorkflowRemoteStartRequest, 'sessionId'> & { sessionId: Agent['id'] }): Promise<unknown>
+}
 
 function runtimeSkillContent(item: AuthoringItem): string {
   const steps = item.steps.filter(step => step.trim() !== '').map((step, index) => `${index + 1}. ${step.trim()}`)
@@ -94,6 +105,25 @@ function instructionTool(kind: 'workflow' | 'tool', item: AuthoringItem, workflo
 /** Register the durable Skill/workflow/tool authoring document. */
 export function apply(ctx?: Context): void {
   if (ctx === undefined) return
+  ctx.inject(['workflowSchedules', 'sessionController'], (scheduleCtx) => {
+    const services = scheduleCtx as Context & {
+      workflowSchedules: WorkflowScheduleHost
+      sessionController: SessionControllerWorkflowHost
+    }
+    scheduleCtx.effect(() => services.workflowSchedules.registerDispatcher(async (agent, target) => {
+      await services.sessionController.workflowStart({
+        sessionId: agent.id,
+        workflowId: target.workflowId,
+        workflowVersion: target.workflowVersion,
+        script: target.script,
+        nodeIds: target.nodeIds,
+        meta: { name: target.workflowName, description: target.workflowName },
+        ...(target.args === undefined ? {} : { args: target.args }),
+        ...(target.timeoutMs === undefined ? {} : { timeoutMs: target.timeoutMs }),
+        source: 'schedule',
+      })
+    }), 'ui-layout: scheduled workflow dispatcher')
+  })
   ctx.inject(['settings'], (settingsCtx) => {
     const settings = settingsCtx.settings.register(AUTHORING_SETTINGS_NAMESPACE, AuthoringSettingsSchema)
     settingsCtx.inject(['skills'], (runtimeCtx) => {

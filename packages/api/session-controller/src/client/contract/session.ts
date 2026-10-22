@@ -12,7 +12,7 @@ import type { MessageId } from '@deepseek-ai/dsh-llm/brand'
 import type { SessionId, SessionSeq } from '@deepseek-ai/dsh-session/types'
 import type { RemoteResult } from '@deepseek-ai/dsh-typert-protocol'
 import type { ObservableSnapshot } from '@deepseek-ai/dsh-client-store'
-import type { PromptContentPart, QueueAction, SessionRequestId, WorkflowRemoteRunListValue, WorkflowRemoteRunRequest, WorkflowRemoteRunView, WorkflowRemoteRunsRequest, WorkflowRemoteStartRequest, WorkflowRemoteStartValue } from '../../types.ts'
+import type { PromptContentPart, PromptOptimizationMode, QueueAction, SessionOptimizePromptValue, SessionRequestId, WorkflowRemoteRunListValue, WorkflowRemoteRunRequest, WorkflowRemoteRunView, WorkflowRemoteRunsRequest, WorkflowRemoteStartRequest, WorkflowRemoteStartValue } from '../../types.ts'
 import type { PendingSubmissionAttachment, SessionSnapshot } from './snapshot.ts'
 
 /**
@@ -71,6 +71,18 @@ export interface ISession {
   workflowStatus(runId: WorkflowRemoteRunRequest['runId']): Promise<RemoteResult<WorkflowRemoteRunView>>
   /** List recent Host-owned workflow runs for this Session. */
   workflowList(request?: WorkflowRemoteRunsRequest): Promise<RemoteResult<WorkflowRemoteRunListValue>>
+  /**
+   * Ask the selected model to rewrite a draft without adding a Session event.
+   * @param draft - user-authored prompt draft to improve.
+   * @param mode - optimization posture supplied to the model.
+   * @param signal - cancellation for the auxiliary model request.
+   * @returns the model-produced prompt, or a Remote failure.
+   */
+  optimizePrompt(
+    draft: string,
+    mode: PromptOptimizationMode,
+    signal?: AbortSignal,
+  ): Promise<RemoteResult<SessionOptimizePromptValue>>
   /** Host-computed projection values by key (the useProjection seat). */
   readonly projections: ProjectionsFace
   /**

@@ -88,6 +88,26 @@ kind: "package-reference"
 
 在本包之前挂载 `dsh-compaction-tool-result-pruner`，即可在压缩过程中修剪超大工具结果。修剪不发起模型调用，并可能完全省去摘要：当修剪后的对话在阈值之内时，压缩会跳过摘要。修剪只在压缩触发条件满足后运行——低于压力的对话绝不会被触碰。
 
+### 让每份摘要都可回读
+
+一个 checkpoint 是对摘要的摘要的摘要：每次后续压缩都会把先前的 checkpoint 折叠成更粗的一层，曾经重要的细节可能就此消失。设置 `sidecar: true` 会把每份摘要写入独立文件，并在 checkpoint 内给出该路径，需要时模型可以回读被折叠掉的细节。
+
+```yaml
+- name: '@deepseek-ai/dsh-compaction-basic'
+  config:
+    sidecar: true
+    sidecarRoot: /var/lib/dsh/compaction
+    sidecarRetentionDays: 30
+```
+
+### 未声明上下文窗口的模型
+
+压力压缩需要一个容量来计算阈值。当路由到的适配器没有声明容量时，由 `fallbackContextWindow` 提供（默认 `100000`，`0` 恢复严格行为）。该保底值会为每个路由目标记录一次警告，然后照常压缩；因此对于那些在请求过大时直接断开、而不返回溢出错误的网关，压缩仍会在请求达到该体积之前触发。
+
+应把它设在真实上限之下：阈值等于 `fallbackContextWindow × thresholdRatio`，高于真实容量的取值会让压缩永远不触发。
+
+`sidecarRoot` 默认为系统临时目录下的私有进程级目录。每个文件是 `<root>/session-<hash>/<compactionId>.md`，以 `0600` 权限写入 `0700` 目录。`sidecarRetentionDays` 默认为 `30`，`0` 表示关闭清理。清理在加载时执行一次，随后每隔 `sidecarSweepIntervalMs`（默认一小时，`0` 表示只在启动时执行）再执行，且仅在同时设置 `sidecar` 与显式 `sidecarRoot` 时运行；它只删除符合本包 `session-<16 位十六进制>` 目录形状内的 `.md` 文件，并且只有在会话目录为空时才将其移除。写入失败不会把一次成功的压缩变成失败的轮次：只记录警告，checkpoint 保持引入 sidecar 之前的样子。
+
 -----
 
 <a id="understand-the-implementation"></a>
@@ -134,6 +154,8 @@ kind: "package-reference"
 | [`src/index.ts`](src/index.ts) | 插件入口：`BasicCompactionEngine`、自动 listener、入口点分发 |
 | [`src/region.ts`](src/region.ts) | 保留选择与共享的先记录标记压缩事务 |
 | [`src/summarizer.ts`](src/summarizer.ts) | 默认 `ctx.llm.stream()` 摘要、检查点框定、安全摘要投影 |
+| [`src/sidecar.ts`](src/sidecar.ts) | 私有摘要文件写入器及其路径布局 |
+| [`src/sidecar-cleanup.ts`](src/sidecar-cleanup.ts) | 针对 sidecar 根目录的一次性启动清理 |
 | [`src/config.ts`](src/config.ts) | 加载时验证与路由模型策略解析 |
 | [`src/types.ts`](src/types.ts) | `BasicCompactionConfig` 与已解析策略词汇 |
 | — | 不发布运行时不变式配套条目；除所属 seam 强制执行的约定外，本包不公开独立事件序列或可变数据关系。持久标记对仍可在会话日志中观察。 |

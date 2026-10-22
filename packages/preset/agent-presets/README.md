@@ -27,9 +27,7 @@ Use `dsh-agent-presets` to give each session the tools, prompt sections, and ski
 
 Mount this package in a composition that should give each agent session its own tools, prompt sections, and skills from a preset file. Every session names a preset — explicitly or through the configured default — and is composed from it; without the package, sessions fall back to whatever the host composition mounts.
 
-The shipped Web `standard`, `diaosi`, `ptc`, and `cordis` presets include [explicit file delivery](../../client/ui-deliverables/README.md#explicit-deliveries). The `minimal` preset exposes only a persistent shell and a complete persona containing the session's configured model and provider. It suppresses additional prompt sections and runtime context.
-
-`diaosi` uses [on-demand tool discovery](../tool-discovery/README.md): initially four tools, including the pinned `read`, `skill` and `present` tools, plus `tool_search`; the remaining initial slot favors actual historical calls. Search loads at most two relevant tools per call; subsequent requests retain at most eight tools plus search. Inherited media and MCP schemas participate in the same selection instead of appearing unconditionally. The updated preset applies to newly created conversations; already loaded generations keep their configuration.
+One preset ships: `diaosi` (Budget mode, 屌丝模式), and it is the default every session composes from.
 
 Choose `diaosi` (Budget mode, 屌丝模式) for a smaller everyday tool set with file editing, shell, search, Skills, task tracking and questions. It keeps the selected model and project instructions, omits delegation, workflow, goal and plan-mode tools, and requests targeted searches, incremental reads and concise replies. Each read returns at most 120 lines and 8,000 bytes of selected text; searches retain 40 paths or matches. A scoped spill policy previews oversized shell, search, web and job-output text within 8,000 bytes, with a full-result locator; other tools keep their existing policies. Compact Skill catalogs preserve names, descriptions and full instruction loading. Its private compactor triggers at 65% of the selected model's context window. These are output and pressure limits, not a total token budget or a measured savings guarantee. [The composition](presets/diaosi/agent.cordis.yml) owns the session-specific settings; [the decision](../../../.agents/notes/implemented/feature/2026-09-16-diaosi-agent-preset.md) records the trade-offs.
 
@@ -46,7 +44,7 @@ The plugin needs a `default` preset id and scans `roots` for presets:
 ```yaml
 - name: '@deepseek-ai/dsh-agent-presets'
   config:
-    default: standard
+    default: diaosi
     modeSelectionEnabled: true
     roots:
       - path: ~/company-presets
@@ -72,7 +70,7 @@ The required `default` config sets the deployment default. `modeSelectionEnabled
 ```yaml
 agent-presets:
   modeSelectionEnabled: true
-  default: minimal
+  default: diaosi
 ```
 
 A client shows or hides selection by writing only `modeSelectionEnabled`; the [Web GUI settings switch](../../client/ui-agent-preset/README.md) does exactly that. The deployment default governs while selection is hidden; re-enabling it restores the saved user `default`, or keeps the deployment default when none has been saved. While mode selection stays enabled, choosing a default writes a user override for sessions created later. Because the Host owns the policy, it applies to every subsequently created session whose caller omits a preset, including Web, CLI, SDK, and headless callers; an explicitly named preset and every existing session remain unchanged.
@@ -183,7 +181,7 @@ These limits define when the roster is a poor fit or needs special operational c
 - **A superseded generation is never reclaimed** — sessions already joined keep the generation they run on, and the roster holds no join count that could tell when the last one left, so the whole subtree stays mounted until the process ends. The cost is per generation rather than per session, but it is not free: `dsh-skill-filesystem` watches its roots by default, so each edit-then-create cycle adds a live watcher set.
 - **A copy is never mounted to validate** — it is byte-identical to its source, so a source broken on disk yields a copy exactly as broken as the source; discovery's health check marks both rows on the next roster read rather than deferring the failure to a session start.
 - **Health asks what is installed, not what would import** — discovery proves the composition parses in the loader dialect, holds named rows, and that each row it can prove will start names a package present above the harness base or a file that exists; it never imports one, so a package whose own entry file is missing, a plugin that throws on apply, and one waiting forever for a service all still fail at the first session. `disabled` is the one entry field the Loader interpolates, so a row carrying an expression there is left unchecked rather than judged from the file.
-- **A copy is a snapshot that drifts** — upgrading the deployment does not update copies of shipped presets, and there is no patch semantics at this layer to express "standard plus one change"; the shipped set itself accepts the same cost — `cordis` and `code` each duplicate `standard`'s full assembly and then edit it — so the whole assembly stays readable in one file.
+- **A copy is a snapshot that drifts** — upgrading the deployment does not update copies of shipped presets, and there is no patch semantics at this layer to express "standard plus one change"; a shipped preset accepts the same cost in the other direction — it cannot be patched, only replaced.
 - **Root scans are not watched** — every read hits the filesystem instead, which keeps the roster fresh but puts one `readdir` per root on each `list()`.
 
 <a id="dev-note"></a>

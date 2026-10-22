@@ -318,6 +318,10 @@ describe('compact configuration and defaults', () => {
       maxOverflowRetries: 1,
       modelPolicies: [],
       auto: true,
+      sidecar: false,
+      sidecarRetentionDays: 30,
+      sidecarSweepIntervalMs: 3_600_000,
+      fallbackContextWindow: 100_000,
     })
     expect(Object.isFrozen(resolved)).toBe(true)
   })
@@ -563,6 +567,51 @@ describe('pressure measurement and retention', () => {
     await expect(compactIfNeeded(compact, session)).resolves.not.toBeNull()
   })
 
+  it('falls back to a configured capacity when the adapter declares none', async () => {
+    const ctx = new Context()
+    void new LlmRuntime(ctx)
+    new SessionProjectionRegistry(ctx)
+    void new TokenMeter(ctx)
+    ctx.llm.registerAdapter(['unknown-context'], new ContextAdapter(1_000))
+    vi.spyOn(ctx.llm, 'resolveModelInfo').mockImplementation((provider, model) => Promise.resolve({
+      provider,
+      id: model,
+      name: model,
+    }))
+    // A small fallback makes the fixture's conversation cross the threshold,
+    // proving proactive compaction runs without an adapter-declared window.
+    const compact = service({ ...compactConfig, fallbackContextWindow: 1_000 }, ctx)
+    const session = conversation(4)
+    session.append('request/header', {
+      header: { config: { provider: 'unknown-context', model: 'model' } },
+      reason: 'resume',
+    })
+
+    await expect(compactIfNeeded(compact, session, 'pressure')).resolves.not.toBeNull()
+  })
+
+  it('disables the fallback when it is configured as zero', async () => {
+    const ctx = new Context()
+    void new LlmRuntime(ctx)
+    new SessionProjectionRegistry(ctx)
+    void new TokenMeter(ctx)
+    ctx.llm.registerAdapter(['unknown-context'], new ContextAdapter(1_000))
+    vi.spyOn(ctx.llm, 'resolveModelInfo').mockImplementation((provider, model) => Promise.resolve({
+      provider,
+      id: model,
+      name: model,
+    }))
+    const compact = service({ ...compactConfig, fallbackContextWindow: 0 }, ctx)
+    const session = conversation(4)
+    session.append('request/header', {
+      header: { config: { provider: 'unknown-context', model: 'model' } },
+      reason: 'resume',
+    })
+
+    await expect(compactIfNeeded(compact, session, 'pressure'))
+      .rejects.toThrow(/no context capacity for unknown-context\/model/)
+  })
+
   it('requires capacity only for proactive pressure, not provider-confirmed overflow', async () => {
     const ctx = new Context()
     void new LlmRuntime(ctx)
@@ -574,7 +623,7 @@ describe('pressure measurement and retention', () => {
       id: model,
       name: model,
     }))
-    const compact = service(compactConfig, ctx)
+    const compact = service({ ...compactConfig, fallbackContextWindow: 0 }, ctx)
     const session = conversation(4)
     session.append('request/header', {
       header: { config: { provider: 'unknown-context', model: 'model' } },
@@ -1633,6 +1682,9 @@ describe('automatic listener and loader composition', () => {
     void new TestCompactionEngine(ctx, {
       thresholdRatio: 0.5,
       retainTokens: 180,
+      // The strict path is now opt-in: a deployment that wants proactive
+      // compaction to fail loudly without adapter capacity sets the fallback to 0.
+      fallbackContextWindow: 0,
     })
     const session = conversation(4)
 

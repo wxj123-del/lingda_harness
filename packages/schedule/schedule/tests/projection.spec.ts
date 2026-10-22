@@ -140,7 +140,7 @@ describe('Schedule Session projection', () => {
       SessionLogOffset(0),
     )
     expect(resumed.snapshot.values.schedule?.map(record => record.id)).toEqual(['two'])
-    expect(resumed.checkpoint.schedule).toMatchObject({ ver: 2, seq: 2 })
+    expect(resumed.checkpoint.schedule).toMatchObject({ ver: 3, seq: 2 })
 
     expect(() => ctx.sessionProjections.restore(
       {},
@@ -156,7 +156,11 @@ describe('Schedule Session projection', () => {
     contexts.push(ctx)
     await ctx.plugin(SessionProjectionRegistry)
     ctx.sessionProjections.register(scheduleProjectionDefinition)
-    const row = (val: unknown) => ({ schedule: { ver: 2, seq: SessionSeq(0), val } })
+    const row = (val: unknown) => ({ schedule: { ver: 3, seq: SessionSeq(0), val } })
+
+    expect(ctx.sessionProjections.viewCheckpoint({
+      schedule: { ver: 2, seq: SessionSeq(0), val: { inheritedEventCount: 0, active: [], seenIds: [] } },
+    })).toEqual({})
 
     expect(ctx.sessionProjections.viewCheckpoint(row({
       inheritedEventCount: 0,

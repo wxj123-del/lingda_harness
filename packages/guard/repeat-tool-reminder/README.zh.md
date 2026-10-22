@@ -39,6 +39,7 @@ kind: "package-reference"
 - name: '@deepseek-ai/dsh-repeat-tool-reminder'
   config:
     thresholds: [3, 5, 8]        # remind at 3, 5, and 8 consecutive repeats
+    repeatInTurnThresholds: [2, 4] # remind when one call repeats across the turn
     include: []                  # track every tool; list patterns to track only some
     exclude: [todo_write]        # never track these tools
     argumentsPreviewChars: 500   # cap on arguments shown in the detailed reminder
@@ -47,11 +48,14 @@ kind: "package-reference"
 | 字段 | 默认值 | 含义 |
 |---|---|---|
 | `thresholds` | `[3, 5, 8]` | 触发提醒的重复次数 |
+| `repeatInTurnThresholds` | `[2, 4]` | 同一轮内同一调用的重复次数（不必连续）；空列表即关闭 |
 | `include` | `[]` | 只跟踪这些工具；空表示所有工具 |
 | `exclude` | `[]` | 绝不跟踪这些工具；对它们的调用既不计数也不重置 |
 | `argumentsPreviewChars` | `500` | 详细提醒中显示多少字符的重复参数 |
 
 无效配置会在启动时以清晰错误失败——空的 `thresholds` 列表、小于 2 的重复次数或重复值——绝不会静默改变行为。生成的[配置目录](../../../docs/config-catalog.zh.md#deepseek-aidsh-repeat-tool-reminder)记录每个受支持的值。
+
+长任务很少把同一个调用连续打两遍，更常见的是隔了十步、中间做了别的事，又去读同一个路径。`repeatInTurnThresholds` 覆盖这种形状：它在整轮范围内累计每个相同的调用，默认在第 2 次和第 4 次提醒——调用出现两次就意味着第一次的结果被重新取了一遍。该计数在每条新的用户消息处清零，因此跨轮次的重复不算循环。
 
 ### 你会得到什么
 

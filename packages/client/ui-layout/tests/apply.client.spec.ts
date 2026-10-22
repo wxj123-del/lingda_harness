@@ -59,7 +59,13 @@ async function bench() {
   ctx.provide('locale', new LocaleRuntime(ctx))
   ctx.provide('connection', { api: { settings: {} }, isLoopback: false } as never)
   // ui-theme's Appearance row binds a durable scope through these two.
-  ctx.provide('remote', { $on: () => () => {} } as never)
+  const credentials = {
+    describe: vi.fn(() => Promise.resolve({ ok: true, value: {} })),
+    set: vi.fn(() => Promise.resolve({ ok: true, value: undefined })),
+    unset: vi.fn(() => Promise.resolve({ ok: true, value: undefined })),
+  }
+  ctx.provide('remote', { $on: () => () => {}, credentials } as never)
+  ctx.provide('remote.credentials', credentials as never)
   ctx.provide('settingsScope', { bind: () => stubSettingsScope().scope } as never)
   await ctx.plugin({ inject: themeInject, apply: themeApply }).await()
   await slotsFiber.await()
@@ -76,10 +82,10 @@ async function bench() {
 
 describe('ui-layout client apply', () => {
   it('declares its service dependencies', () => {
-    expect(inject).toEqual(['slots', 'theme', 'locale', 'settingsScope'])
+    expect(inject).toEqual(['slots', 'theme', 'locale', 'settingsScope', 'remote', 'remote.credentials'])
   })
 
-  it('provides ctx.layout and declares the four root-scoped frame slots', async () => {
+  it('provides ctx.layout and declares the root-scoped frame slots', async () => {
     const { ctx, slots } = await bench()
     const fiber = ctx.plugin({ inject: [...inject], apply })
     await fiber.await()
@@ -89,6 +95,7 @@ describe('ui-layout client apply', () => {
     expect(slots.spec('main')).toEqual({ kind: 'keyed', scope: 'root' })
     expect(slots.spec('rightbar')).toEqual({ kind: 'single', scope: 'root' })
     expect(slots.spec('shell.overlay')).toEqual({ kind: 'list', scope: 'root' })
+
   })
 
   it('shares a pre-created instance between service actions, root rendering, and panelInfo', async () => {
