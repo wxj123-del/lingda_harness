@@ -50,3 +50,4 @@ native/system/test/bin/
 
 # typert test scratch output
 packages/typert/generator/tests/.rendered-model-*/
+scripts/__pycache__/
