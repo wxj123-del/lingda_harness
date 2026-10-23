@@ -2202,6 +2202,14 @@ export interface Config {
    * always compares the FULL canonical string).
    */
   argumentsPreviewChars?: number
+  /**
+   * Turn an advisory reminder into a hard stop after this many identical calls
+   * within one turn (default: unset, reminders only). A model can ignore a
+   * probe; it cannot ignore an error result. Set this when a repeated identical
+   * call is unambiguously waste — reading the same range, re-running the same
+   * command — rather than a legitimate retry the model should judge.
+   */
+  blockAfterRepeats?: number
 }
 ```
 
@@ -3076,28 +3084,28 @@ Source: [`packages/core/system-prompt/src/index.ts:248`](../packages/core/system
 Requires: `tools` · `sessionProjections` · `systemPrompt`
 
 ```ts config-catalog
-/** Deployment policy for the task domain. */
+/** Deployment policy for the task domain. Every field carries a schema default. */
 export interface Config {
   /** Inject the compact task card at the start of every top-level turn. */
-  injectTaskCard: boolean
+  injectTaskCard?: boolean
   /** Record settled bash/pwsh results as automatic evidence while a task is active. */
-  recordCommandEvidence: boolean
+  recordCommandEvidence?: boolean
   /**
    * Require observed evidence before a task may be marked succeeded: an
    * automatic record, or a command the session log shows exiting zero. When
    * false, any passing evidence record covers a criterion.
    */
-  requireVerifiedEvidence: boolean
+  requireVerifiedEvidence?: boolean
   /**
    * Re-run every verified command immediately before a task may be marked
    * succeeded. The re-run goes through the tool pipeline, so approval, sandbox,
    * timeout policy, and logging all apply.
    */
-  reverifyEvidence: boolean
+  reverifyEvidence?: boolean
   /** Wall-clock limit for one re-verification run. */
-  reverifyTimeoutMs: number
+  reverifyTimeoutMs?: number
   /** Upper bound on distinct commands re-run for one completion attempt. */
-  maxReverifyCommands: number
+  maxReverifyCommands?: number
 }
 ```
 

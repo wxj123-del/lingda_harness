@@ -109,6 +109,26 @@ describe('bounded tool discovery', () => {
     expect((await h.ctx.systemPrompt.assemble(assembleContextFor(standard.agent))).tools).toHaveLength(7)
   })
 
+  it('still matches the tools a mixed query names when some terms are unknown', async () => {
+    // Regression: a query naming capabilities this catalog lacks used to score
+    // every tool at zero, because one unmatched term vetoed the whole query.
+    // Models write queries like this constantly ("write edit file create_goal").
+    const h = await harness()
+    await h.assemble()
+    const result = await search(h.ctx, h.agent, 'edit file create_goal task_update')
+    expect(result.isError).toBe(false)
+    expect((result.meta as { toolDiscovery?: string[] }).toolDiscovery).toContain('edit')
+    expect(await h.names()).toContain('edit')
+  })
+
+  it('ranks a tool covering more query terms above one matching a single word', async () => {
+    const h = await harness({ searchLimit: 2 })
+    await h.assemble()
+    const result = await search(h.ctx, h.agent, 'image models')
+    // `list_image_models` covers both terms; `generate_image` covers one.
+    expect((result.meta as { toolDiscovery?: string[] }).toolDiscovery?.[0]).toBe('list_image_models')
+  })
+
   it('uses a typed decision endpoint for semantic capability matches', async () => {
     const fetchMock = vi.fn<typeof fetch>(async () => new Response(JSON.stringify({
       capability: {

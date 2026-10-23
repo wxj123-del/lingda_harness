@@ -109,13 +109,32 @@ function consume(selection: Selection, event: SessionEvent, pinned: Set<string>,
   trim(selection, pinned, maxTools)
 }
 
+/**
+ * Score how well one tool matches the parsed query terms.
+ *
+ * A term that matches nothing contributes zero instead of vetoing the whole
+ * query. Query text routinely mixes words for capabilities this catalog does
+ * not have (`create_goal`, `task_update`) with words for ones it does
+ * (`write`); treating any unmatched term as fatal made the entire search miss
+ * every tool. The sum is scaled by how many distinct terms matched, so a tool
+ * covering more of the query outranks one that happens to hit a single word.
+ * @param tool - candidate tool.
+ * @param query - the raw, already-lowercased query text.
+ * @param terms - distinct query terms.
+ * @returns a positive score when at least one term matched, otherwise 0.
+ */
 function relevance(tool: ToolSchema, query: string, terms: string[]): number {
   const name = tool.name.toLowerCase()
   if (name === query) return Number.MAX_SAFE_INTEGER
   const words = new Set(name.split(/[^\p{L}\p{N}]+/u))
   const description = tool.description.toLowerCase()
   const scores = terms.map(term => words.has(term) ? 10 : name.includes(term) ? 5 : description.includes(term) ? 1 : 0)
-  return scores.includes(0) ? 0 : scores.reduce<number>((sum, score) => sum + score, 0)
+  const matched = scores.filter(score => score > 0).length
+  if (matched === 0) return 0
+  const score = scores.reduce<number>((sum, value) => sum + value, 0)
+  // Coverage multiplier: hits on 1 of 5 terms score lower than 4 of 5, without
+  // letting a long query drown out a genuinely specific match.
+  return score * (matched / scores.length) + matched * 0.5
 }
 
 function lexicalCandidates(

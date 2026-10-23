@@ -13,6 +13,30 @@
 
 # ── surface-specific values the base deliberately omits ─────────────────────
 
+# The base row leaves every budget unbounded so deployments can choose. This
+# surface is driven by a person watching the browser, so a turn that spins is
+# visible waste rather than a batch job: bound it. The numbers are generous
+# enough for a long tool-using task (a full feature with tests) and small
+# enough that a repeat-call loop stops before it burns the context window. A
+# stop is not silent — budget-guard records `budget/stop`, and auto-resume
+# picks the turn up when the task carries a handoff.
+- id: budget-guard
+  config:
+    maxStepsPerTurn: 120
+    maxTokensPerTurn: 1500000
+    maxWallClockMsPerTurn: 1800000
+    warnAtRatio: 0.8
+
+# A reminder is advisory: the model may keep looping anyway. Past a small
+# number of identical calls in one turn the repetition is waste by definition
+# — the result is already in context — so refuse it instead of describing it.
+- id: repeat-tool-reminder
+  config:
+    thresholds: [3, 5, 8]
+    repeatInTurnThresholds: [2, 4]
+    argumentsPreviewChars: 500
+    blockAfterRepeats: 4
+
 - id: system-prompt
   config:
     personaSuffix: Your working directory is {{cwd}}.

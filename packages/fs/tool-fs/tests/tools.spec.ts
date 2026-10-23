@@ -271,7 +271,7 @@ describe('read tool', () => {
     const { ctx } = await setup()
     const result = await call(ctx, 'read', { file_path: 'a.txt', limit: 99999 })
     expect(result.isError).toBe(true)
-    expect(text(result)).toContain('less than or equal to 2000')
+    expect(text(result)).toContain('limit <= 2000')
   })
 
   it('rejects a blank file_path', async () => {
@@ -713,8 +713,9 @@ describe('read caps are plugin config', () => {
     expect(text(result)).toContain('(Showing lines 1-2 of 4. Use offset=3 to continue.)')
     const overCap = await call(ctx, 'read', { file_path: 'a.txt', limit: 3 })
     expect(overCap.isError).toBe(true)
-    expect(text(overCap)).toContain('less than or equal to 2')
+    expect(text(overCap)).toContain('limit <= 2')
     const readSchema = ctx.tools.schemas().find(s => s.name === 'read')
+    expect(JSON.stringify(readSchema)).toContain('at most 2')
     expect(JSON.stringify(readSchema)).toContain('Defaults to 2.')
   })
 

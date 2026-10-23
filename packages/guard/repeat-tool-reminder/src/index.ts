@@ -49,6 +49,14 @@ export interface Config {
    * always compares the FULL canonical string).
    */
   argumentsPreviewChars?: number
+  /**
+   * Turn an advisory reminder into a hard stop after this many identical calls
+   * within one turn (default: unset, reminders only). A model can ignore a
+   * probe; it cannot ignore an error result. Set this when a repeated identical
+   * call is unambiguously waste — reading the same range, re-running the same
+   * command — rather than a legitimate retry the model should judge.
+   */
+  blockAfterRepeats?: number
 }
 
 export const Config: z<Config> = z.object({
@@ -57,6 +65,7 @@ export const Config: z<Config> = z.object({
   include: z.array(z.string()).default([]),
   exclude: z.array(z.string()).default([]),
   argumentsPreviewChars: z.number().default(500),
+  blockAfterRepeats: z.number(),
 })
 
 /**
@@ -241,6 +250,10 @@ export function apply(ctx: Context, config: Config): void {
   if (!Number.isInteger(argumentsPreviewChars) || argumentsPreviewChars < 1) {
     throw new Error(`repeat-tool-reminder: invalid argumentsPreviewChars ${argumentsPreviewChars} — must be an integer >= 1`)
   }
+  const blockAfterRepeats = config.blockAfterRepeats
+  if (blockAfterRepeats !== undefined && (!Number.isInteger(blockAfterRepeats) || blockAfterRepeats < 2)) {
+    throw new Error(`repeat-tool-reminder: invalid blockAfterRepeats ${String(blockAfterRepeats)} — must be an integer >= 2`)
+  }
 
   const chains = new WeakMap<Agent, Chain>()
   /**
@@ -276,13 +289,14 @@ export function apply(ctx: Context, config: Config): void {
    * a deny flows through this same waterfall and a model repeating a denied call
    * is exactly the loop worth breaking.
    * @param exec - the finished attempt, including the agent that issued it.
-   * @returns the reminders to fold onto the result, consecutive first.
+   * @returns the reminders to fold onto the result (consecutive first) and, when
+   *   `blockAfterRepeats` is configured and reached, the call count that tripped it.
    */
-  function observe(exec: ToolExecution): UserMessage[] {
+  function observe(exec: ToolExecution): { reminders: UserMessage[]; blockedAt?: number } {
     // A direct `ctx.tools.execute()` caller has no model to remind and no id
     // to key on; only agent-loop calls participate.
-    if (!exec.agent) return []
-    if (!tracked(exec.name)) return []
+    if (!exec.agent) return { reminders: [] }
+    if (!tracked(exec.name)) return { reminders: [] }
     const canonical = canonicalize(exec.arguments)
     const key = JSON.stringify([exec.name, canonical])
     const reminders: UserMessage[] = []
@@ -297,7 +311,8 @@ export function apply(ctx: Context, config: Config): void {
       reminders.push(notice(exec.name, count, text))
     }
 
-    if (inTurnThresholdSet.size > 0) {
+    let blockedAt: number | undefined
+    if (inTurnThresholdSet.size > 0 || blockAfterRepeats !== undefined) {
       let counts = inTurnCounts.get(exec.agent)
       if (counts === undefined) {
         counts = new Map()
@@ -311,8 +326,12 @@ export function apply(ctx: Context, config: Config): void {
           : inTurnRepeatReminder(exec.name, calls, previewArguments(canonical, argumentsPreviewChars))
         reminders.push(notice(exec.name, calls, text))
       }
+      // `>=` rather than equality: past the limit the call stays blocked, so a
+      // model that retries anyway keeps getting the same explicit refusal
+      // instead of silently succeeding on the next attempt.
+      if (blockAfterRepeats !== undefined && calls >= blockAfterRepeats) blockedAt = calls
     }
-    return reminders
+    return { reminders, ...(blockedAt === undefined ? {} : { blockedAt }) }
   }
 
   // Observe-and-enrich, never veto: count first (state advances regardless of
@@ -320,8 +339,20 @@ export function apply(ctx: Context, config: Config): void {
   // replace, then fold the reminder onto whatever came back — additionalContexts
   // rides both decision variants, so a blocked call still gets the nudge.
   ctx.on('tools/post-execute', async (exec, _result, next): Promise<PostToolDecision> => {
-    const reminders = observe(exec)
+    const { reminders, blockedAt } = observe(exec)
     const downstream = await next()
+    if (blockedAt !== undefined) {
+      // The call already ran, so its work is not undone; what stops here is the
+      // next identical attempt. Replacing the result with an error is the only
+      // lever a post-execute hook has, and it is the right one: the model sees
+      // a refusal it must act on rather than another success it can ignore.
+      const feedback = {
+        type: 'text' as const,
+        text: `Blocked: this exact ${exec.name} call has already run ${String(blockedAt)} times in this turn. `
+          + 'Its result is still in the conversation. Change approach or finish the task — repeating it again will be blocked too.',
+      }
+      return { kind: 'block', feedback: [feedback], ...(reminders.length > 0 ? { additionalContexts: reminders } : {}) }
+    }
     if (reminders.length === 0) return downstream
     return foldReminders(reminders, downstream)
   })

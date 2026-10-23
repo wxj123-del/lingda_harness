@@ -488,3 +488,72 @@ describe('repeats within one turn', () => {
     await expect(harness({ repeatInTurnThresholds: [1] })).rejects.toThrow(/>= 2/)
   })
 })
+
+describe('hard stop after repeated identical calls', () => {
+  it('turns the call into an error result once blockAfterRepeats is reached', async () => {
+    const ctx = await harness({ thresholds: [99], repeatInTurnThresholds: [99], blockAfterRepeats: 2 })
+    const adapter = new MockAdapter([
+      toolCallResponse('c1', 'probe', { path: 'a' }),
+      toolCallResponse('c2', 'probe', { path: 'a' }),
+      toolCallResponse('c3', 'probe', { path: 'a' }),
+      textResponse('done'),
+    ])
+    ctx.llm.registerAdapter(['mock'], adapter)
+    const agent = await ctx.agentLoop.create(SessionId('block-1'), { provider: 'mock', model: 'mock' })
+    agent.followup(createUserMessage({ content: [{ type: 'text', text: 'go' }], source: { kind: 'user' } }))
+    await waitForIdle(ctx, agent)
+
+    const results = agent.session.snapshotEvents()
+      .filter((e): e is SessionEvent<'tool/result'> => e.type === 'tool/result')
+      .map(e => e.data.message.content[0])
+    expect(results).toHaveLength(3)
+    // First call succeeds; the second reaches the limit and is refused.
+    expect(results[0]!.isError).toBe(false)
+    expect(results[1]!.isError).toBe(true)
+    expect(JSON.stringify(results[1]!.content)).toContain('already run 2 times')
+    // Past the limit stays blocked rather than succeeding on retry.
+    expect(results[2]!.isError).toBe(true)
+  })
+
+  it('leaves a different call alone and only blocks the repeated identity', async () => {
+    const ctx = await harness({ thresholds: [99], repeatInTurnThresholds: [99], blockAfterRepeats: 2 })
+    const adapter = new MockAdapter([
+      toolCallResponse('c1', 'probe', { path: 'a' }),
+      toolCallResponse('c2', 'probe', { path: 'a' }),
+      toolCallResponse('c3', 'other', {}),
+      textResponse('done'),
+    ])
+    ctx.llm.registerAdapter(['mock'], adapter)
+    const agent = await ctx.agentLoop.create(SessionId('block-2'), { provider: 'mock', model: 'mock' })
+    agent.followup(createUserMessage({ content: [{ type: 'text', text: 'go' }], source: { kind: 'user' } }))
+    await waitForIdle(ctx, agent)
+
+    const results = agent.session.snapshotEvents()
+      .filter((e): e is SessionEvent<'tool/result'> => e.type === 'tool/result')
+      .map(e => e.data.message.content[0])
+    expect(results[1]!.isError).toBe(true)
+    expect(results[2]!.isError).toBe(false)
+  })
+
+  it('remains advisory when blockAfterRepeats is unset', async () => {
+    const ctx = await harness({ thresholds: [99], repeatInTurnThresholds: [2] })
+    const adapter = new MockAdapter([
+      ...Array.from({ length: 3 }, (_, i) => toolCallResponse(`c${i}`, 'probe', { path: 'a' })),
+      textResponse('done'),
+    ])
+    ctx.llm.registerAdapter(['mock'], adapter)
+    const agent = await ctx.agentLoop.create(SessionId('block-3'), { provider: 'mock', model: 'mock' })
+    agent.followup(createUserMessage({ content: [{ type: 'text', text: 'go' }], source: { kind: 'user' } }))
+    await waitForIdle(ctx, agent)
+
+    const results = agent.session.snapshotEvents()
+      .filter((e): e is SessionEvent<'tool/result'> => e.type === 'tool/result')
+      .map(e => e.data.message.content[0])
+    expect(results.every(result => result.isError === false)).toBe(true)
+  })
+
+  it('rejects an invalid blockAfterRepeats', async () => {
+    await expect(harness({ blockAfterRepeats: 1 })).rejects.toThrow(/blockAfterRepeats/)
+    await expect(harness({ blockAfterRepeats: 2.5 })).rejects.toThrow(/blockAfterRepeats/)
+  })
+})

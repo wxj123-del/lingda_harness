@@ -56,7 +56,12 @@ export function parseReadArgs(args: { file_path: string; offset?: number; limit?
   if (args.file_path.trim().length === 0) throw new Error('file_path must be a non-empty string')
   const offset = args.offset === undefined ? 1 : parsePositiveInteger(args.offset, 'offset')
   const limit = args.limit === undefined ? maxLimit : parsePositiveInteger(args.limit, 'limit')
-  if (limit > maxLimit) throw new Error(`limit must be less than or equal to ${maxLimit}`)
+  if (limit > maxLimit) {
+    // Name the cap and the configured maximum: a bare "120" reads like an
+    // arbitrary rejection, and models retry with other guesses instead of
+    // lowering the value.
+    throw new Error(`limit ${limit} exceeds this deployment's read cap: pass limit <= ${maxLimit} (or omit limit to use ${maxLimit})`)
+  }
   return { filePath: args.file_path, offset, limit }
 }
 
@@ -80,7 +85,7 @@ export function applyReadTool(ctx: Context, caps: ReadToolCaps): void {
     parameters: {
       file_path: { type: 'string', required: true, description: 'Path to read, resolved by the filesystem backend.' },
       offset: { type: 'number', description: '1-based first line to return. Defaults to 1.' },
-      limit: { type: 'number', description: `Maximum number of lines to return. Defaults to ${caps.limit}.` },
+      limit: { type: 'number', description: `Maximum number of lines to return; at most ${caps.limit}. Defaults to ${caps.limit}.` },
     },
     output: {
       schema: {
